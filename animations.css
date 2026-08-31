@@ -1,0 +1,744 @@
+/* =========================================================
+   ESCAPE ROOM — ANIMATIONS.CSS
+   PARTE 3 — ANIMAÇÕES E EFEITOS VISUAIS
+   ========================================================= */
+
+/* =========================================================
+   1. VARIÁVEIS DE ANIMAÇÃO
+   ========================================================= */
+
+:root {
+    --animation-fast: 0.18s;
+    --animation-normal: 0.35s;
+    --animation-slow: 0.7s;
+    --animation-very-slow: 1.2s;
+}
+
+/* =========================================================
+   2. FADE IN
+   ========================================================= */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.fade-in {
+    animation: fadeIn var(--animation-normal) ease forwards;
+}
+
+/* =========================================================
+   3. FADE OUT
+   ========================================================= */
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+.fade-out {
+    animation: fadeOut var(--animation-normal) ease forwards;
+}
+
+/* =========================================================
+   4. ENTRADA DE BAIXO
+   ========================================================= */
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-up {
+    animation: slideUp var(--animation-normal) ease forwards;
+}
+
+/* =========================================================
+   5. ENTRADA DE CIMA
+   ========================================================= */
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-down {
+    animation: slideDown var(--animation-normal) ease forwards;
+}
+
+/* =========================================================
+   6. ENTRADA DA ESQUERDA
+   ========================================================= */
+
+@keyframes slideLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slide-left {
+    animation: slideLeft var(--animation-normal) ease forwards;
+}
+
+/* =========================================================
+   7. ENTRADA DA DIREITA
+   ========================================================= */
+
+@keyframes slideRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slide-right {
+    animation: slideRight var(--animation-normal) ease forwards;
+}
+
+/* =========================================================
+   8. ESCALA DE ENTRADA
+   ========================================================= */
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.scale-in {
+    animation: scaleIn var(--animation-normal) ease forwards;
+}
+
+/* =========================================================
+   9. ESCALA DE SAÍDA
+   ========================================================= */
+
+@keyframes scaleOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+}
+
+.scale-out {
+    animation: scaleOut var(--animation-normal) ease forwards;
+}
+
+/* =========================================================
+   10. PULSO SUTIL
+   ========================================================= */
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.025);
+        opacity: 0.9;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* =========================================================
+   11. BRILHO
+   ========================================================= */
+
+@keyframes glow {
+    0% {
+        filter: brightness(1);
+    }
+
+    50% {
+        filter: brightness(1.18);
+    }
+
+    100% {
+        filter: brightness(1);
+    }
+}
+
+.glow {
+    animation: glow 2s ease-in-out infinite;
+}
+
+/* =========================================================
+   12. PISCAR
+   ========================================================= */
+
+@keyframes blink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.35;
+    }
+}
+
+.blink {
+    animation: blink 1.4s ease-in-out infinite;
+}
+
+/* =========================================================
+   13. FLUTUAÇÃO
+   ========================================================= */
+
+@keyframes float {
+    0% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-6px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.float {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* =========================================================
+   14. SHAKE
+   ========================================================= */
+
+@keyframes shake {
+    0% {
+        transform: translateX(0);
+    }
+
+    15% {
+        transform: translateX(-5px);
+    }
+
+    30% {
+        transform: translateX(5px);
+    }
+
+    45% {
+        transform: translateX(-4px);
+    }
+
+    60% {
+        transform: translateX(4px);
+    }
+
+    75% {
+        transform: translateX(-2px);
+    }
+
+    90% {
+        transform: translateX(2px);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
+}
+
+.shake {
+    animation: shake 0.45s ease;
+}
+
+/* =========================================================
+   15. TREMER
+   ========================================================= */
+
+@keyframes tremble {
+    0% {
+        transform: translate(0, 0);
+    }
+
+    25% {
+        transform: translate(1px, -1px);
+    }
+
+    50% {
+        transform: translate(-1px, 1px);
+    }
+
+    75% {
+        transform: translate(1px, 1px);
+    }
+
+    100% {
+        transform: translate(0, 0);
+    }
+}
+
+.tremble {
+    animation: tremble 0.12s linear infinite;
+}
+
+/* =========================================================
+   16. FLASH
+   ========================================================= */
+
+@keyframes flash {
+    0% {
+        opacity: 0;
+    }
+
+    25% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+.flash {
+    animation: flash 0.5s ease forwards;
+}
+
+/* =========================================================
+   17. ESCURECER CENA
+   ========================================================= */
+
+@keyframes sceneDarken {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.scene-darken {
+    animation: sceneDarken var(--animation-slow) ease forwards;
+}
+
+/* =========================================================
+   18. ILUMINAÇÃO DE CENA
+   ========================================================= */
+
+@keyframes lightFlicker {
+    0% {
+        opacity: 1;
+    }
+
+    8% {
+        opacity: 0.92;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    18% {
+        opacity: 0.96;
+    }
+
+    20% {
+        opacity: 1;
+    }
+
+    65% {
+        opacity: 0.98;
+    }
+
+    70% {
+        opacity: 0.88;
+    }
+
+    73% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.light-flicker {
+    animation: lightFlicker 4s ease-in-out infinite;
+}
+
+/* =========================================================
+   19. CURSOR / ELEMENTO INTERATIVO
+   ========================================================= */
+
+@keyframes interactionPulse {
+    0% {
+        box-shadow:
+            0 0 0 0 rgba(255, 255, 255, 0);
+    }
+
+    50% {
+        box-shadow:
+            0 0 20px 2px rgba(255, 255, 255, 0.08);
+    }
+
+    100% {
+        box-shadow:
+            0 0 0 0 rgba(255, 255, 255, 0);
+    }
+}
+
+.interaction-pulse {
+    animation: interactionPulse 2s ease-in-out infinite;
+}
+
+/* =========================================================
+   20. APARIÇÃO DO HUD
+   ========================================================= */
+
+@keyframes hudAppear {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hud-appear {
+    animation: hudAppear 0.6s ease forwards;
+}
+
+/* =========================================================
+   21. DESAPARIÇÃO DO HUD
+   ========================================================= */
+
+@keyframes hudDisappear {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+.hud-disappear {
+    animation: hudDisappear 0.4s ease forwards;
+}
+
+/* =========================================================
+   22. ENTRADA DA TELA DE PAUSA
+   ========================================================= */
+
+@keyframes pauseEnter {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0);
+        -webkit-backdrop-filter: blur(0);
+    }
+
+    to {
+        opacity: 1;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+}
+
+.pause-enter {
+    animation: pauseEnter 0.35s ease forwards;
+}
+
+/* =========================================================
+   23. SAÍDA DA TELA DE PAUSA
+   ========================================================= */
+
+@keyframes pauseExit {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+.pause-exit {
+    animation: pauseExit 0.3s ease forwards;
+}
+
+/* =========================================================
+   24. CONCLUSÃO
+   ========================================================= */
+
+@keyframes completionReveal {
+    0% {
+        opacity: 0;
+        transform: scale(0.94);
+    }
+
+    60% {
+        opacity: 1;
+        transform: scale(1.02);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.completion-reveal {
+    animation: completionReveal 0.8s cubic-bezier(
+        0.16,
+        1,
+        0.3,
+        1
+    ) forwards;
+}
+
+/* =========================================================
+   25. BRILHO DO TÍTULO
+   ========================================================= */
+
+@keyframes titleGlow {
+    0% {
+        text-shadow:
+            0 0 10px rgba(255, 255, 255, 0.08);
+    }
+
+    50% {
+        text-shadow:
+            0 0 10px rgba(255, 255, 255, 0.16),
+            0 0 35px rgba(255, 255, 255, 0.08);
+    }
+
+    100% {
+        text-shadow:
+            0 0 10px rgba(255, 255, 255, 0.08);
+    }
+}
+
+.title-glow {
+    animation: titleGlow 3s ease-in-out infinite;
+}
+
+/* =========================================================
+   26. BOTÃO ENTRANDO
+   ========================================================= */
+
+@keyframes buttonReveal {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.button-reveal {
+    animation: buttonReveal 0.6s ease 0.25s both;
+}
+
+/* =========================================================
+   27. HOVER AVANÇADO
+   ========================================================= */
+
+.animated-hover {
+    transition:
+        transform var(--animation-fast) ease,
+        filter var(--animation-fast) ease,
+        box-shadow var(--animation-fast) ease;
+}
+
+.animated-hover:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.08);
+    box-shadow:
+        0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* =========================================================
+   28. TRANSIÇÃO DE CENA
+   ========================================================= */
+
+.scene-transition {
+    position: absolute;
+    inset: 0;
+    z-index: 999;
+    pointer-events: none;
+    background: #000000;
+    opacity: 0;
+}
+
+@keyframes sceneTransitionIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes sceneTransitionOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+.scene-transition.in {
+    animation: sceneTransitionIn 0.35s ease forwards;
+}
+
+.scene-transition.out {
+    animation: sceneTransitionOut 0.5s ease forwards;
+}
+
+/* =========================================================
+   29. CARREGAMENTO
+   ========================================================= */
+
+@keyframes loadingPulse {
+    0% {
+        opacity: 0.3;
+        transform: scale(0.95);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    100% {
+        opacity: 0.3;
+        transform: scale(0.95);
+    }
+}
+
+.loading {
+    animation: loadingPulse 1.2s ease-in-out infinite;
+}
+
+/* =========================================================
+   30. ATRASOS DE ANIMAÇÃO
+   ========================================================= */
+
+.delay-1 {
+    animation-delay: 0.1s;
+}
+
+.delay-2 {
+    animation-delay: 0.2s;
+}
+
+.delay-3 {
+    animation-delay: 0.3s;
+}
+
+.delay-4 {
+    animation-delay: 0.4s;
+}
+
+.delay-5 {
+    animation-delay: 0.5s;
+}
+
+.delay-6 {
+    animation-delay: 0.6s;
+}
+
+/* =========================================================
+   31. ESTADOS DE VISIBILIDADE
+   ========================================================= */
+
+.animation-hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.animation-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* =========================================================
+   32. REDUÇÃO DE MOVIMENTO
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+}
+
+/* =========================================================
+   FIM DO ANIMATIONS.CSS
+   ========================================================= */
