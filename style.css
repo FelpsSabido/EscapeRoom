@@ -1,0 +1,1497 @@
+
+/* ============================================================
+   ESCAPE ROOM — STYLE.CSS
+   Interface e apresentação visual do jogo
+   ============================================================ */
+
+
+/* ============================================================
+   1. RESET / BASE
+   ============================================================ */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    background: #08090d;
+    color: #d8dce5;
+
+    font-family:
+        "Courier New",
+        Courier,
+        monospace;
+
+    user-select: none;
+    -webkit-user-select: none;
+
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* ============================================================
+   2. ROOT
+   ============================================================ */
+
+#game-root {
+    position: fixed;
+
+    inset: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            circle at center,
+            #151820 0%,
+            #0b0d12 55%,
+            #050609 100%
+        );
+}
+
+
+/* ============================================================
+   3. GAME VIEWPORT
+   ============================================================ */
+
+#game-viewport {
+    position: relative;
+
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    background: #07080c;
+}
+
+
+/* ============================================================
+   4. CANVAS
+   ============================================================ */
+
+#game-canvas {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 100%;
+    height: 100%;
+
+    transform: translate(-50%, -50%);
+
+    display: block;
+
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+
+    background: #11141a;
+
+    /*
+        Evita que o Canvas seja tratado como uma imagem
+        redimensionável com interpolação suave.
+    */
+    touch-action: none;
+}
+
+
+/* ============================================================
+   5. SCREEN EFFECTS
+   ============================================================ */
+
+#screen-effects {
+    position: absolute;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 20;
+
+    overflow: hidden;
+
+    opacity: 0;
+
+    transition: opacity 180ms ease;
+
+    /*
+        O JavaScript poderá utilizar este elemento para
+        efeitos pontuais de glitch, dano, transição etc.
+    */
+}
+
+
+/*
+    Scanlines extremamente discretas.
+    Não são aplicadas permanentemente com intensidade alta.
+*/
+
+#screen-effects::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.018) 0px,
+            rgba(255, 255, 255, 0.018) 1px,
+            transparent 1px,
+            transparent 4px
+        );
+
+    opacity: 0.35;
+}
+
+
+/*
+    Vinheta cinematográfica.
+*/
+
+#screen-effects::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            transparent 45%,
+            rgba(0, 0, 0, 0.16) 72%,
+            rgba(0, 0, 0, 0.62) 100%
+        );
+}
+
+
+/* ============================================================
+   6. UI UTILITY
+   ============================================================ */
+
+.ui-hidden {
+    display: none !important;
+}
+
+
+/* ============================================================
+   7. HUD
+   ============================================================ */
+
+#game-hud {
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 30;
+
+    pointer-events: none;
+
+    padding:
+        clamp(18px, 3vw, 38px)
+        clamp(20px, 3vw, 42px);
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(130px, 0.8fr)
+        minmax(200px, 1.5fr)
+        minmax(150px, 0.9fr);
+
+    grid-template-rows: auto 1fr auto;
+
+    align-items: start;
+
+    gap: 10px 28px;
+
+    /*
+        O HUD não deve parecer um painel administrativo.
+        A interface é propositalmente leve.
+    */
+}
+
+
+/* Seções individuais */
+
+.hud-section {
+    position: relative;
+
+    min-width: 0;
+
+    padding-left: 12px;
+
+    border-left:
+        1px solid rgba(190, 200, 220, 0.22);
+
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+
+/* Pequeno indicador luminoso */
+
+.hud-section::before {
+    content: "";
+
+    position: absolute;
+
+    width: 3px;
+    height: 3px;
+
+    left: -2px;
+    top: 4px;
+
+    background: #a9b5c9;
+
+    box-shadow:
+        0 0 5px rgba(170, 190, 220, 0.6);
+}
+
+
+/* Rótulo */
+
+.hud-label {
+    font-size:
+        clamp(8px, 0.75vw, 11px);
+
+    letter-spacing:
+        0.22em;
+
+    color:
+        rgba(185, 194, 210, 0.55);
+
+    margin-bottom: 5px;
+}
+
+
+/* Valor */
+
+.hud-value {
+    font-size:
+        clamp(9px, 0.85vw, 12px);
+
+    line-height: 1.4;
+
+    letter-spacing:
+        0.06em;
+
+    color:
+        rgba(230, 234, 242, 0.88);
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+}
+
+
+/* Objetivo ocupa mais espaço */
+
+#hud-objective {
+    max-width: 390px;
+}
+
+
+/* Status */
+
+#hud-status {
+    justify-self: end;
+}
+
+
+/* Timer */
+
+#hud-timer {
+    grid-column: 3;
+
+    grid-row: 3;
+
+    justify-self: end;
+
+    align-self: end;
+
+    text-align: right;
+
+    border-left: none;
+
+    border-right:
+        1px solid rgba(190, 200, 220, 0.22);
+
+    padding-left: 0;
+    padding-right: 12px;
+}
+
+#hud-timer::before {
+    left: auto;
+    right: -2px;
+}
+
+
+/* Tempo */
+
+.hud-time-value {
+    font-size:
+        clamp(13px, 1.2vw, 18px);
+
+    letter-spacing:
+        0.12em;
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+
+/* Controles */
+
+#hud-controls {
+    grid-column: 1 / 3;
+
+    grid-row: 3;
+
+    align-self: end;
+
+    opacity: 0.55;
+}
+
+
+/* ============================================================
+   8. INTERACTION PROMPT
+   ============================================================ */
+
+#interaction-prompt {
+    position: absolute;
+
+    z-index: 40;
+
+    left: 50%;
+    bottom: 10%;
+
+    transform:
+        translateX(-50%);
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 7px 12px;
+
+    background:
+        rgba(8, 10, 14, 0.78);
+
+    border:
+        1px solid rgba(190, 200, 220, 0.18);
+
+    box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.28);
+
+    backdrop-filter:
+        blur(5px);
+
+    -webkit-backdrop-filter:
+        blur(5px);
+
+    font-size:
+        clamp(9px, 0.8vw, 12px);
+
+    letter-spacing:
+        0.12em;
+
+    color:
+        rgba(230, 235, 242, 0.85);
+
+    pointer-events: none;
+
+    animation:
+        interactionAppear 180ms ease-out;
+}
+
+
+/* Tecla E */
+
+.interaction-key {
+    min-width: 25px;
+    height: 25px;
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border:
+        1px solid rgba(215, 222, 235, 0.35);
+
+    background:
+        rgba(255, 255, 255, 0.06);
+
+    color:
+        #eef1f7;
+
+    font-weight: bold;
+
+    box-shadow:
+        inset 0 0 8px rgba(255, 255, 255, 0.025);
+}
+
+
+@keyframes interactionAppear {
+    from {
+        opacity: 0;
+        transform:
+            translate(-50%, 6px);
+    }
+
+    to {
+        opacity: 1;
+        transform:
+            translate(-50%, 0);
+    }
+}
+
+
+/* ============================================================
+   9. DIALOGUE BOX
+   ============================================================ */
+
+#dialogue-box {
+    position: absolute;
+
+    z-index: 50;
+
+    left: 50%;
+    bottom: 5%;
+
+    width:
+        min(720px, 82vw);
+
+    min-height: 95px;
+
+    transform:
+        translateX(-50%);
+
+    padding:
+        18px 22px 15px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(12, 15, 21, 0.94),
+            rgba(7, 9, 13, 0.96)
+        );
+
+    border:
+        1px solid rgba(185, 198, 220, 0.22);
+
+    box-shadow:
+        0 15px 50px rgba(0, 0, 0, 0.48),
+        inset 0 1px 0 rgba(255, 255, 255, 0.025);
+
+    pointer-events: none;
+
+    animation:
+        dialogueAppear 200ms ease-out;
+}
+
+
+.dialogue-speaker {
+    margin-bottom: 9px;
+
+    font-size:
+        clamp(8px, 0.75vw, 11px);
+
+    letter-spacing:
+        0.2em;
+
+    color:
+        rgba(178, 192, 213, 0.65);
+}
+
+
+.dialogue-text {
+    min-height: 30px;
+
+    font-size:
+        clamp(11px, 1vw, 14px);
+
+    line-height: 1.6;
+
+    letter-spacing:
+        0.03em;
+
+    color:
+        rgba(241, 243, 247, 0.94);
+}
+
+
+.dialogue-hint {
+    margin-top: 10px;
+
+    text-align: right;
+
+    font-size:
+        8px;
+
+    letter-spacing:
+        0.16em;
+
+    color:
+        rgba(180, 190, 205, 0.4);
+}
+
+
+@keyframes dialogueAppear {
+    from {
+        opacity: 0;
+        transform:
+            translate(-50%, 12px);
+    }
+
+    to {
+        opacity: 1;
+        transform:
+            translate(-50%, 0);
+    }
+}
+
+
+/* ============================================================
+   10. TERMINAL OVERLAY
+   ============================================================ */
+
+#terminal-overlay {
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 100;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    background:
+        rgba(3, 5, 8, 0.7);
+
+    backdrop-filter:
+        blur(2px);
+
+    -webkit-backdrop-filter:
+        blur(2px);
+
+    animation:
+        overlayAppear 180ms ease-out;
+}
+
+
+/* Terminal */
+
+#terminal {
+    width:
+        min(440px, 86vw);
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(14, 18, 25, 0.98),
+            rgba(7, 10, 14, 0.99)
+        );
+
+    border:
+        1px solid rgba(180, 194, 215, 0.24);
+
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.62),
+        inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+
+/* Cabeçalho */
+
+.terminal-header {
+    height: 48px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding:
+        0 16px;
+
+    border-bottom:
+        1px solid rgba(180, 194, 215, 0.12);
+
+    font-size:
+        10px;
+
+    letter-spacing:
+        0.16em;
+
+    color:
+        rgba(220, 226, 236, 0.75);
+}
+
+
+.terminal-indicator {
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+
+    background: #8f98a7;
+
+    box-shadow:
+        0 0 7px rgba(170, 185, 210, 0.55);
+}
+
+
+/* Conteúdo */
+
+.terminal-content {
+    padding:
+        34px 30px;
+}
+
+
+.terminal-status {
+    text-align: center;
+
+    font-size:
+        10px;
+
+    letter-spacing:
+        0.12em;
+
+    color:
+        rgba(180, 190, 207, 0.65);
+
+    margin-bottom:
+        28px;
+}
+
+
+/* Display da senha */
+
+.password-display {
+    display: flex;
+
+    justify-content: center;
+
+    gap: 14px;
+
+    margin-bottom:
+        25px;
+}
+
+
+.password-slot {
+    width: 38px;
+    height: 46px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-bottom:
+        1px solid rgba(205, 215, 230, 0.42);
+
+    font-size:
+        25px;
+
+    color:
+        rgba(235, 240, 248, 0.92);
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+
+/*
+    Input real.
+    Será usado pelo JavaScript, mas visualmente discreto.
+*/
+
+#password-input {
+    position: absolute;
+
+    width: 1px;
+    height: 1px;
+
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+
+/* Feedback */
+
+.terminal-feedback {
+    min-height: 17px;
+
+    text-align: center;
+
+    font-size:
+        9px;
+
+    letter-spacing:
+        0.1em;
+
+    color:
+        rgba(210, 217, 229, 0.7);
+}
+
+
+/* Rodapé */
+
+.terminal-footer {
+    display: flex;
+
+    justify-content: space-between;
+
+    padding:
+        13px 16px;
+
+    border-top:
+        1px solid rgba(180, 194, 215, 0.1);
+
+    font-size:
+        8px;
+
+    letter-spacing:
+        0.12em;
+
+    color:
+        rgba(180, 190, 205, 0.38);
+}
+
+
+@keyframes overlayAppear {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+
+/* ============================================================
+   11. START / PAUSE / COMPLETION SCREENS
+   ============================================================ */
+
+#start-screen,
+#pause-screen,
+#completion-screen {
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 90;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(22, 27, 37, 0.84) 0%,
+            rgba(7, 9, 13, 0.96) 68%,
+            rgba(2, 3, 5, 1) 100%
+        );
+}
+
+
+/*
+    Textura extremamente sutil.
+*/
+
+#start-screen::before,
+#pause-screen::before,
+#completion-screen::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    opacity: 0.13;
+
+    background:
+        repeating-linear-gradient(
+            0deg,
+            transparent 0px,
+            transparent 3px,
+            rgba(255, 255, 255, 0.025) 4px
+        );
+}
+
+
+.menu-content {
+    position: relative;
+
+    z-index: 2;
+
+    width:
+        min(650px, 86vw);
+
+    text-align: center;
+}
+
+
+/* Pequeno título */
+
+.menu-kicker {
+    margin-bottom:
+        15px;
+
+    font-size:
+        clamp(8px, 0.8vw, 11px);
+
+    letter-spacing:
+        0.32em;
+
+    color:
+        rgba(178, 190, 210, 0.5);
+}
+
+
+/* Título */
+
+#game-title {
+    font-family:
+        "Courier New",
+        Courier,
+        monospace;
+
+    font-size:
+        clamp(38px, 7vw, 82px);
+
+    line-height: 0.9;
+
+    font-weight:
+        700;
+
+    letter-spacing:
+        0.08em;
+
+    color:
+        rgba(238, 241, 247, 0.95);
+
+    text-shadow:
+        0 0 25px rgba(180, 195, 220, 0.1);
+}
+
+
+#game-subtitle {
+    margin-top:
+        13px;
+
+    font-size:
+        clamp(10px, 1vw, 14px);
+
+    letter-spacing:
+        0.42em;
+
+    color:
+        rgba(175, 187, 205, 0.62);
+}
+
+
+.menu-description {
+    margin:
+        38px auto 30px;
+
+    font-size:
+        clamp(10px, 0.95vw, 13px);
+
+    line-height:
+        1.8;
+
+    letter-spacing:
+        0.04em;
+
+    color:
+        rgba(200, 207, 220, 0.56);
+}
+
+
+/* ============================================================
+   12. GAME BUTTON
+   ============================================================ */
+
+.game-button {
+    position: relative;
+
+    min-width: 155px;
+
+    padding:
+        13px 25px;
+
+    border:
+        1px solid rgba(205, 215, 232, 0.28);
+
+    background:
+        rgba(225, 230, 240, 0.045);
+
+    color:
+        rgba(235, 239, 246, 0.9);
+
+    font-family:
+        inherit;
+
+    font-size:
+        10px;
+
+    font-weight:
+        bold;
+
+    letter-spacing:
+        0.2em;
+
+    cursor:
+        pointer;
+
+    transition:
+        background 150ms ease,
+        border-color 150ms ease,
+        transform 150ms ease,
+        box-shadow 150ms ease;
+
+    outline: none;
+}
+
+
+.game-button::before {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    top: 0;
+
+    width: 3px;
+    height: 100%;
+
+    background:
+        rgba(210, 220, 235, 0.5);
+
+    transform:
+        scaleY(0);
+
+    transition:
+        transform 150ms ease;
+
+    transform-origin:
+        bottom;
+}
+
+
+.game-button:hover {
+    background:
+        rgba(220, 228, 240, 0.09);
+
+    border-color:
+        rgba(215, 224, 240, 0.48);
+
+    box-shadow:
+        0 0 25px rgba(170, 190, 220, 0.07);
+
+    transform:
+        translateY(-1px);
+}
+
+
+.game-button:hover::before {
+    transform:
+        scaleY(1);
+}
+
+
+.game-button:active {
+    transform:
+        translateY(1px);
+}
+
+
+.game-button:focus-visible {
+    outline:
+        1px solid rgba(220, 230, 245, 0.65);
+
+    outline-offset:
+        5px;
+}
+
+
+/* ============================================================
+   13. START CONTROLS
+   ============================================================ */
+
+.menu-controls {
+    margin-top:
+        35px;
+
+    font-size:
+        8px;
+
+    line-height:
+        2;
+
+    letter-spacing:
+        0.12em;
+
+    color:
+        rgba(170, 180, 198, 0.35);
+}
+
+
+/* ============================================================
+   14. PAUSE
+   ============================================================ */
+
+#pause-screen h2,
+#completion-screen h2 {
+    margin-bottom:
+        18px;
+
+    font-size:
+        clamp(30px, 5vw, 56px);
+
+    letter-spacing:
+        0.08em;
+
+    color:
+        rgba(235, 239, 246, 0.94);
+}
+
+
+#pause-screen .menu-content {
+    transform:
+        translateY(-3vh);
+}
+
+
+/* ============================================================
+   15. COMPLETION
+   ============================================================ */
+
+#completion-screen {
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(20, 29, 31, 0.9) 0%,
+            rgba(7, 10, 12, 0.97) 70%,
+            #020304 100%
+        );
+}
+
+
+#completion-kicker {
+    color:
+        rgba(178, 205, 197, 0.58);
+}
+
+
+#completion-description {
+    margin-top:
+        5px;
+
+    margin-bottom:
+        18px;
+}
+
+
+.completion-time {
+    margin-bottom:
+        30px;
+
+    font-size:
+        10px;
+
+    letter-spacing:
+        0.16em;
+
+    color:
+        rgba(200, 210, 218, 0.5);
+}
+
+
+/* ============================================================
+   16. SYSTEM MESSAGE
+   ============================================================ */
+
+#system-message {
+    position: absolute;
+
+    z-index: 60;
+
+    left: 50%;
+    top: 17%;
+
+    transform:
+        translateX(-50%);
+
+    max-width:
+        min(600px, 80vw);
+
+    padding:
+        9px 15px;
+
+    background:
+        rgba(7, 9, 13, 0.82);
+
+    border-left:
+        2px solid rgba(190, 202, 220, 0.35);
+
+    box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.28);
+
+    font-size:
+        clamp(8px, 0.75vw, 11px);
+
+    letter-spacing:
+        0.08em;
+
+    color:
+        rgba(218, 224, 235, 0.78);
+
+    pointer-events:
+        none;
+
+    animation:
+        systemMessageAppear 180ms ease-out;
+}
+
+
+#system-message-prefix {
+    color:
+        rgba(175, 188, 208, 0.48);
+
+    margin-right:
+        7px;
+}
+
+
+@keyframes systemMessageAppear {
+    from {
+        opacity: 0;
+        transform:
+            translate(-50%, -5px);
+    }
+
+    to {
+        opacity: 1;
+        transform:
+            translate(-50%, 0);
+    }
+}
+
+
+/* ============================================================
+   17. LOADING SCREEN
+   ============================================================ */
+
+#loading-screen {
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 200;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    background:
+        #05070a;
+}
+
+
+.loading-content {
+    width:
+        min(360px, 70vw);
+
+    text-align:
+        center;
+}
+
+
+#loading-label {
+    margin-bottom:
+        15px;
+
+    font-size:
+        10px;
+
+    letter-spacing:
+        0.2em;
+
+    color:
+        rgba(210, 217, 228, 0.7);
+}
+
+
+#loading-bar {
+    width:
+        100%;
+
+    height:
+        2px;
+
+    background:
+        rgba(190, 200, 215, 0.1);
+
+    overflow:
+        hidden;
+}
+
+
+#loading-progress {
+    width:
+        0%;
+
+    height:
+        100%;
+
+    background:
+        rgba(210, 220, 235, 0.72);
+
+    box-shadow:
+        0 0 10px rgba(200, 215, 235, 0.2);
+
+    transition:
+        width 200ms ease;
+}
+
+
+#loading-status {
+    margin-top:
+        12px;
+
+    font-size:
+        8px;
+
+    letter-spacing:
+        0.14em;
+
+    color:
+        rgba(175, 185, 200, 0.36);
+}
+
+
+/* ============================================================
+   18. RESPONSIVIDADE
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    #game-hud {
+        grid-template-columns:
+            1fr 1fr;
+
+        grid-template-rows:
+            auto auto auto;
+
+        gap:
+            8px 18px;
+    }
+
+    #hud-status {
+        justify-self: start;
+    }
+
+    #hud-objective {
+        grid-column: 1 / 3;
+
+        grid-row: 2;
+
+        max-width: 60%;
+    }
+
+    #hud-timer {
+        grid-column: 2;
+
+        grid-row: 3;
+    }
+
+    #hud-controls {
+        grid-column: 1;
+
+        grid-row: 3;
+    }
+
+    #dialogue-box {
+        bottom: 4%;
+
+        width: 88vw;
+    }
+}
+
+
+@media (max-width: 600px) {
+
+    #game-hud {
+        padding:
+            16px 16px;
+
+        gap:
+            7px 12px;
+    }
+
+    .hud-section {
+        padding-left:
+            8px;
+    }
+
+    .hud-value {
+        max-width:
+            170px;
+    }
+
+    #hud-objective {
+        max-width:
+            100%;
+    }
+
+    #hud-controls {
+        display:
+            none;
+    }
+
+    #hud-timer {
+        grid-column:
+            2;
+
+        grid-row:
+            3;
+    }
+
+    #interaction-prompt {
+        bottom:
+            13%;
+    }
+
+    #dialogue-box {
+        padding:
+            14px 16px 12px;
+
+        min-height:
+            85px;
+    }
+
+    .dialogue-text {
+        line-height:
+            1.5;
+    }
+
+    #terminal {
+        width:
+            90vw;
+    }
+
+    .terminal-content {
+        padding:
+            27px 20px;
+    }
+
+    .password-display {
+        gap:
+            9px;
+    }
+
+    .password-slot {
+        width:
+            31px;
+        height:
+            40px;
+
+        font-size:
+            21px;
+    }
+
+    #game-title {
+        letter-spacing:
+            0.04em;
+    }
+
+    #game-subtitle {
+        letter-spacing:
+            0.28em;
+    }
+}
+
+
+/* ============================================================
+   19. ACESSIBILIDADE VISUAL
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration:
+            0.01ms !important;
+
+        animation-iteration-count:
+            1 !important;
+
+        transition-duration:
+            0.01ms !important;
+    }
+}
+
+
+/* ============================================================
+   20. ESTADOS DE FOCO
+   ============================================================ */
+
+button:focus-visible,
+input:focus-visible {
+    outline:
+        1px solid rgba(215, 225, 240, 0.7);
+
+    outline-offset:
+        3px;
+}
+
+
+/* ============================================================
+   FIM DO STYLE.CSS
+   ============================================================ */
