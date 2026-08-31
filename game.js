@@ -16,21 +16,14 @@ export class Game {
 
     constructor(options = {}) {
 
-        /* ====================================================
-           CANVAS
-           ==================================================== */
-
         this.canvas =
             options.canvas || null;
-
 
         this.context =
             options.context || null;
 
-
         this.width =
             options.width || 960;
-
 
         this.height =
             options.height || 540;
@@ -43,14 +36,11 @@ export class Game {
         this.state =
             "loading";
 
-
         this.running =
             false;
 
-
         this.paused =
             false;
-
 
         this.initialized =
             false;
@@ -63,14 +53,11 @@ export class Game {
         this.lastTime =
             0;
 
-
         this.deltaTime =
             0;
 
-
         this.totalTime =
             0;
-
 
         this.elapsedTime =
             0;
@@ -91,10 +78,8 @@ export class Game {
         this.fps =
             60;
 
-
         this.frameCounter =
             0;
-
 
         this.fpsTimer =
             0;
@@ -113,32 +98,7 @@ export class Game {
            ==================================================== */
 
         this.world =
-            new World();
-
-
-        /*
-         * Garante dimensões mínimas para compatibilidade
-         * com diferentes versões do World.
-         */
-
-        if (
-            typeof this.world.width !==
-            "number"
-        ) {
-
-            this.world.width =
-                2400;
-        }
-
-
-        if (
-            typeof this.world.height !==
-            "number"
-        ) {
-
-            this.world.height =
-                1350;
-        }
+            null;
 
 
         /* ====================================================
@@ -155,11 +115,9 @@ export class Game {
 
         this.camera = {
 
-            x:
-                0,
+            x: 0,
 
-            y:
-                0,
+            y: 0,
 
             width:
                 this.width,
@@ -185,16 +143,7 @@ export class Game {
                 false,
 
             backgroundColor:
-                "#0b0d12",
-
-            worldColor:
-                "#171a20",
-
-            gridColor:
-                "rgba(255,255,255,0.025)",
-
-            borderColor:
-                "rgba(190,200,220,0.15)"
+                "#11151c"
         };
 
 
@@ -241,7 +190,7 @@ export class Game {
 
 
         /* ====================================================
-           VALIDAÇÃO DO CANVAS
+           VALIDAÇÃO
            ==================================================== */
 
         if (
@@ -265,7 +214,7 @@ export class Game {
 
 
         /* ====================================================
-           CONFIGURAÇÃO DO CANVAS
+           CANVAS
            ==================================================== */
 
         this.configureCanvas();
@@ -280,42 +229,21 @@ export class Game {
 
 
         /* ====================================================
-           INICIALIZAÇÃO DO MUNDO
+           MUNDO
            ==================================================== */
 
-        if (
-            typeof this.world.initialize ===
-            "function"
-        ) {
+        this.world =
+            new World({
 
-            await this.world.initialize();
-        }
+                width:
+                    2400,
 
-
-        /*
-         * Atualiza as dimensões caso o World tenha
-         * definido suas próprias dimensões durante
-         * a inicialização.
-         */
-
-        if (
-            typeof this.world.width ===
-            "number"
-        ) {
-
-            this.worldWidth =
-                this.world.width;
-        }
+                height:
+                    1350
+            });
 
 
-        if (
-            typeof this.world.height ===
-            "number"
-        ) {
-
-            this.worldHeight =
-                this.world.height;
-        }
+        this.world.initialize();
 
 
         /* ====================================================
@@ -338,10 +266,10 @@ export class Game {
                     this.world.height / 2,
 
                 width:
-                    28,
+                    32,
 
                 height:
-                    38,
+                    44,
 
                 speed:
                     180,
@@ -380,20 +308,16 @@ export class Game {
                     }
                 },
 
+
             onStop:
                 () => {
 
-                    /*
-                     * Reservado para efeitos futuros.
-                     */
                 },
+
 
             onDirectionChange:
                 () => {
 
-                    /*
-                     * Reservado para animações futuras.
-                     */
                 }
         });
 
@@ -406,19 +330,18 @@ export class Game {
 
 
         /* ====================================================
-           RENDERIZAÇÃO INICIAL
+           RENDER INICIAL
            ==================================================== */
 
         this.render();
 
 
         /* ====================================================
-           ESTADO FINAL
+           FINALIZA
            ==================================================== */
 
         this.initialized =
             true;
-
 
         this.state =
             "menu";
@@ -436,21 +359,12 @@ export class Game {
 
     configureCanvas() {
 
-        /*
-         * Resolução lógica do jogo.
-         */
-
         this.canvas.width =
             this.width;
-
 
         this.canvas.height =
             this.height;
 
-
-        /*
-         * Suavização gráfica.
-         */
 
         this.context.imageSmoothingEnabled =
             true;
@@ -458,7 +372,7 @@ export class Game {
 
 
     /* ========================================================
-       INICIALIZAÇÃO DA CÂMERA
+       CÂMERA INICIAL
        ======================================================== */
 
     initializeCamera() {
@@ -514,10 +428,8 @@ export class Game {
         this.running =
             true;
 
-
         this.paused =
             false;
-
 
         this.state =
             "playing";
@@ -526,14 +438,11 @@ export class Game {
         this.lastTime =
             performance.now();
 
-
         this.deltaTime =
             0;
 
-
         this.totalTime =
             0;
-
 
         this.elapsedTime =
             0;
@@ -541,7 +450,6 @@ export class Game {
 
         this.frameCounter =
             0;
-
 
         this.fpsTimer =
             0;
@@ -573,10 +481,6 @@ export class Game {
         }
 
 
-        /* ====================================================
-           DELTA TIME
-           ==================================================== */
-
         if (
             !this.lastTime
         ) {
@@ -597,10 +501,6 @@ export class Game {
             timestamp;
 
 
-        /*
-         * Proteção contra valores muito grandes.
-         */
-
         this.deltaTime =
             Math.min(
                 this.deltaTime,
@@ -618,7 +518,6 @@ export class Game {
 
             this.totalTime +=
                 this.deltaTime;
-
 
             this.elapsedTime =
                 this.totalTime;
@@ -656,7 +555,7 @@ export class Game {
 
 
         /* ====================================================
-           INPUT — FINAL DO FRAME
+           INPUT
            ==================================================== */
 
         if (
@@ -785,10 +684,6 @@ export class Game {
             this.camera.height / 2;
 
 
-        /*
-         * Suavização independente do FPS.
-         */
-
         const smoothing =
             1 -
             Math.exp(
@@ -823,24 +718,18 @@ export class Game {
 
     clampCamera() {
 
-        const worldWidth =
-            typeof this.world.width ===
-            "number"
-                ? this.world.width
-                : 2400;
+        if (
+            !this.world
+        ) {
 
-
-        const worldHeight =
-            typeof this.world.height ===
-            "number"
-                ? this.world.height
-                : 1350;
+            return;
+        }
 
 
         const maxX =
             Math.max(
                 0,
-                worldWidth -
+                this.world.width -
                 this.camera.width
             );
 
@@ -848,7 +737,7 @@ export class Game {
         const maxY =
             Math.max(
                 0,
-                worldHeight -
+                this.world.height -
                 this.camera.height
             );
 
@@ -888,11 +777,15 @@ export class Game {
         }
 
 
+        const ctx =
+            this.context;
+
+
         /* ====================================================
            LIMPEZA
            ==================================================== */
 
-        this.context.clearRect(
+        ctx.clearRect(
             0,
             0,
             this.width,
@@ -901,14 +794,14 @@ export class Game {
 
 
         /* ====================================================
-           FUNDO
+           FUNDO DA TELA
            ==================================================== */
 
-        this.context.fillStyle =
+        ctx.fillStyle =
             this.config.backgroundColor;
 
 
-        this.context.fillRect(
+        ctx.fillRect(
             0,
             0,
             this.width,
@@ -917,13 +810,13 @@ export class Game {
 
 
         /* ====================================================
-           CÂMERA
+           CÂMERA / MUNDO
            ==================================================== */
 
-        this.context.save();
+        ctx.save();
 
 
-        this.context.translate(
+        ctx.translate(
             -Math.floor(
                 this.camera.x
             ),
@@ -938,7 +831,14 @@ export class Game {
            MUNDO
            ==================================================== */
 
-        this.renderWorld();
+        if (
+            this.world
+        ) {
+
+            this.world.render(
+                ctx
+            );
+        }
 
 
         /* ====================================================
@@ -950,7 +850,7 @@ export class Game {
         ) {
 
             this.player.render(
-                this.context,
+                ctx,
                 this.camera
             );
         }
@@ -968,7 +868,7 @@ export class Game {
         }
 
 
-        this.context.restore();
+        ctx.restore();
 
 
         /* ====================================================
@@ -980,175 +880,58 @@ export class Game {
 
 
     /* ========================================================
-       RENDER DO MUNDO
+       EFEITOS DE TELA
        ======================================================== */
 
-    renderWorld() {
+    renderScreenEffects() {
 
         const ctx =
             this.context;
 
 
         /*
-         * Se o World possuir seu próprio método
-         * de renderização, ele assume o controle.
+         * Vinheta cinematográfica.
          */
 
-        if (
-            this.world &&
-            typeof this.world.render ===
-            "function"
-        ) {
-
-            this.world.render(
-                ctx,
-                this.camera
+        const gradient =
+            ctx.createRadialGradient(
+                this.width / 2,
+                this.height / 2,
+                this.height * 0.25,
+                this.width / 2,
+                this.height / 2,
+                this.width * 0.75
             );
 
-            return;
-        }
+
+        gradient.addColorStop(
+            0,
+            "rgba(0,0,0,0)"
+        );
 
 
-        /*
-         * Fallback visual.
-         *
-         * Isso evita que o jogo fique completamente
-         * vazio caso o World ainda não possua render().
-         */
-
-        const worldWidth =
-            typeof this.world.width ===
-            "number"
-                ? this.world.width
-                : 2400;
+        gradient.addColorStop(
+            0.75,
+            "rgba(0,0,0,0.03)"
+        );
 
 
-        const worldHeight =
-            typeof this.world.height ===
-            "number"
-                ? this.world.height
-                : 1350;
+        gradient.addColorStop(
+            1,
+            "rgba(0,0,0,0.30)"
+        );
 
-
-        /* ====================================================
-           PISO
-           ==================================================== */
 
         ctx.fillStyle =
-            this.config.worldColor;
+            gradient;
 
 
         ctx.fillRect(
             0,
             0,
-            worldWidth,
-            worldHeight
+            this.width,
+            this.height
         );
-
-
-        /* ====================================================
-           GRADE
-           ==================================================== */
-
-        const gridSize =
-            64;
-
-
-        ctx.strokeStyle =
-            this.config.gridColor;
-
-
-        ctx.lineWidth =
-            1;
-
-
-        for (
-            let x = 0;
-            x <= worldWidth;
-            x += gridSize
-        ) {
-
-            ctx.beginPath();
-
-
-            ctx.moveTo(
-                x + 0.5,
-                0
-            );
-
-
-            ctx.lineTo(
-                x + 0.5,
-                worldHeight
-            );
-
-
-            ctx.stroke();
-        }
-
-
-        for (
-            let y = 0;
-            y <= worldHeight;
-            y += gridSize
-        ) {
-
-            ctx.beginPath();
-
-
-            ctx.moveTo(
-                0,
-                y + 0.5
-            );
-
-
-            ctx.lineTo(
-                worldWidth,
-                y + 0.5
-            );
-
-
-            ctx.stroke();
-        }
-
-
-        /* ====================================================
-           BORDA DO MUNDO
-           ==================================================== */
-
-        ctx.strokeStyle =
-            this.config.borderColor;
-
-
-        ctx.lineWidth =
-            4;
-
-
-        ctx.strokeRect(
-            0,
-            0,
-            worldWidth,
-            worldHeight
-        );
-    }
-
-
-    /* ========================================================
-       EFEITOS DE TELA
-       ======================================================== */
-
-    renderScreenEffects() {
-
-        /*
-         * Aqui entrarão futuramente:
-         *
-         * - Vinheta
-         * - Iluminação
-         * - Partículas
-         * - Glitch
-         * - Efeitos cinematográficos
-         * - Transições
-         */
     }
 
 
@@ -1174,29 +957,23 @@ export class Game {
 
 
         ctx.strokeStyle =
-            "#ff0000";
+            "#ff3333";
 
 
         ctx.lineWidth =
             1;
 
 
-        if (
-            typeof this.player.getCollisionRect ===
-            "function"
-        ) {
-
-            const collision =
-                this.player.getCollisionRect();
+        const collision =
+            this.player.getCollisionRect();
 
 
-            ctx.strokeRect(
-                collision.x,
-                collision.y,
-                collision.width,
-                collision.height
-            );
-        }
+        ctx.strokeRect(
+            collision.x,
+            collision.y,
+            collision.width,
+            collision.height
+        );
 
 
         ctx.fillStyle =
@@ -1208,25 +985,23 @@ export class Game {
 
 
         ctx.fillText(
-            "PLAYER X: " +
+            "X: " +
             Math.round(
                 this.player.x
             ),
 
             this.camera.x + 12,
-
             this.camera.y + 20
         );
 
 
         ctx.fillText(
-            "PLAYER Y: " +
+            "Y: " +
             Math.round(
                 this.player.y
             ),
 
             this.camera.x + 12,
-
             this.camera.y + 36
         );
 
@@ -1236,7 +1011,6 @@ export class Game {
             this.fps,
 
             this.camera.x + 12,
-
             this.camera.y + 52
         );
 
@@ -1246,7 +1020,6 @@ export class Game {
             this.state,
 
             this.camera.x + 12,
-
             this.camera.y + 68
         );
 
@@ -1263,7 +1036,6 @@ export class Game {
 
         this.frameCounter +=
             1;
-
 
         this.fpsTimer +=
             deltaTime;
@@ -1283,7 +1055,6 @@ export class Game {
 
             this.frameCounter =
                 0;
-
 
             this.fpsTimer =
                 0;
@@ -1340,7 +1111,6 @@ export class Game {
         this.paused =
             true;
 
-
         this.state =
             "paused";
 
@@ -1371,7 +1141,6 @@ export class Game {
 
         this.paused =
             false;
-
 
         this.state =
             "playing";
@@ -1421,7 +1190,7 @@ export class Game {
 
 
     /* ========================================================
-       COMPLETAR JOGO
+       COMPLETAR
        ======================================================== */
 
     complete() {
@@ -1438,10 +1207,8 @@ export class Game {
         this.state =
             "completed";
 
-
         this.running =
             false;
-
 
         this.paused =
             false;
@@ -1485,10 +1252,6 @@ export class Game {
 
     restart() {
 
-        /*
-         * Interrompe o loop atual.
-         */
-
         this.running =
             false;
 
@@ -1508,9 +1271,7 @@ export class Game {
         }
 
 
-        /* ====================================================
-           INPUT
-           ==================================================== */
+        /* Input */
 
         if (
             this.input
@@ -1520,46 +1281,36 @@ export class Game {
         }
 
 
-        /* ====================================================
-           TEMPO
-           ==================================================== */
+        /* Tempo */
 
         this.lastTime =
             0;
 
-
         this.deltaTime =
             0;
 
-
         this.totalTime =
             0;
-
 
         this.elapsedTime =
             0;
 
 
-        /* ====================================================
-           MUNDO
-           ==================================================== */
+        /* Mundo */
 
         if (
-            this.world &&
-            typeof this.world.reset ===
-            "function"
+            this.world
         ) {
 
             this.world.reset();
         }
 
 
-        /* ====================================================
-           JOGADOR
-           ==================================================== */
+        /* Jogador */
 
         if (
-            this.player
+            this.player &&
+            this.world
         ) {
 
             this.player.reset(
@@ -1569,28 +1320,19 @@ export class Game {
         }
 
 
-        /* ====================================================
-           CÂMERA
-           ==================================================== */
+        /* Câmera */
 
         this.initializeCamera();
 
 
-        /* ====================================================
-           ESTADO
-           ==================================================== */
+        /* Estado */
 
         this.paused =
             false;
 
-
         this.state =
             "playing";
 
-
-        /* ====================================================
-           INICIA NOVAMENTE
-           ==================================================== */
 
         this.start();
     }
@@ -1615,7 +1357,6 @@ export class Game {
 
         this.camera.width =
             this.width;
-
 
         this.camera.height =
             this.height;
@@ -1690,10 +1431,6 @@ export class Game {
 
     destroy() {
 
-        /*
-         * Para o loop.
-         */
-
         this.running =
             false;
 
@@ -1713,10 +1450,6 @@ export class Game {
         }
 
 
-        /*
-         * Destrói o sistema de input.
-         */
-
         if (
             this.input
         ) {
@@ -1727,24 +1460,6 @@ export class Game {
                 null;
         }
 
-
-        /*
-         * Destrói o mundo.
-         */
-
-        if (
-            this.world &&
-            typeof this.world.destroy ===
-            "function"
-        ) {
-
-            this.world.destroy();
-        }
-
-
-        /*
-         * Destrói o jogador.
-         */
 
         if (
             this.player
@@ -1757,20 +1472,21 @@ export class Game {
         }
 
 
-        /*
-         * Estado final.
-         */
+        if (
+            this.world
+        ) {
+
+            this.world.destroy();
+
+            this.world =
+                null;
+        }
+
 
         this.initialized =
             false;
-
 
         this.state =
             "loading";
     }
 }
-
-
-/* ============================================================
-   FIM DO GAME.JS
-   ============================================================ */
