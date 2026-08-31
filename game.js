@@ -5,6 +5,7 @@
 
 import { Input } from "./input.js";
 import { Player } from "./player.js";
+import { World } from "./world.js";
 
 
 export class Game {
@@ -111,14 +112,33 @@ export class Game {
            MUNDO
            ==================================================== */
 
-        this.world = {
+        this.world =
+            new World();
 
-            width:
-                2400,
 
-            height:
-                1350
-        };
+        /*
+         * Garante dimensões mínimas para compatibilidade
+         * com diferentes versões do World.
+         */
+
+        if (
+            typeof this.world.width !==
+            "number"
+        ) {
+
+            this.world.width =
+                2400;
+        }
+
+
+        if (
+            typeof this.world.height !==
+            "number"
+        ) {
+
+            this.world.height =
+                1350;
+        }
 
 
         /* ====================================================
@@ -260,6 +280,45 @@ export class Game {
 
 
         /* ====================================================
+           INICIALIZAÇÃO DO MUNDO
+           ==================================================== */
+
+        if (
+            typeof this.world.initialize ===
+            "function"
+        ) {
+
+            await this.world.initialize();
+        }
+
+
+        /*
+         * Atualiza as dimensões caso o World tenha
+         * definido suas próprias dimensões durante
+         * a inicialização.
+         */
+
+        if (
+            typeof this.world.width ===
+            "number"
+        ) {
+
+            this.worldWidth =
+                this.world.width;
+        }
+
+
+        if (
+            typeof this.world.height ===
+            "number"
+        ) {
+
+            this.worldHeight =
+                this.world.height;
+        }
+
+
+        /* ====================================================
            JOGADOR
            ==================================================== */
 
@@ -390,10 +449,7 @@ export class Game {
 
 
         /*
-         * Evita suavização de elementos pixelados.
-         *
-         * Isso poderá ser alterado quando entrarmos
-         * no sistema gráfico definitivo.
+         * Suavização gráfica.
          */
 
         this.context.imageSmoothingEnabled =
@@ -666,6 +722,22 @@ export class Game {
 
 
         /* ====================================================
+           MUNDO
+           ==================================================== */
+
+        if (
+            this.world &&
+            typeof this.world.update ===
+            "function"
+        ) {
+
+            this.world.update(
+                deltaTime
+            );
+        }
+
+
+        /* ====================================================
            JOGADOR
            ==================================================== */
 
@@ -751,10 +823,24 @@ export class Game {
 
     clampCamera() {
 
+        const worldWidth =
+            typeof this.world.width ===
+            "number"
+                ? this.world.width
+                : 2400;
+
+
+        const worldHeight =
+            typeof this.world.height ===
+            "number"
+                ? this.world.height
+                : 1350;
+
+
         const maxX =
             Math.max(
                 0,
-                this.world.width -
+                worldWidth -
                 this.camera.width
             );
 
@@ -762,7 +848,7 @@ export class Game {
         const maxY =
             Math.max(
                 0,
-                this.world.height -
+                worldHeight -
                 this.camera.height
             );
 
@@ -831,7 +917,7 @@ export class Game {
 
 
         /* ====================================================
-           MUNDO
+           CÂMERA
            ==================================================== */
 
         this.context.save();
@@ -847,6 +933,10 @@ export class Game {
             )
         );
 
+
+        /* ====================================================
+           MUNDO
+           ==================================================== */
 
         this.renderWorld();
 
@@ -899,6 +989,47 @@ export class Game {
             this.context;
 
 
+        /*
+         * Se o World possuir seu próprio método
+         * de renderização, ele assume o controle.
+         */
+
+        if (
+            this.world &&
+            typeof this.world.render ===
+            "function"
+        ) {
+
+            this.world.render(
+                ctx,
+                this.camera
+            );
+
+            return;
+        }
+
+
+        /*
+         * Fallback visual.
+         *
+         * Isso evita que o jogo fique completamente
+         * vazio caso o World ainda não possua render().
+         */
+
+        const worldWidth =
+            typeof this.world.width ===
+            "number"
+                ? this.world.width
+                : 2400;
+
+
+        const worldHeight =
+            typeof this.world.height ===
+            "number"
+                ? this.world.height
+                : 1350;
+
+
         /* ====================================================
            PISO
            ==================================================== */
@@ -910,8 +1041,8 @@ export class Game {
         ctx.fillRect(
             0,
             0,
-            this.world.width,
-            this.world.height
+            worldWidth,
+            worldHeight
         );
 
 
@@ -933,7 +1064,7 @@ export class Game {
 
         for (
             let x = 0;
-            x <= this.world.width;
+            x <= worldWidth;
             x += gridSize
         ) {
 
@@ -948,7 +1079,7 @@ export class Game {
 
             ctx.lineTo(
                 x + 0.5,
-                this.world.height
+                worldHeight
             );
 
 
@@ -958,7 +1089,7 @@ export class Game {
 
         for (
             let y = 0;
-            y <= this.world.height;
+            y <= worldHeight;
             y += gridSize
         ) {
 
@@ -972,7 +1103,7 @@ export class Game {
 
 
             ctx.lineTo(
-                this.world.width,
+                worldWidth,
                 y + 0.5
             );
 
@@ -996,8 +1127,8 @@ export class Game {
         ctx.strokeRect(
             0,
             0,
-            this.world.width,
-            this.world.height
+            worldWidth,
+            worldHeight
         );
     }
 
@@ -1013,12 +1144,10 @@ export class Game {
          *
          * - Vinheta
          * - Iluminação
-         * - Escurecimento
          * - Partículas
          * - Glitch
-         * - Efeitos de dano
-         * - Transições
          * - Efeitos cinematográficos
+         * - Transições
          */
     }
 
@@ -1052,16 +1181,22 @@ export class Game {
             1;
 
 
-        const collision =
-            this.player.getCollisionRect();
+        if (
+            typeof this.player.getCollisionRect ===
+            "function"
+        ) {
+
+            const collision =
+                this.player.getCollisionRect();
 
 
-        ctx.strokeRect(
-            collision.x,
-            collision.y,
-            collision.width,
-            collision.height
-        );
+            ctx.strokeRect(
+                collision.x,
+                collision.y,
+                collision.width,
+                collision.height
+            );
+        }
 
 
         ctx.fillStyle =
@@ -1406,6 +1541,20 @@ export class Game {
 
 
         /* ====================================================
+           MUNDO
+           ==================================================== */
+
+        if (
+            this.world &&
+            typeof this.world.reset ===
+            "function"
+        ) {
+
+            this.world.reset();
+        }
+
+
+        /* ====================================================
            JOGADOR
            ==================================================== */
 
@@ -1463,11 +1612,6 @@ export class Game {
             return;
         }
 
-
-        /*
-         * Mantém a resolução lógica do jogo,
-         * mas atualiza a câmera caso necessário.
-         */
 
         this.camera.width =
             this.width;
@@ -1585,6 +1729,20 @@ export class Game {
 
 
         /*
+         * Destrói o mundo.
+         */
+
+        if (
+            this.world &&
+            typeof this.world.destroy ===
+            "function"
+        ) {
+
+            this.world.destroy();
+        }
+
+
+        /*
          * Destrói o jogador.
          */
 
@@ -1611,3 +1769,8 @@ export class Game {
             "loading";
     }
 }
+
+
+/* ============================================================
+   FIM DO GAME.JS
+   ============================================================ */
