@@ -1,6 +1,6 @@
 /* ============================================================
    ESCAPE ROOM — GAME.JS
-   Motor principal e gerenciamento do jogo
+   Motor principal do jogo
    ============================================================ */
 
 import { Input } from "./input.js";
@@ -9,10 +9,6 @@ import { World } from "./world.js";
 
 
 export class Game {
-
-    /* ========================================================
-       CONSTRUTOR
-       ======================================================== */
 
     constructor(options = {}) {
 
@@ -98,7 +94,14 @@ export class Game {
            ==================================================== */
 
         this.world =
-            null;
+            new World({
+
+                width:
+                    2400,
+
+                height:
+                    1350
+            });
 
 
         /* ====================================================
@@ -115,9 +118,11 @@ export class Game {
 
         this.camera = {
 
-            x: 0,
+            x:
+                0,
 
-            y: 0,
+            y:
+                0,
 
             width:
                 this.width,
@@ -143,7 +148,7 @@ export class Game {
                 false,
 
             backgroundColor:
-                "#11151c"
+                "#111827"
         };
 
 
@@ -189,10 +194,6 @@ export class Game {
             "loading";
 
 
-        /* ====================================================
-           VALIDAÇÃO
-           ==================================================== */
-
         if (
             !this.canvas
         ) {
@@ -221,29 +222,18 @@ export class Game {
 
 
         /* ====================================================
+           MUNDO
+           ==================================================== */
+
+        this.world.initialize();
+
+
+        /* ====================================================
            INPUT
            ==================================================== */
 
         this.input =
             new Input();
-
-
-        /* ====================================================
-           MUNDO
-           ==================================================== */
-
-        this.world =
-            new World({
-
-                width:
-                    2400,
-
-                height:
-                    1350
-            });
-
-
-        this.world.initialize();
 
 
         /* ====================================================
@@ -260,16 +250,16 @@ export class Game {
                     this.world,
 
                 x:
-                    this.world.width / 2,
+                    1200,
 
                 y:
-                    this.world.height / 2,
+                    680,
 
                 width:
                     32,
 
                 height:
-                    44,
+                    42,
 
                 speed:
                     180,
@@ -289,7 +279,7 @@ export class Game {
 
 
         /* ====================================================
-           CALLBACKS DO JOGADOR
+           CALLBACKS
            ==================================================== */
 
         this.player.setCallbacks({
@@ -308,17 +298,11 @@ export class Game {
                     }
                 },
 
-
             onStop:
-                () => {
-
-                },
-
+                () => {},
 
             onDirectionChange:
-                () => {
-
-                }
+                () => {}
         });
 
 
@@ -330,14 +314,14 @@ export class Game {
 
 
         /* ====================================================
-           RENDER INICIAL
+           RENDERIZAÇÃO INICIAL
            ==================================================== */
 
         this.render();
 
 
         /* ====================================================
-           FINALIZA
+           FINAL
            ==================================================== */
 
         this.initialized =
@@ -367,12 +351,12 @@ export class Game {
 
 
         this.context.imageSmoothingEnabled =
-            true;
+            false;
     }
 
 
     /* ========================================================
-       CÂMERA INICIAL
+       CÂMERA
        ======================================================== */
 
     initializeCamera() {
@@ -398,271 +382,6 @@ export class Game {
         this.clampCamera();
     }
 
-
-    /* ========================================================
-       START
-       ======================================================== */
-
-    start() {
-
-        if (
-            !this.initialized
-        ) {
-
-            console.warn(
-                "[ESCAPE ROOM] O jogo ainda não foi inicializado."
-            );
-
-            return;
-        }
-
-
-        if (
-            this.running
-        ) {
-
-            return;
-        }
-
-
-        this.running =
-            true;
-
-        this.paused =
-            false;
-
-        this.state =
-            "playing";
-
-
-        this.lastTime =
-            performance.now();
-
-        this.deltaTime =
-            0;
-
-        this.totalTime =
-            0;
-
-        this.elapsedTime =
-            0;
-
-
-        this.frameCounter =
-            0;
-
-        this.fpsTimer =
-            0;
-
-
-        this.animationFrame =
-            requestAnimationFrame(
-                this.gameLoop.bind(this)
-            );
-
-
-        console.info(
-            "[ESCAPE ROOM] Jogo iniciado."
-        );
-    }
-
-
-    /* ========================================================
-       GAME LOOP
-       ======================================================== */
-
-    gameLoop(timestamp) {
-
-        if (
-            !this.running
-        ) {
-
-            return;
-        }
-
-
-        if (
-            !this.lastTime
-        ) {
-
-            this.lastTime =
-                timestamp;
-        }
-
-
-        this.deltaTime =
-            (
-                timestamp -
-                this.lastTime
-            ) / 1000;
-
-
-        this.lastTime =
-            timestamp;
-
-
-        this.deltaTime =
-            Math.min(
-                this.deltaTime,
-                0.05
-            );
-
-
-        /* ====================================================
-           TEMPO
-           ==================================================== */
-
-        if (
-            !this.paused
-        ) {
-
-            this.totalTime +=
-                this.deltaTime;
-
-            this.elapsedTime =
-                this.totalTime;
-        }
-
-
-        /* ====================================================
-           UPDATE
-           ==================================================== */
-
-        if (
-            !this.paused
-        ) {
-
-            this.update(
-                this.deltaTime
-            );
-        }
-
-
-        /* ====================================================
-           RENDER
-           ==================================================== */
-
-        this.render();
-
-
-        /* ====================================================
-           FPS
-           ==================================================== */
-
-        this.updateFPS(
-            this.deltaTime
-        );
-
-
-        /* ====================================================
-           INPUT
-           ==================================================== */
-
-        if (
-            this.input
-        ) {
-
-            this.input.endFrame();
-        }
-
-
-        /* ====================================================
-           PRÓXIMO FRAME
-           ==================================================== */
-
-        this.animationFrame =
-            requestAnimationFrame(
-                this.gameLoop.bind(this)
-            );
-    }
-
-
-    /* ========================================================
-       UPDATE
-       ======================================================== */
-
-    update(deltaTime) {
-
-        if (
-            this.state !==
-            "playing"
-        ) {
-
-            return;
-        }
-
-
-        /* ====================================================
-           PAUSA
-           ==================================================== */
-
-        if (
-            this.input &&
-            this.input.wantsPause()
-        ) {
-
-            this.togglePause();
-
-            return;
-        }
-
-
-        /* ====================================================
-           INTERAÇÃO
-           ==================================================== */
-
-        if (
-            this.input &&
-            this.input.wantsInteract()
-        ) {
-
-            this.interact();
-        }
-
-
-        /* ====================================================
-           MUNDO
-           ==================================================== */
-
-        if (
-            this.world &&
-            typeof this.world.update ===
-            "function"
-        ) {
-
-            this.world.update(
-                deltaTime
-            );
-        }
-
-
-        /* ====================================================
-           JOGADOR
-           ==================================================== */
-
-        if (
-            this.player
-        ) {
-
-            this.player.update(
-                deltaTime
-            );
-        }
-
-
-        /* ====================================================
-           CÂMERA
-           ==================================================== */
-
-        this.updateCamera(
-            deltaTime
-        );
-    }
-
-
-    /* ========================================================
-       CÂMERA
-       ======================================================== */
 
     updateCamera(deltaTime) {
 
@@ -712,19 +431,7 @@ export class Game {
     }
 
 
-    /* ========================================================
-       LIMITES DA CÂMERA
-       ======================================================== */
-
     clampCamera() {
-
-        if (
-            !this.world
-        ) {
-
-            return;
-        }
-
 
         const maxX =
             Math.max(
@@ -764,6 +471,196 @@ export class Game {
 
 
     /* ========================================================
+       START
+       ======================================================== */
+
+    start() {
+
+        if (
+            !this.initialized
+        ) {
+
+            console.warn(
+                "[ESCAPE ROOM] O jogo ainda não foi inicializado."
+            );
+
+            return;
+        }
+
+
+        if (
+            this.running
+        ) {
+
+            return;
+        }
+
+
+        this.running =
+            true;
+
+        this.paused =
+            false;
+
+        this.state =
+            "playing";
+
+
+        this.lastTime =
+            performance.now();
+
+
+        this.deltaTime =
+            0;
+
+        this.totalTime =
+            0;
+
+        this.elapsedTime =
+            0;
+
+
+        this.animationFrame =
+            requestAnimationFrame(
+                this.gameLoop.bind(this)
+            );
+    }
+
+
+    /* ========================================================
+       GAME LOOP
+       ======================================================== */
+
+    gameLoop(timestamp) {
+
+        if (
+            !this.running
+        ) {
+
+            return;
+        }
+
+
+        this.deltaTime =
+            (
+                timestamp -
+                this.lastTime
+            ) / 1000;
+
+
+        this.lastTime =
+            timestamp;
+
+
+        this.deltaTime =
+            Math.min(
+                this.deltaTime,
+                0.05
+            );
+
+
+        if (
+            !this.paused
+        ) {
+
+            this.totalTime +=
+                this.deltaTime;
+
+            this.elapsedTime =
+                this.totalTime;
+
+
+            this.update(
+                this.deltaTime
+            );
+        }
+
+
+        this.render();
+
+
+        this.updateFPS(
+            this.deltaTime
+        );
+
+
+        if (
+            this.input
+        ) {
+
+            this.input.endFrame();
+        }
+
+
+        this.animationFrame =
+            requestAnimationFrame(
+                this.gameLoop.bind(this)
+            );
+    }
+
+
+    /* ========================================================
+       UPDATE
+       ======================================================== */
+
+    update(deltaTime) {
+
+        if (
+            this.state !==
+            "playing"
+        ) {
+
+            return;
+        }
+
+
+        if (
+            this.input &&
+            this.input.wantsPause()
+        ) {
+
+            this.togglePause();
+
+            return;
+        }
+
+
+        if (
+            this.input &&
+            this.input.wantsInteract()
+        ) {
+
+            this.interact();
+        }
+
+
+        if (
+            this.world
+        ) {
+
+            this.world.update(
+                deltaTime
+            );
+        }
+
+
+        if (
+            this.player
+        ) {
+
+            this.player.update(
+                deltaTime
+            );
+        }
+
+
+        this.updateCamera(
+            deltaTime
+        );
+    }
+
+
+    /* ========================================================
        RENDER
        ======================================================== */
 
@@ -781,10 +678,6 @@ export class Game {
             this.context;
 
 
-        /* ====================================================
-           LIMPEZA
-           ==================================================== */
-
         ctx.clearRect(
             0,
             0,
@@ -792,10 +685,6 @@ export class Game {
             this.height
         );
 
-
-        /* ====================================================
-           FUNDO DA TELA
-           ==================================================== */
 
         ctx.fillStyle =
             this.config.backgroundColor;
@@ -810,7 +699,7 @@ export class Game {
 
 
         /* ====================================================
-           CÂMERA / MUNDO
+           MUNDO
            ==================================================== */
 
         ctx.save();
@@ -820,16 +709,11 @@ export class Game {
             -Math.floor(
                 this.camera.x
             ),
-
             -Math.floor(
                 this.camera.y
             )
         );
 
-
-        /* ====================================================
-           MUNDO
-           ==================================================== */
 
         if (
             this.world
@@ -856,23 +740,11 @@ export class Game {
         }
 
 
-        /* ====================================================
-           DEBUG
-           ==================================================== */
-
-        if (
-            this.config.debug
-        ) {
-
-            this.renderDebug();
-        }
-
-
         ctx.restore();
 
 
         /* ====================================================
-           EFEITOS DE TELA
+           EFEITOS
            ==================================================== */
 
         this.renderScreenEffects();
@@ -890,17 +762,17 @@ export class Game {
 
 
         /*
-         * Vinheta cinematográfica.
+         * Vinheta.
          */
 
         const gradient =
             ctx.createRadialGradient(
                 this.width / 2,
                 this.height / 2,
-                this.height * 0.25,
+                this.height * 0.18,
                 this.width / 2,
                 this.height / 2,
-                this.width * 0.75
+                this.height * 0.75
             );
 
 
@@ -911,14 +783,8 @@ export class Game {
 
 
         gradient.addColorStop(
-            0.75,
-            "rgba(0,0,0,0.03)"
-        );
-
-
-        gradient.addColorStop(
             1,
-            "rgba(0,0,0,0.30)"
+            "rgba(0,0,0,0.42)"
         );
 
 
@@ -932,99 +798,6 @@ export class Game {
             this.width,
             this.height
         );
-    }
-
-
-    /* ========================================================
-       DEBUG
-       ======================================================== */
-
-    renderDebug() {
-
-        if (
-            !this.player
-        ) {
-
-            return;
-        }
-
-
-        const ctx =
-            this.context;
-
-
-        ctx.save();
-
-
-        ctx.strokeStyle =
-            "#ff3333";
-
-
-        ctx.lineWidth =
-            1;
-
-
-        const collision =
-            this.player.getCollisionRect();
-
-
-        ctx.strokeRect(
-            collision.x,
-            collision.y,
-            collision.width,
-            collision.height
-        );
-
-
-        ctx.fillStyle =
-            "#ffffff";
-
-
-        ctx.font =
-            "12px monospace";
-
-
-        ctx.fillText(
-            "X: " +
-            Math.round(
-                this.player.x
-            ),
-
-            this.camera.x + 12,
-            this.camera.y + 20
-        );
-
-
-        ctx.fillText(
-            "Y: " +
-            Math.round(
-                this.player.y
-            ),
-
-            this.camera.x + 12,
-            this.camera.y + 36
-        );
-
-
-        ctx.fillText(
-            "FPS: " +
-            this.fps,
-
-            this.camera.x + 12,
-            this.camera.y + 52
-        );
-
-
-        ctx.fillText(
-            "STATE: " +
-            this.state,
-
-            this.camera.x + 12,
-            this.camera.y + 68
-        );
-
-
-        ctx.restore();
     }
 
 
@@ -1077,11 +850,6 @@ export class Game {
         }
 
 
-        console.log(
-            "[ESCAPE ROOM] Interação solicitada."
-        );
-
-
         if (
             typeof this.callbacks.onInteraction ===
             "function"
@@ -1125,10 +893,6 @@ export class Game {
     }
 
 
-    /* ========================================================
-       RETOMAR
-       ======================================================== */
-
     resume() {
 
         if (
@@ -1160,10 +924,6 @@ export class Game {
     }
 
 
-    /* ========================================================
-       ALTERNAR PAUSA
-       ======================================================== */
-
     togglePause() {
 
         if (
@@ -1178,10 +938,6 @@ export class Game {
         }
     }
 
-
-    /* ========================================================
-       VERIFICAR PAUSA
-       ======================================================== */
 
     isPaused() {
 
@@ -1223,7 +979,6 @@ export class Game {
                 this.animationFrame
             );
 
-
             this.animationFrame =
                 null;
         }
@@ -1238,11 +993,6 @@ export class Game {
                 this.elapsedTime
             );
         }
-
-
-        console.info(
-            "[ESCAPE ROOM] Jogo concluído."
-        );
     }
 
 
@@ -1265,13 +1015,10 @@ export class Game {
                 this.animationFrame
             );
 
-
             this.animationFrame =
                 null;
         }
 
-
-        /* Input */
 
         if (
             this.input
@@ -1280,8 +1027,6 @@ export class Game {
             this.input.reset();
         }
 
-
-        /* Tempo */
 
         this.lastTime =
             0;
@@ -1296,8 +1041,6 @@ export class Game {
             0;
 
 
-        /* Mundo */
-
         if (
             this.world
         ) {
@@ -1306,26 +1049,19 @@ export class Game {
         }
 
 
-        /* Jogador */
-
         if (
-            this.player &&
-            this.world
+            this.player
         ) {
 
             this.player.reset(
-                this.world.width / 2,
-                this.world.height / 2
+                1200,
+                680
             );
         }
 
 
-        /* Câmera */
-
         this.initializeCamera();
 
-
-        /* Estado */
 
         this.paused =
             false;
@@ -1443,7 +1179,6 @@ export class Game {
             cancelAnimationFrame(
                 this.animationFrame
             );
-
 
             this.animationFrame =
                 null;
