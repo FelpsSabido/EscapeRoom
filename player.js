@@ -76,16 +76,6 @@ export class Player {
             "down";
 
 
-        /*
-         * Direções possíveis:
-         *
-         * up
-         * down
-         * left
-         * right
-         */
-
-
         /* ====================================================
            ESTADO
            ==================================================== */
@@ -222,21 +212,12 @@ export class Player {
         }
 
 
-        /*
-         * Guarda a posição anterior.
-         */
-
         this.previousPosition.x =
             this.x;
 
         this.previousPosition.y =
             this.y;
 
-
-        /*
-         * Se não houver input,
-         * simplesmente desacelera.
-         */
 
         if (!this.input) {
 
@@ -256,10 +237,6 @@ export class Player {
         }
 
 
-        /*
-         * Obtém o vetor de movimento.
-         */
-
         const movement =
             this.input.getMovementVector();
 
@@ -276,10 +253,6 @@ export class Player {
             inputY !== 0;
 
 
-        /*
-         * Atualiza direção.
-         */
-
         if (hasInput) {
 
             this.updateDirection(
@@ -288,10 +261,6 @@ export class Player {
             );
         }
 
-
-        /*
-         * Aceleração.
-         */
 
         if (hasInput) {
 
@@ -309,18 +278,10 @@ export class Player {
         }
 
 
-        /*
-         * Aplica velocidade.
-         */
-
         this.applyVelocity(
             deltaTime
         );
 
-
-        /*
-         * Verifica se está realmente andando.
-         */
 
         const wasMoving =
             this.moving;
@@ -331,18 +292,10 @@ export class Player {
             Math.abs(this.velocityY) > 1;
 
 
-        /*
-         * Atualiza animação.
-         */
-
         this.updateAnimation(
             deltaTime
         );
 
-
-        /*
-         * Callbacks de movimento.
-         */
 
         if (
             this.moving &&
@@ -396,10 +349,6 @@ export class Player {
             this.acceleration *
             deltaTime;
 
-
-        /*
-         * Limita velocidade.
-         */
 
         const velocityMagnitude =
             Math.sqrt(
@@ -518,9 +467,9 @@ export class Player {
             deltaTime;
 
 
-        /*
-         * Colisão horizontal.
-         */
+        /* ====================================================
+           MOVIMENTO HORIZONTAL
+           ==================================================== */
 
         if (
             this.canMoveTo(
@@ -539,9 +488,9 @@ export class Player {
         }
 
 
-        /*
-         * Colisão vertical.
-         */
+        /* ====================================================
+           MOVIMENTO VERTICAL
+           ==================================================== */
 
         if (
             this.canMoveTo(
@@ -560,17 +509,8 @@ export class Player {
         }
 
 
-        /*
-         * Limites do mundo.
-         */
-
         this.clampToWorld();
 
-
-        /*
-         * Se não houve movimento,
-         * zera pequenas velocidades residuais.
-         */
 
         if (
             Math.abs(
@@ -618,21 +558,49 @@ export class Player {
         targetY
     ) {
 
-        /*
-         * Se não existe mundo ou sistema de colisão,
-         * permitimos o movimento.
-         */
-
         if (!this.world) {
 
             return true;
         }
 
 
-        /*
-         * Se o mundo possuir um método próprio
-         * de colisão, utilizamos ele.
-         */
+        if (
+            !this.collision.enabled
+        ) {
+
+            return true;
+        }
+
+
+        /* ====================================================
+           CRIA A HITBOX NA NOVA POSIÇÃO
+           ==================================================== */
+
+        const collisionRect =
+            this.getCollisionRect(
+                targetX,
+                targetY
+            );
+
+
+        /* ====================================================
+           USA O SISTEMA DE COLISÃO DO WORLD
+           ==================================================== */
+
+        if (
+            typeof this.world.collides ===
+            "function"
+        ) {
+
+            return !this.world.collides(
+                collisionRect
+            );
+        }
+
+
+        /* ====================================================
+           COMPATIBILIDADE COM FUTURA IMPLEMENTAÇÃO
+           ==================================================== */
 
         if (
             typeof this.world.canPlayerMoveTo ===
@@ -646,13 +614,6 @@ export class Player {
             );
         }
 
-
-        /*
-         * Caso contrário, permitimos.
-         *
-         * Os limites externos serão tratados
-         * por clampToWorld().
-         */
 
         return true;
     }
@@ -733,11 +694,6 @@ export class Player {
             this.direction;
 
 
-        /*
-         * Quando o movimento horizontal é
-         * dominante.
-         */
-
         if (
             Math.abs(inputX) >
             Math.abs(inputY)
@@ -756,12 +712,6 @@ export class Player {
                     "left";
             }
 
-
-        /*
-         * Quando o movimento vertical é
-         * dominante.
-         */
-
         } else {
 
             if (
@@ -778,10 +728,6 @@ export class Player {
             }
         }
 
-
-        /*
-         * Detecta mudança de direção.
-         */
 
         if (
             previousDirection !==
@@ -866,16 +812,8 @@ export class Player {
         }
 
 
-        /*
-         * Salva estado do Canvas.
-         */
-
         context.save();
 
-
-        /*
-         * Calcula posição de renderização.
-         */
 
         let renderX =
             this.x;
@@ -884,18 +822,7 @@ export class Player {
             this.y;
 
 
-        /*
-         * A câmera não é aplicada diretamente aqui
-         * porque o Game poderá aplicar a transformação
-         * do mundo antes de chamar render().
-         */
-
         if (camera) {
-
-            /*
-             * Mantemos a referência disponível
-             * para futuros sistemas de renderização.
-             */
 
             renderX =
                 this.x;
@@ -904,10 +831,6 @@ export class Player {
                 this.y;
         }
 
-
-        /*
-         * Sombra.
-         */
 
         if (
             this.config.shadow
@@ -921,20 +844,12 @@ export class Player {
         }
 
 
-        /*
-         * Corpo.
-         */
-
         this.renderBody(
             context,
             renderX,
             renderY
         );
 
-
-        /*
-         * Debug.
-         */
 
         if (
             this.config.debug
@@ -1017,9 +932,36 @@ export class Player {
             this.height;
 
 
-        /*
-         * Corpo principal.
-         */
+        /* ====================================================
+           SOMBRA DO CORPO
+           ==================================================== */
+
+        context.fillStyle =
+            "rgba(0,0,0,0.18)";
+
+
+        context.fillRect(
+            Math.floor(
+                x -
+                width / 2 +
+                3
+            ),
+
+            Math.floor(
+                y -
+                height / 2 +
+                4
+            ),
+
+            width,
+
+            height
+        );
+
+
+        /* ====================================================
+           CORPO
+           ==================================================== */
 
         context.fillStyle =
             "#d6dbe5";
@@ -1042,9 +984,9 @@ export class Player {
         );
 
 
-        /*
-         * Cabeça.
-         */
+        /* ====================================================
+           CABEÇA
+           ==================================================== */
 
         context.fillStyle =
             "#b9c0cc";
@@ -1082,9 +1024,9 @@ export class Player {
         );
 
 
-        /*
-         * Detalhes da roupa.
-         */
+        /* ====================================================
+           ROUPA
+           ==================================================== */
 
         context.fillStyle =
             "#596170";
@@ -1111,9 +1053,9 @@ export class Player {
         );
 
 
-        /*
-         * Rosto / direção.
-         */
+        /* ====================================================
+           ROSTO
+           ==================================================== */
 
         this.renderFace(
             context,
@@ -1248,10 +1190,6 @@ export class Player {
         y
     ) {
 
-        /*
-         * Hitbox de colisão.
-         */
-
         context.strokeStyle =
             "#ff0000";
 
@@ -1260,28 +1198,20 @@ export class Player {
             1;
 
 
+        const rect =
+            this.getCollisionRect(
+                x,
+                y
+            );
+
+
         context.strokeRect(
-            Math.floor(
-                x -
-                this.collision.width /
-                2
-            ),
-
-            Math.floor(
-                y -
-                this.collision.height /
-                2
-            ),
-
-            this.collision.width,
-
-            this.collision.height
+            rect.x,
+            rect.y,
+            rect.width,
+            rect.height
         );
 
-
-        /*
-         * Centro do jogador.
-         */
 
         context.fillStyle =
             "#ffff00";
@@ -1489,7 +1419,9 @@ export class Player {
     getCenter() {
 
         return {
+
             x: this.x,
+
             y: this.y
         };
     }
