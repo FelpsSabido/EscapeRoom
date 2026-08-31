@@ -3,18 +3,9 @@
    Mundo físico e visual da sala
    ============================================================ */
 
-
 export class World {
 
-    /* ========================================================
-       CONSTRUTOR
-       ======================================================== */
-
     constructor(options = {}) {
-
-        /* ====================================================
-           DIMENSÕES
-           ==================================================== */
 
         this.width =
             options.width || 2400;
@@ -23,38 +14,34 @@ export class World {
             options.height || 1350;
 
 
-        /* ====================================================
-           CONFIGURAÇÕES
-           ==================================================== */
-
         this.config = {
 
             floorColor:
-                "#17191d",
+                "#111419",
 
             floorSecondaryColor:
-                "#1c1f24",
+                "#181c22",
 
             wallColor:
-                "#292d34",
+                "#292e36",
 
             wallTopColor:
-                "#343943",
-
-            wallSideColor:
-                "#111318",
-
-            obstacleColor:
-                "#24282e",
-
-            obstacleBorderColor:
                 "#414752",
 
+            wallSideColor:
+                "#0a0c10",
+
+            obstacleColor:
+                "#20252c",
+
+            obstacleBorderColor:
+                "#505762",
+
             gridColor:
-                "rgba(255,255,255,0.018)",
+                "rgba(255,255,255,0.025)",
 
             shadowColor:
-                "rgba(0,0,0,0.35)"
+                "rgba(0,0,0,0.45)"
         };
 
 
@@ -64,10 +51,6 @@ export class World {
 
         this.walls = [
 
-            /*
-             * Parede superior
-             */
-
             {
                 x: 0,
                 y: 0,
@@ -75,11 +58,6 @@ export class World {
                 height: 80,
                 type: "wall"
             },
-
-
-            /*
-             * Parede inferior
-             */
 
             {
                 x: 0,
@@ -89,11 +67,6 @@ export class World {
                 type: "wall"
             },
 
-
-            /*
-             * Parede esquerda
-             */
-
             {
                 x: 0,
                 y: 80,
@@ -101,11 +74,6 @@ export class World {
                 height: this.height - 160,
                 type: "wall"
             },
-
-
-            /*
-             * Parede direita
-             */
 
             {
                 x: this.width - 80,
@@ -123,10 +91,6 @@ export class World {
 
         this.obstacles = [
 
-            /*
-             * Mesa central
-             */
-
             {
                 x: 850,
                 y: 490,
@@ -135,11 +99,6 @@ export class World {
                 type: "table",
                 solid: true
             },
-
-
-            /*
-             * Mesa lateral esquerda
-             */
 
             {
                 x: 260,
@@ -150,11 +109,6 @@ export class World {
                 solid: true
             },
 
-
-            /*
-             * Mesa lateral direita
-             */
-
             {
                 x: 1820,
                 y: 300,
@@ -163,11 +117,6 @@ export class World {
                 type: "table",
                 solid: true
             },
-
-
-            /*
-             * Armário esquerdo
-             */
 
             {
                 x: 230,
@@ -178,11 +127,6 @@ export class World {
                 solid: true
             },
 
-
-            /*
-             * Armário direito
-             */
-
             {
                 x: 1920,
                 y: 760,
@@ -192,11 +136,6 @@ export class World {
                 solid: true
             },
 
-
-            /*
-             * Pequena mesa inferior esquerda
-             */
-
             {
                 x: 650,
                 y: 930,
@@ -205,11 +144,6 @@ export class World {
                 type: "table",
                 solid: true
             },
-
-
-            /*
-             * Pequena mesa inferior direita
-             */
 
             {
                 x: 1490,
@@ -223,14 +157,10 @@ export class World {
 
 
         /* ====================================================
-           OBJETOS NÃO SÓLIDOS
+           DECORAÇÕES
            ==================================================== */
 
         this.decorations = [
-
-            /*
-             * Quadro na parede superior
-             */
 
             {
                 x: 850,
@@ -240,17 +170,44 @@ export class World {
                 type: "board"
             },
 
-
-            /*
-             * Porta
-             */
-
             {
                 x: 1120,
                 y: 0,
                 width: 160,
                 height: 80,
                 type: "door"
+            },
+
+            {
+                x: 180,
+                y: 120,
+                width: 220,
+                height: 120,
+                type: "window"
+            },
+
+            {
+                x: 2000,
+                y: 120,
+                width: 220,
+                height: 120,
+                type: "window"
+            },
+
+            {
+                x: 980,
+                y: 170,
+                width: 440,
+                height: 12,
+                type: "light"
+            },
+
+            {
+                x: 900,
+                y: 720,
+                width: 600,
+                height: 12,
+                type: "light"
             }
         ];
 
@@ -274,39 +231,19 @@ export class World {
     }
 
 
-    /* ========================================================
-       INICIALIZAÇÃO
-       ======================================================== */
-
     initialize() {
 
         return this;
     }
 
 
-    /* ========================================================
-       ATUALIZAÇÃO
-       ======================================================== */
-
     update(deltaTime) {
 
-        /*
-         * O mundo atualmente é estático.
-         *
-         * Este método existe para permitir futuramente:
-         *
-         * - portas animadas
-         * - objetos móveis
-         * - iluminação dinâmica
-         * - puzzles
-         * - partículas
-         * - eventos
-         */
     }
 
 
     /* ========================================================
-       RENDERIZAÇÃO
+       RENDER
        ======================================================== */
 
     render(ctx) {
@@ -321,9 +258,11 @@ export class World {
 
         this.renderWalls(ctx);
 
+        this.renderDecorations(ctx);
+
         this.renderObstacles(ctx);
 
-        this.renderDecorations(ctx);
+        this.renderAtmosphere(ctx);
     }
 
 
@@ -332,10 +271,6 @@ export class World {
        ======================================================== */
 
     renderFloor(ctx) {
-
-        /*
-         * Base do piso
-         */
 
         ctx.fillStyle =
             this.config.floorColor;
@@ -349,10 +284,6 @@ export class World {
         );
 
 
-        /*
-         * Área interna
-         */
-
         ctx.fillStyle =
             this.config.floorSecondaryColor;
 
@@ -364,10 +295,6 @@ export class World {
             this.height - 160
         );
 
-
-        /*
-         * Pequena grade arquitetônica.
-         */
 
         const gridSize =
             64;
@@ -444,34 +371,26 @@ export class World {
     }
 
 
-    /* ========================================================
-       PAREDE INDIVIDUAL
-       ======================================================== */
-
     renderWall(
         ctx,
         wall
     ) {
 
-        /*
-         * Sombra
-         */
+        /* Sombra */
 
         ctx.fillStyle =
             this.config.shadowColor;
 
 
         ctx.fillRect(
-            wall.x + 8,
-            wall.y + 8,
+            wall.x + 12,
+            wall.y + 12,
             wall.width,
             wall.height
         );
 
 
-        /*
-         * Corpo da parede
-         */
+        /* Corpo */
 
         ctx.fillStyle =
             this.config.wallColor;
@@ -485,9 +404,7 @@ export class World {
         );
 
 
-        /*
-         * Parte superior iluminada
-         */
+        /* Faixa iluminada */
 
         ctx.fillStyle =
             this.config.wallTopColor;
@@ -502,10 +419,7 @@ export class World {
                 wall.x,
                 wall.y,
                 wall.width,
-                Math.min(
-                    10,
-                    wall.height
-                )
+                10
             );
 
         } else {
@@ -513,21 +427,47 @@ export class World {
             ctx.fillRect(
                 wall.x,
                 wall.y,
-                Math.min(
-                    10,
-                    wall.width
-                ),
+                10,
                 wall.height
             );
         }
 
 
-        /*
-         * Contorno
-         */
+        /* Linha inferior */
+
+        ctx.fillStyle =
+            this.config.wallSideColor;
+
+
+        if (
+            wall.width >
+            wall.height
+        ) {
+
+            ctx.fillRect(
+                wall.x,
+                wall.y +
+                wall.height -
+                8,
+                wall.width,
+                8
+            );
+
+        } else {
+
+            ctx.fillRect(
+                wall.x +
+                wall.width -
+                8,
+                wall.y,
+                8,
+                wall.height
+            );
+        }
+
 
         ctx.strokeStyle =
-            this.config.wallSideColor;
+            "#0d1015";
 
 
         ctx.lineWidth =
@@ -561,34 +501,26 @@ export class World {
     }
 
 
-    /* ========================================================
-       OBSTÁCULO INDIVIDUAL
-       ======================================================== */
-
     renderObstacle(
         ctx,
         obstacle
     ) {
 
-        /*
-         * Sombra
-         */
+        /* Sombra */
 
         ctx.fillStyle =
             this.config.shadowColor;
 
 
         ctx.fillRect(
-            obstacle.x + 10,
-            obstacle.y + 10,
+            obstacle.x + 14,
+            obstacle.y + 14,
             obstacle.width,
             obstacle.height
         );
 
 
-        /*
-         * Corpo
-         */
+        /* Corpo */
 
         ctx.fillStyle =
             this.config.obstacleColor;
@@ -602,9 +534,7 @@ export class World {
         );
 
 
-        /*
-         * Borda
-         */
+        /* Borda externa */
 
         ctx.strokeStyle =
             this.config.obstacleBorderColor;
@@ -621,10 +551,6 @@ export class World {
             obstacle.height
         );
 
-
-        /*
-         * Detalhes específicos
-         */
 
         if (
             obstacle.type ===
@@ -652,7 +578,7 @@ export class World {
 
 
     /* ========================================================
-       DETALHES DA MESA
+       MESAS
        ======================================================== */
 
     renderTableDetails(
@@ -660,73 +586,21 @@ export class World {
         table
     ) {
 
-        /*
-         * Linha central
-         */
-
-        ctx.strokeStyle =
-            "rgba(255,255,255,0.06)";
-
-
-        ctx.lineWidth =
-            2;
-
-
-        ctx.beginPath();
-
-
-        ctx.moveTo(
-            table.x + table.width / 2,
-            table.y
-        );
-
-
-        ctx.lineTo(
-            table.x + table.width / 2,
-            table.y + table.height
-        );
-
-
-        ctx.stroke();
-
-
-        /*
-         * Pequenos detalhes nas extremidades
-         */
+        /* Superfície */
 
         ctx.fillStyle =
             "rgba(255,255,255,0.035)";
 
 
         ctx.fillRect(
-            table.x + 15,
-            table.y + 15,
-            table.width - 30,
-            2
+            table.x + 8,
+            table.y + 8,
+            table.width - 16,
+            table.height - 16
         );
 
 
-        ctx.fillRect(
-            table.x + 15,
-            table.y + table.height - 17,
-            table.width - 30,
-            2
-        );
-    }
-
-
-    /* ========================================================
-       DETALHES DO ARMÁRIO
-       ======================================================== */
-
-    renderCabinetDetails(
-        ctx,
-        cabinet
-    ) {
-
-        const doorWidth =
-            cabinet.width / 2;
-
+        /* Divisão */
 
         ctx.strokeStyle =
             "rgba(255,255,255,0.08)";
@@ -740,36 +614,179 @@ export class World {
 
 
         ctx.moveTo(
-            cabinet.x + doorWidth,
-            cabinet.y
+            table.x +
+            table.width / 2,
+
+            table.y + 8
         );
 
 
         ctx.lineTo(
-            cabinet.x + doorWidth,
-            cabinet.y + cabinet.height
+            table.x +
+            table.width / 2,
+
+            table.y +
+            table.height -
+            8
         );
 
 
         ctx.stroke();
 
 
-        /*
-         * Maçanetas
-         */
+        /* Bordas internas */
+
+        ctx.strokeStyle =
+            "rgba(0,0,0,0.35)";
+
+
+        ctx.lineWidth =
+            4;
+
+
+        ctx.strokeRect(
+            table.x + 8,
+            table.y + 8,
+            table.width - 16,
+            table.height - 16
+        );
+
+
+        /* Pernas */
 
         ctx.fillStyle =
-            "rgba(255,255,255,0.16)";
+            "#12151a";
+
+
+        ctx.fillRect(
+            table.x + 18,
+            table.y + table.height,
+            20,
+            18
+        );
+
+
+        ctx.fillRect(
+            table.x +
+            table.width -
+            38,
+
+            table.y +
+            table.height,
+
+            20,
+            18
+        );
+    }
+
+
+    /* ========================================================
+       ARMÁRIOS
+       ======================================================== */
+
+    renderCabinetDetails(
+        ctx,
+        cabinet
+    ) {
+
+        const doorWidth =
+            cabinet.width / 2;
+
+
+        /* Divisão das portas */
+
+        ctx.strokeStyle =
+            "rgba(255,255,255,0.10)";
+
+
+        ctx.lineWidth =
+            2;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            cabinet.x +
+            doorWidth,
+
+            cabinet.y
+        );
+
+
+        ctx.lineTo(
+            cabinet.x +
+            doorWidth,
+
+            cabinet.y +
+            cabinet.height
+        );
+
+
+        ctx.stroke();
+
+
+        /* Linhas horizontais */
+
+        ctx.strokeStyle =
+            "rgba(255,255,255,0.045)";
+
+
+        ctx.lineWidth =
+            1;
+
+
+        for (
+            let y =
+                cabinet.y + 70;
+
+            y <
+                cabinet.y +
+                cabinet.height;
+
+            y += 70
+        ) {
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                cabinet.x + 8,
+                y
+            );
+
+            ctx.lineTo(
+                cabinet.x +
+                cabinet.width -
+                8,
+
+                y
+            );
+
+            ctx.stroke();
+        }
+
+
+        /* Maçanetas */
+
+        ctx.fillStyle =
+            "#aab0ba";
 
 
         ctx.beginPath();
 
 
         ctx.arc(
-            cabinet.x + doorWidth - 15,
-            cabinet.y + cabinet.height / 2,
-            4,
+            cabinet.x +
+            doorWidth -
+            15,
+
+            cabinet.y +
+            cabinet.height / 2,
+
+            5,
+
             0,
+
             Math.PI * 2
         );
 
@@ -781,10 +798,17 @@ export class World {
 
 
         ctx.arc(
-            cabinet.x + doorWidth + 15,
-            cabinet.y + cabinet.height / 2,
-            4,
+            cabinet.x +
+            doorWidth +
+            15,
+
+            cabinet.y +
+            cabinet.height / 2,
+
+            5,
+
             0,
+
             Math.PI * 2
         );
 
@@ -825,6 +849,30 @@ export class World {
                     decoration
                 );
             }
+
+
+            if (
+                decoration.type ===
+                "window"
+            ) {
+
+                this.renderWindow(
+                    ctx,
+                    decoration
+                );
+            }
+
+
+            if (
+                decoration.type ===
+                "light"
+            ) {
+
+                this.renderLight(
+                    ctx,
+                    decoration
+                );
+            }
         }
     }
 
@@ -838,28 +886,20 @@ export class World {
         board
     ) {
 
-        /*
-         * Sombra
-         */
-
         ctx.fillStyle =
-            "rgba(0,0,0,0.4)";
+            "rgba(0,0,0,0.5)";
 
 
         ctx.fillRect(
-            board.x + 8,
-            board.y + 8,
+            board.x + 10,
+            board.y + 10,
             board.width,
             board.height
         );
 
 
-        /*
-         * Quadro
-         */
-
         ctx.fillStyle =
-            "#20252b";
+            "#20252c";
 
 
         ctx.fillRect(
@@ -870,12 +910,8 @@ export class World {
         );
 
 
-        /*
-         * Moldura
-         */
-
         ctx.strokeStyle =
-            "#4a5059";
+            "#606773";
 
 
         ctx.lineWidth =
@@ -888,6 +924,44 @@ export class World {
             board.width,
             board.height
         );
+
+
+        /* Pequenas marcações */
+
+        ctx.strokeStyle =
+            "rgba(255,255,255,0.12)";
+
+
+        ctx.lineWidth =
+            2;
+
+
+        for (
+            let x =
+                board.x + 30;
+
+            x <
+                board.x +
+                board.width -
+                20;
+
+            x += 80
+        ) {
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                x,
+                board.y + 10
+            );
+
+            ctx.lineTo(
+                x + 35,
+                board.y + 25
+            );
+
+            ctx.stroke();
+        }
     }
 
 
@@ -900,12 +974,20 @@ export class World {
         door
     ) {
 
-        /*
-         * A porta fica sobre a parede superior.
-         */
+        ctx.fillStyle =
+            "rgba(0,0,0,0.5)";
+
+
+        ctx.fillRect(
+            door.x + 10,
+            door.y + 10,
+            door.width,
+            door.height
+        );
+
 
         ctx.fillStyle =
-            "#15181d";
+            "#101318";
 
 
         ctx.fillRect(
@@ -916,16 +998,12 @@ export class World {
         );
 
 
-        /*
-         * Moldura
-         */
-
         ctx.strokeStyle =
-            "#555b65";
+            "#646b76";
 
 
         ctx.lineWidth =
-            4;
+            5;
 
 
         ctx.strokeRect(
@@ -936,27 +1014,226 @@ export class World {
         );
 
 
-        /*
-         * Maçaneta
-         */
+        /* Painéis */
+
+        ctx.strokeStyle =
+            "rgba(255,255,255,0.10)";
+
+
+        ctx.lineWidth =
+            2;
+
+
+        ctx.strokeRect(
+            door.x + 18,
+            door.y + 14,
+            door.width - 36,
+            door.height - 28
+        );
+
+
+        /* Maçaneta */
 
         ctx.fillStyle =
-            "#aeb4bd";
+            "#c2c8d0";
 
 
         ctx.beginPath();
 
 
         ctx.arc(
-            door.x + door.width - 25,
-            door.y + door.height / 2,
+            door.x +
+            door.width -
+            25,
+
+            door.y +
+            door.height / 2,
+
             5,
+
             0,
+
             Math.PI * 2
         );
 
 
         ctx.fill();
+    }
+
+
+    /* ========================================================
+       JANELAS
+       ======================================================== */
+
+    renderWindow(
+        ctx,
+        window
+    ) {
+
+        ctx.fillStyle =
+            "#080b10";
+
+
+        ctx.fillRect(
+            window.x,
+            window.y,
+            window.width,
+            window.height
+        );
+
+
+        ctx.fillStyle =
+            "rgba(120,140,170,0.10)";
+
+
+        ctx.fillRect(
+            window.x + 8,
+            window.y + 8,
+            window.width - 16,
+            window.height - 16
+        );
+
+
+        ctx.strokeStyle =
+            "#555d68";
+
+
+        ctx.lineWidth =
+            5;
+
+
+        ctx.strokeRect(
+            window.x,
+            window.y,
+            window.width,
+            window.height
+        );
+
+
+        ctx.strokeStyle =
+            "rgba(255,255,255,0.08)";
+
+
+        ctx.lineWidth =
+            2;
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            window.x +
+            window.width / 2,
+
+            window.y + 8
+        );
+
+        ctx.lineTo(
+            window.x +
+            window.width / 2,
+
+            window.y +
+            window.height -
+            8
+        );
+
+        ctx.stroke();
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            window.x + 8,
+
+            window.y +
+            window.height / 2
+        );
+
+        ctx.lineTo(
+            window.x +
+            window.width -
+            8,
+
+            window.y +
+            window.height / 2
+        );
+
+        ctx.stroke();
+    }
+
+
+    /* ========================================================
+       LUZES
+       ======================================================== */
+
+    renderLight(
+        ctx,
+        light
+    ) {
+
+        ctx.fillStyle =
+            "rgba(230,235,245,0.12)";
+
+
+        ctx.fillRect(
+            light.x,
+            light.y,
+            light.width,
+            light.height
+        );
+
+
+        ctx.fillStyle =
+            "rgba(255,255,255,0.65)";
+
+
+        ctx.fillRect(
+            light.x + 5,
+            light.y + 3,
+            light.width - 10,
+            3
+        );
+    }
+
+
+    /* ========================================================
+       ATMOSFERA
+       ======================================================== */
+
+    renderAtmosphere(ctx) {
+
+        const gradient =
+            ctx.createRadialGradient(
+                this.width / 2,
+                this.height / 2,
+                250,
+                this.width / 2,
+                this.height / 2,
+                1500
+            );
+
+
+        gradient.addColorStop(
+            0,
+            "rgba(255,255,255,0.015)"
+        );
+
+
+        gradient.addColorStop(
+            1,
+            "rgba(0,0,0,0.22)"
+        );
+
+
+        ctx.fillStyle =
+            gradient;
+
+
+        ctx.fillRect(
+            0,
+            0,
+            this.width,
+            this.height
+        );
     }
 
 
@@ -968,17 +1245,11 @@ export class World {
         rect
     ) {
 
-        if (
-            !rect
-        ) {
+        if (!rect) {
 
             return false;
         }
 
-
-        /*
-         * Colisão com paredes
-         */
 
         for (
             const wall of this.walls
@@ -995,10 +1266,6 @@ export class World {
             }
         }
 
-
-        /*
-         * Colisão com objetos sólidos
-         */
 
         for (
             const obstacle of this.obstacles
@@ -1022,7 +1289,7 @@ export class World {
 
 
     /* ========================================================
-       INTERSEÇÃO DE RETÂNGULOS
+       INTERSEÇÃO
        ======================================================== */
 
     intersects(
@@ -1054,7 +1321,7 @@ export class World {
 
 
     /* ========================================================
-       RETÂNGULO DE COLISÃO DO MUNDO
+       LIMITES
        ======================================================== */
 
     getBounds() {
@@ -1080,11 +1347,6 @@ export class World {
 
     reset() {
 
-        /*
-         * O mundo atualmente é estático.
-         *
-         * Este método fica preparado para futuras fases.
-         */
     }
 
 
