@@ -1,482 +1,426 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+    <meta charset="UTF-8">
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  >
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
 
-  <meta
-    name="description"
-    content="Escape Room — uma experiência interativa de aventura e enigmas."
-  >
+    <meta
+        name="theme-color"
+        content="#10151c"
+    >
 
-  <meta name="theme-color" content="#07111f">
+    <meta
+        name="description"
+        content="Escape Room - Sala de Aula"
+    >
 
-  <title>Escape Room</title>
+    <title>ESCAPE ROOM — Sala de Aula</title>
 
-  <!-- =========================================================
-       FOLHAS DE ESTILO
-       ========================================================= -->
-
-  <link rel="stylesheet" href="./style.css">
-  <link rel="stylesheet" href="./animations.css">
-  <link rel="stylesheet" href="./responsive.css">
-
-  <!-- =========================================================
-       FAVICON SVG EMBUTIDO
-       ========================================================= -->
-
-  <link
-    rel="icon"
-    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2307111f'/%3E%3Cpath d='M25 20h50v12H38v16h30v12H38v20h37v12H25z' fill='%23ffffff'/%3E%3C/svg%3E"
-  >
+    <link
+        rel="stylesheet"
+        href="./style.css"
+    >
 </head>
 
 <body>
 
-  <!-- =========================================================
-       APLICAÇÃO PRINCIPAL
-       ========================================================= -->
-
-  <main id="app">
-
-    <!-- =======================================================
-         ÁREA DO JOGO
-         ======================================================= -->
-
-    <section
-      id="gameContainer"
-      class="game-container"
-      aria-label="Área principal do Escape Room"
-    >
-
-      <!-- Canvas onde todo o mundo será desenhado -->
-      <canvas
-        id="gameCanvas"
-        width="960"
-        height="540"
-        tabindex="0"
-        aria-label="Escape Room. Use WASD ou as setas para se movimentar."
-      ></canvas>
-
-      <!-- =====================================================
-           INTERFACE SUPERIOR
-           ===================================================== -->
-
-      <div
-        id="gameHud"
-        class="game-hud"
-        aria-hidden="true"
-      >
-
-        <div class="hud-left">
-
-          <div
-            id="objectivePanel"
-            class="hud-panel objective-panel"
-          >
-            <span class="hud-label">OBJETIVO</span>
-
-            <span
-              id="objectiveText"
-              class="hud-value"
-            >
-              Explore a sala.
-            </span>
-          </div>
-
-        </div>
-
-        <div class="hud-center">
-
-          <div
-            id="interactionHint"
-            class="interaction-hint"
-          >
-            <span class="interaction-key">E</span>
-
-            <span id="interactionText">
-              Interagir
-            </span>
-          </div>
-
-        </div>
-
-        <div class="hud-right">
-
-          <button
-            id="pauseButton"
-            class="hud-button"
-            type="button"
-            aria-label="Pausar jogo"
-          >
-            II
-          </button>
-
-        </div>
-
-      </div>
-
-      <!-- =====================================================
-           TELA DE MENU
-           ===================================================== -->
-
-      <section
-        id="menuScreen"
-        class="screen screen-menu active"
-        aria-label="Menu principal"
-      >
-
-        <div class="screen-background"></div>
-
-        <div class="menu-content">
-
-          <div class="game-logo">
-
-            <div class="logo-small">
-              ESCAPE
-            </div>
-
-            <h1>
-              ROOM
-            </h1>
-
-            <div class="logo-line"></div>
-
-            <p>
-              A sala esconde mais do que parece.
-            </p>
-
-          </div>
-
-          <div class="menu-card">
-
-            <p class="menu-description">
-              Explore o ambiente, encontre pistas,
-              resolva os enigmas e descubra uma forma
-              de escapar.
-            </p>
-
-            <button
-              id="startButton"
-              class="primary-button"
-              type="button"
-            >
-              <span>COMEÇAR</span>
-              <span class="button-arrow">→</span>
-            </button>
-
-            <div class="controls-preview">
-
-              <div class="control-item">
-                <span class="control-key">WASD</span>
-                <span>Movimentar</span>
-              </div>
-
-              <div class="control-item">
-                <span class="control-key">E</span>
-                <span>Interagir</span>
-              </div>
-
-              <div class="control-item">
-                <span class="control-key">ESC</span>
-                <span>Pausar</span>
-              </div>
-
-            </div>
-
-          </div>
-
-          <div class="menu-footer">
-            <span>ESCAPE ROOM</span>
-            <span>•</span>
-            <span>EXPERIÊNCIA INTERATIVA</span>
-          </div>
-
-        </div>
-
-      </section>
-
-      <!-- =====================================================
-           TELA DE PAUSA
-           ===================================================== -->
-
-      <section
-        id="pauseScreen"
-        class="screen screen-overlay"
-        aria-label="Jogo pausado"
-        aria-hidden="true"
-      >
-
-        <div class="pause-card">
-
-          <div class="pause-icon">
-            II
-          </div>
-
-          <h2>
-            JOGO PAUSADO
-          </h2>
-
-          <p>
-            Sua aventura está esperando.
-          </p>
-
-          <div class="pause-actions">
-
-            <button
-              id="resumeButton"
-              class="primary-button"
-              type="button"
-            >
-              CONTINUAR
-            </button>
-
-            <button
-              id="pauseRestartButton"
-              class="secondary-button"
-              type="button"
-            >
-              RECOMEÇAR
-            </button>
-
-          </div>
-
-          <div class="pause-tip">
-            Pressione <strong>ESC</strong> para continuar.
-          </div>
-
-        </div>
-
-      </section>
-
-      <!-- =====================================================
-           TELA DE CONCLUSÃO
-           ===================================================== -->
-
-      <section
-        id="completedScreen"
-        class="screen screen-overlay"
-        aria-label="Jogo concluído"
-        aria-hidden="true"
-      >
-
-        <div class="complete-card">
-
-          <div class="complete-icon">
-            ✓
-          </div>
-
-          <span class="complete-overline">
-            MISSÃO CONCLUÍDA
-          </span>
-
-          <h2>
-            VOCÊ ESCAPOU!
-          </h2>
-
-          <p>
-            Você encontrou as pistas,
-            resolveu os desafios e conseguiu
-            encontrar a saída.
-          </p>
-
-          <div class="complete-stats">
-
-            <div class="stat">
-              <span class="stat-label">TEMPO</span>
-
-              <span
-                id="completionTime"
-                class="stat-value"
-              >
-                00:00
-              </span>
-            </div>
-
-            <div class="stat">
-              <span class="stat-label">STATUS</span>
-
-              <span class="stat-value">
-                CONCLUÍDO
-              </span>
-            </div>
-
-          </div>
-
-          <button
-            id="restartButton"
-            class="primary-button"
-            type="button"
-          >
-            JOGAR NOVAMENTE
-          </button>
-
-        </div>
-
-      </section>
-
-      <!-- =====================================================
-           MENSAGEM DE INTERAÇÃO
-           ===================================================== -->
-
-      <div
-        id="messageContainer"
-        class="message-container"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-
-        <div
-          id="messageBox"
-          class="message-box"
+    <main id="gameContainer">
+
+        <canvas
+            id="gameCanvas"
+            width="1280"
+            height="720"
+            tabindex="0"
+            aria-label="Escape Room interativo"
+        ></canvas>
+
+
+        <!-- ============================= -->
+        <!-- MENU PRINCIPAL -->
+        <!-- ============================= -->
+
+        <section
+            id="menuScreen"
+            class="screen active"
         >
 
-          <div
-            id="messageTitle"
-            class="message-title"
-          ></div>
+            <div class="menuAtmosphere"></div>
 
-          <div
-            id="messageText"
-            class="message-text"
-          ></div>
+            <div class="menuContent">
 
-        </div>
+                <div class="menuEyebrow">
+                    EXPERIÊNCIA INTERATIVA
+                </div>
 
-      </div>
+                <h1>
+                    ESCAPE
+                    <span>ROOM</span>
+                </h1>
 
-      <!-- =====================================================
-           INDICADOR DE CARREGAMENTO
-           ===================================================== -->
+                <div class="menuDivider"></div>
 
-      <div
-        id="loadingScreen"
-        class="loading-screen"
-        aria-hidden="true"
-      >
+                <p class="menuSubtitle">
+                    A sala está trancada.
+                    <br>
+                    Você precisa descobrir como sair.
+                </p>
 
-        <div class="loading-content">
+                <button
+                    id="startButton"
+                    class="primaryButton"
+                    type="button"
+                >
+                    <span>ENTRAR NA SALA</span>
+                    <strong>→</strong>
+                </button>
 
-          <div class="loading-symbol">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
+                <div class="controlsPreview">
 
-          <div class="loading-title">
-            PREPARANDO A SALA
-          </div>
+                    <div>
+                        <kbd>W A S D</kbd>
+                        <span>Mover</span>
+                    </div>
 
-          <div class="loading-bar">
+                    <div>
+                        <kbd>E</kbd>
+                        <span>Interagir</span>
+                    </div>
+
+                    <div>
+                        <kbd>ESC</kbd>
+                        <span>Pausar</span>
+                    </div>
+
+                </div>
+
+                <div class="menuWarning">
+                    USE FONES DE OUVIDO PARA UMA EXPERIÊNCIA MELHOR
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- HUD -->
+        <!-- ============================= -->
+
+        <section
+            id="hud"
+            class="hud hidden"
+        >
+
             <div
-              id="loadingProgress"
-              class="loading-progress"
-            ></div>
-          </div>
+                id="objectivePanel"
+                class="hudPanel objectivePanel"
+            >
 
-          <div
-            id="loadingText"
-            class="loading-text"
-          >
-            Carregando...
-          </div>
+                <div class="hudLabel">
+                    OBJETIVO
+                </div>
+
+                <div
+                    id="objectiveText"
+                    class="objectiveText"
+                >
+                    Investigue a sala.
+                </div>
+
+            </div>
+
+
+            <div class="hudRight">
+
+                <div
+                    id="timer"
+                    class="timer"
+                >
+                    00:00
+                </div>
+
+                <button
+                    id="pauseButton"
+                    class="pauseButton"
+                    type="button"
+                    aria-label="Pausar jogo"
+                >
+                    II
+                </button>
+
+            </div>
+
+
+            <div
+                id="interactionHint"
+                class="interactionHint hidden"
+            >
+
+                <span class="interactionKey">
+                    E
+                </span>
+
+                <span id="interactionText">
+                    Interagir
+                </span>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- CAIXA DE DIÁLOGO -->
+        <!-- ============================= -->
+
+        <section
+            id="dialogue"
+            class="dialogue hidden"
+        >
+
+            <div class="dialogueBox">
+
+                <div
+                    id="dialogueTitle"
+                    class="dialogueTitle"
+                >
+                    INVESTIGAÇÃO
+                </div>
+
+                <div
+                    id="dialogueText"
+                    class="dialogueText"
+                >
+                </div>
+
+                <button
+                    id="dialogueContinue"
+                    class="dialogueButton"
+                    type="button"
+                >
+                    CONTINUAR
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- PAINEL DO ENIGMA -->
+        <!-- ============================= -->
+
+        <section
+            id="puzzleModal"
+            class="modal hidden"
+        >
+
+            <div class="puzzleBox">
+
+                <button
+                    id="puzzleClose"
+                    class="modalClose"
+                    type="button"
+                    aria-label="Fechar"
+                >
+                    ×
+                </button>
+
+                <div
+                    id="puzzleCategory"
+                    class="puzzleCategory"
+                >
+                    ENIGMA
+                </div>
+
+                <h2
+                    id="puzzleTitle"
+                    class="puzzleTitle"
+                >
+                    Código
+                </h2>
+
+                <p
+                    id="puzzleDescription"
+                    class="puzzleDescription"
+                >
+                </p>
+
+                <div
+                    id="puzzleContent"
+                    class="puzzleContent"
+                >
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- PAUSA -->
+        <!-- ============================= -->
+
+        <section
+            id="pauseScreen"
+            class="screen hidden"
+        >
+
+            <div class="pauseCard">
+
+                <div class="smallTitle">
+                    JOGO PAUSADO
+                </div>
+
+                <h2>
+                    Você ainda está
+                    <span>preso.</span>
+                </h2>
+
+                <p>
+                    As pistas continuam esperando por você.
+                </p>
+
+                <button
+                    id="resumeButton"
+                    class="primaryButton"
+                    type="button"
+                >
+                    CONTINUAR
+                </button>
+
+                <button
+                    id="restartButton"
+                    class="secondaryButton"
+                    type="button"
+                >
+                    RECOMEÇAR
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- VITÓRIA -->
+        <!-- ============================= -->
+
+        <section
+            id="completeScreen"
+            class="screen hidden"
+        >
+
+            <div class="completeCard">
+
+                <div class="completeIcon">
+                    ✓
+                </div>
+
+                <div class="smallTitle">
+                    ESCAPE ROOM CONCLUÍDO
+                </div>
+
+                <h2>
+                    Você conseguiu.
+                </h2>
+
+                <p>
+                    A porta está aberta.
+                    <br>
+                    Você encontrou a saída.
+                </p>
+
+                <div class="finalStats">
+
+                    <div>
+                        <span>TEMPO</span>
+
+                        <strong
+                            id="finalTime"
+                        >
+                            00:00
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>STATUS</span>
+
+                        <strong>
+                            ESCAPOU
+                        </strong>
+                    </div>
+
+                </div>
+
+                <button
+                    id="playAgainButton"
+                    class="primaryButton"
+                    type="button"
+                >
+                    JOGAR NOVAMENTE
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- INDICADOR DE SOM -->
+        <!-- ============================= -->
+
+        <div
+            id="soundIndicator"
+            class="soundIndicator"
+        >
+            <span class="soundIcon">
+                ♪
+            </span>
+
+            <span>
+                ÁUDIO ATIVO
+            </span>
+        </div>
+
+
+        <!-- ============================= -->
+        <!-- LOADING -->
+        <!-- ============================= -->
+
+        <div
+            id="loadingScreen"
+            class="loadingScreen"
+        >
+
+            <div class="loadingLogo">
+                ESCAPE ROOM
+            </div>
+
+            <div class="loadingBar">
+                <div
+                    id="loadingProgress"
+                    class="loadingProgress"
+                ></div>
+            </div>
+
+            <div class="loadingText">
+                PREPARANDO A SALA...
+            </div>
 
         </div>
 
-      </div>
+    </main>
 
-    </section>
 
-  </main>
-
-  <!-- =========================================================
-       ERRO FATAL
-       Criado dinamicamente pelo main.js caso necessário.
-       ========================================================= -->
-
-  <noscript>
-    <div
-      style="
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 30px;
-        background: #07111f;
-        color: white;
-        font-family: Arial, Helvetica, sans-serif;
-        text-align: center;
-        z-index: 99999;
-      "
-    >
-      <div>
-        <h1>JavaScript necessário</h1>
-
-        <p>
-          Este Escape Room precisa do JavaScript
-          ativado para funcionar.
-        </p>
-      </div>
-    </div>
-  </noscript>
-
-  <!-- =========================================================
-       JAVASCRIPT PRINCIPAL
-       ========================================================= -->
-
-  <script
-    type="module"
-    src="./main.js"
-  ></script>
-
-  <!-- =========================================================
-       CONTROLES DA INTERFACE
-       ========================================================= -->
-
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-
-      const resumeButton =
-        document.getElementById("resumeButton");
-
-      const pauseRestartButton =
-        document.getElementById("pauseRestartButton");
-
-      if (resumeButton) {
-        resumeButton.addEventListener("click", () => {
-
-          if (
-            window.escapeRoom &&
-            window.escapeRoom.game &&
-            typeof window.escapeRoom.game.togglePause === "function"
-          ) {
-            window.escapeRoom.game.togglePause();
-          }
-
-        });
-      }
-
-      if (pauseRestartButton) {
-        pauseRestartButton.addEventListener("click", () => {
-
-          if (
-            window.escapeRoom &&
-            window.escapeRoom.game &&
-            typeof window.escapeRoom.game.restart === "function"
-          ) {
-            window.escapeRoom.game.restart();
-          }
-
-        });
-      }
-
-    });
-  </script>
+    <script
+        type="module"
+        src="./game.js"
+    ></script>
 
 </body>
 </html>
