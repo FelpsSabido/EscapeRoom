@@ -1,11 +1,7 @@
 // game.js
 // Escape Room — Controlador principal
-// Compatível com:
-// index.html
-// main.js
-// input.js
-// player.js
-// world.js
+// Integra jogador, mundo, câmera, interações, puzzles,
+// terminal, iluminação, partículas, áudio, HUD e telas.
 
 import { Input } from "./input.js";
 import { Player } from "./player.js";
@@ -15,7 +11,11 @@ export class Game {
   constructor(canvas) {
     this.canvas = canvas;
 
-    this.ctx = canvas.getContext("2d");
+    if (!this.canvas) {
+      throw new Error("Canvas não encontrado.");
+    }
+
+    this.ctx = this.canvas.getContext("2d");
 
     if (!this.ctx) {
       throw new Error(
@@ -31,6 +31,10 @@ export class Game {
     this.worldWidth = 1600;
     this.worldHeight = 900;
 
+    // =========================================================
+    // ESTADO
+    // =========================================================
+
     this.state = "menu";
 
     this.elapsedTime = 0;
@@ -40,65 +44,106 @@ export class Game {
 
     this.doorUnlocked = false;
 
-    this.currentInteraction = null;
-
-    this.currentPuzzle = null;
-    this.currentTerminal = null;
-
     this.messageOpen = false;
 
+    this.currentPuzzle = null;
+
+    this.currentTerminal = null;
+
+    this.currentInteraction = null;
+
     this.interactionCooldown = 0;
+
+    // =========================================================
+    // CÂMERA
+    // =========================================================
 
     this.camera = {
       x: 0,
       y: 0,
+
       targetX: 0,
       targetY: 0,
-      smoothing: 8
+
+      smoothing: 10
     };
+
+    // =========================================================
+    // EFEITOS
+    // =========================================================
 
     this.particles = [];
 
     this.shakeTime = 0;
     this.shakeStrength = 0;
 
+    // =========================================================
+    // ÁUDIO
+    // =========================================================
+
     this.audioStarted = false;
     this.audioContext = null;
 
-    // =====================================================
-    // IMPORTANTE:
-    // O World recebe width e height diretamente.
-    // Não passar { width, height }.
-    // =====================================================
+    // =========================================================
+    // MUNDO
+    // =========================================================
 
+    // IMPORTANTE:
+    // World recebe width e height diretamente.
     this.world = new World(
       this.worldWidth,
       this.worldHeight
     );
 
+    // =========================================================
+    // PLAYER
+    // =========================================================
+
     this.player = new Player({
       world: this.world
     });
 
+    // =========================================================
+    // INPUT
+    // =========================================================
+
     this.input = new Input(this);
+
+    // =========================================================
+    // DOM
+    // =========================================================
+
+    this.elements = {};
 
     this.setupCanvas();
     this.setupDOM();
 
+    // =========================================================
+    // RESET INICIAL
+    // =========================================================
+
     this.reset();
+
+    // Garante que o jogo começa no menu.
+    this.state = "menu";
 
     this.showScreen("menuScreen");
 
     this.hideGameplayUI();
+
+    this.hideOverlayElements();
   }
 
-  // =====================================================
+  // =========================================================
   // CANVAS
-  // =====================================================
+  // =========================================================
 
   setupCanvas() {
-    this.canvas.width = this.width;
-    this.canvas.height = this.height;
+    this.canvas.width = 960;
+    this.canvas.height = 540;
+
+    this.width = this.canvas.width;
+    this.height = this.canvas.height;
 
     this.canvas.style.imageRendering = "pixelated";
 
@@ -106,18 +151,23 @@ export class Game {
 
     this.canvas.setAttribute(
       "aria-label",
-      "Escape Room"
+      "Escape Room — A Sala"
     );
 
     this.canvas.setAttribute(
       "role",
       "application"
     );
+
+    this.canvas.setAttribute(
+      "tabindex",
+      "0"
+    );
   }
 
-  // =====================================================
+  // =========================================================
   // DOM
-  // =====================================================
+  // =========================================================
 
   setupDOM() {
     this.elements = {
@@ -137,149 +187,111 @@ export class Game {
         document.getElementById("resumeButton"),
 
       pauseRestartButton:
-        document.getElementById(
-          "pauseRestartButton"
-        ),
+        document.getElementById("pauseRestartButton"),
 
       restartButton:
-        document.getElementById(
-          "restartButton"
-        ),
+        document.getElementById("restartButton"),
 
       objectivePanel:
-        document.getElementById(
-          "objectivePanel"
-        ),
+        document.getElementById("objectivePanel"),
 
       objectiveText:
-        document.getElementById(
-          "objectiveText"
-        ),
+        document.getElementById("objectiveText"),
 
       interactionHint:
-        document.getElementById(
-          "interactionHint"
-        ),
+        document.getElementById("interactionHint"),
 
       interactionKey:
-        document.getElementById(
-          "interactionKey"
-        ),
+        document.getElementById("interactionKey"),
 
       interactionText:
-        document.getElementById(
-          "interactionText"
-        ),
+        document.getElementById("interactionText"),
 
       statusPanel:
-        document.getElementById(
-          "statusPanel"
-        ),
+        document.getElementById("statusPanel"),
 
       statusText:
-        document.getElementById(
-          "statusText"
-        ),
+        document.getElementById("statusText"),
 
       pauseButton:
-        document.getElementById(
-          "pauseButton"
-        ),
-
-      screenVignette:
-        document.getElementById(
-          "screenVignette"
-        ),
+        document.getElementById("pauseButton"),
 
       sceneTransition:
-        document.getElementById(
-          "sceneTransition"
-        ),
+        document.getElementById("sceneTransition"),
+
+      screenVignette:
+        document.getElementById("screenVignette"),
 
       messageContainer:
-        document.getElementById(
-          "messageContainer"
-        ),
+        document.getElementById("messageContainer"),
 
       messageTitle:
-        document.getElementById(
-          "messageTitle"
-        ),
+        document.getElementById("messageTitle"),
 
       messageText:
-        document.getElementById(
-          "messageText"
-        ),
+        document.getElementById("messageText"),
 
       messageContinue:
-        document.getElementById(
-          "messageContinue"
-        ),
+        document.getElementById("messageContinue"),
 
       terminalOverlay:
-        document.getElementById(
-          "terminalOverlay"
-        ),
+        document.getElementById("terminalOverlay"),
 
       terminalDisplay:
-        document.getElementById(
-          "terminalDisplay"
-        ),
+        document.getElementById("terminalDisplay"),
 
       terminalFeedback:
-        document.getElementById(
-          "terminalFeedback"
-        ),
+        document.getElementById("terminalFeedback"),
 
       puzzleOverlay:
-        document.getElementById(
-          "puzzleOverlay"
-        ),
+        document.getElementById("puzzleOverlay"),
 
       puzzleTitle:
-        document.getElementById(
-          "puzzleTitle"
-        ),
+        document.getElementById("puzzleTitle"),
 
       puzzleQuestion:
-        document.getElementById(
-          "puzzleQuestion"
-        ),
+        document.getElementById("puzzleQuestion"),
 
       puzzleOptions:
-        document.getElementById(
-          "puzzleOptions"
-        ),
+        document.getElementById("puzzleOptions"),
 
       puzzleFeedback:
-        document.getElementById(
-          "puzzleFeedback"
-        ),
+        document.getElementById("puzzleFeedback"),
 
       completionTime:
-        document.getElementById(
-          "completionTime"
-        )
+        document.getElementById("completionTime"),
+
+      loadingScreen:
+        document.getElementById("loadingScreen"),
+
+      gameError:
+        document.getElementById("gameError")
     };
 
     this.bindDOMEvents();
   }
 
+  // =========================================================
+  // EVENTOS DOM
+  // =========================================================
+
   bindDOMEvents() {
+    const {
+      resumeButton,
+      pauseRestartButton,
+      messageContinue
+    } = this.elements;
+
     /*
-      NÃO registramos aqui:
-      startButton
-      restartButton
-      pauseButton
+     * O botão JOGAR, REINICIAR e PAUSAR já são
+     * controlados pelo main.js.
+     *
+     * Não registramos esses eventos novamente aqui
+     * para evitar o jogo iniciar duas vezes.
+     */
 
-      O main.js já registra esses botões.
-
-      Isso evita que um clique execute
-      startFromMenu() duas vezes.
-    */
-
-    if (this.elements.resumeButton) {
-      this.elements.resumeButton.addEventListener(
+    if (resumeButton) {
+      resumeButton.addEventListener(
         "click",
         () => {
           this.resume();
@@ -287,8 +299,8 @@ export class Game {
       );
     }
 
-    if (this.elements.pauseRestartButton) {
-      this.elements.pauseRestartButton.addEventListener(
+    if (pauseRestartButton) {
+      pauseRestartButton.addEventListener(
         "click",
         () => {
           this.restart();
@@ -296,24 +308,23 @@ export class Game {
       );
     }
 
-    if (this.elements.messageContinue) {
-      this.elements.messageContinue.addEventListener(
+    if (messageContinue) {
+      messageContinue.addEventListener(
         "click",
         () => {
           this.closeMessage();
         }
       );
     }
-
-    this.setupTerminalButtons();
   }
 
-  // =====================================================
+  // =========================================================
   // RESET
-  // =====================================================
+  // =========================================================
 
   reset() {
     this.elapsedTime = 0;
+
     this.gameTime = 0;
 
     this.completed = false;
@@ -322,17 +333,19 @@ export class Game {
 
     this.currentInteraction = null;
 
-    this.currentPuzzle = null;
-    this.currentTerminal = null;
+    this.interactionCooldown = 0;
 
     this.messageOpen = false;
 
-    this.interactionCooldown = 0;
+    this.currentPuzzle = null;
 
-    this.shakeTime = 0;
-    this.shakeStrength = 0;
+    this.currentTerminal = null;
 
     this.particles = [];
+
+    this.shakeTime = 0;
+
+    this.shakeStrength = 0;
 
     if (this.world) {
       this.world.reset();
@@ -340,6 +353,8 @@ export class Game {
 
     if (this.player) {
       this.player.reset();
+
+      this.ensureSafeSpawn();
     }
 
     this.updateCamera(true);
@@ -355,15 +370,108 @@ export class Game {
     );
   }
 
-  // =====================================================
-  // INÍCIO
-  // =====================================================
+  // =========================================================
+  // SPAWN SEGURO
+  // =========================================================
+
+  ensureSafeSpawn() {
+    if (!this.player || !this.world) {
+      return;
+    }
+
+    let spawn = null;
+
+    if (
+      typeof this.world.getSpawnPoint ===
+      "function"
+    ) {
+      spawn =
+        this.world.getSpawnPoint();
+    }
+
+    if (
+      !spawn ||
+      !Number.isFinite(spawn.x) ||
+      !Number.isFinite(spawn.y)
+    ) {
+      spawn = {
+        x: 930,
+        y: 620
+      };
+    }
+
+    /*
+     * Primeiro tenta o spawn definido pelo mundo.
+     */
+
+    if (
+      this.world.canPlayerMoveTo(
+        this.player,
+        spawn.x,
+        spawn.y
+      )
+    ) {
+      this.player.setPosition(
+        spawn.x,
+        spawn.y
+      );
+
+      return;
+    }
+
+    /*
+     * Se o spawn estiver dentro de uma colisão,
+     * procura automaticamente um espaço livre.
+     */
+
+    const candidates = [
+      { x: 930, y: 620 },
+      { x: 930, y: 500 },
+      { x: 930, y: 760 },
+      { x: 400, y: 500 },
+      { x: 450, y: 620 },
+      { x: 1180, y: 500 },
+      { x: 1180, y: 620 },
+      { x: 800, y: 760 },
+      { x: 650, y: 480 },
+      { x: 1050, y: 620 }
+    ];
+
+    for (const candidate of candidates) {
+      if (
+        this.world.canPlayerMoveTo(
+          this.player,
+          candidate.x,
+          candidate.y
+        )
+      ) {
+        this.player.setPosition(
+          candidate.x,
+          candidate.y
+        );
+
+        return;
+      }
+    }
+
+    /*
+     * Último recurso.
+     */
+
+    this.player.setPosition(
+      930,
+      620
+    );
+  }
+
+  // =========================================================
+  // COMEÇAR
+  // =========================================================
 
   startFromMenu() {
     /*
-      Proteção contra o botão sendo acionado
-      duas vezes ou por cache antigo.
-    */
+     * Evita que o botão seja processado duas vezes.
+     */
 
     if (this.state === "playing") {
       return;
@@ -376,74 +484,103 @@ export class Game {
     this.state = "playing";
 
     this.elapsedTime = 0;
+
     this.gameTime = 0;
 
     this.hideScreen("menuScreen");
+
     this.hideScreen("pauseScreen");
-    this.hideScreen("completionScreen");
+
+    this.hideScreen(
+      "completionScreen"
+    );
 
     this.showGameplayUI();
+
+    this.setObjective(
+      "Encontre uma maneira de escapar da sala."
+    );
+
+    this.setStatus(
+      "Use WASD ou as setas para explorar. Pressione E para interagir."
+    );
 
     this.startAudio();
 
     this.createInitialParticles();
 
-    this.showIntroMessage();
+    /*
+     * NÃO abrimos a mensagem inicial aqui.
+     *
+     * Antes ela travava o update() do Player.
+     *
+     * Agora o jogador pode andar imediatamente.
+     */
+
+    if (this.canvas) {
+      this.canvas.focus();
+    }
   }
 
   start() {
     this.startFromMenu();
   }
 
-  // =====================================================
-  // INTRO
-  // =====================================================
-
-  showIntroMessage() {
-    this.openMessage(
-      "A SALA ESTÁ TRANCADA",
-      "Você está sozinho em uma sala de aula escura. A porta está trancada. Explore o ambiente, encontre as pistas e descubra como escapar."
-    );
-  }
-
-  // =====================================================
+  // =========================================================
   // UPDATE
-  // =====================================================
+  // =========================================================
 
   update(deltaTime) {
     if (!Number.isFinite(deltaTime)) {
       deltaTime = 0;
     }
 
-    deltaTime = Math.min(
-      deltaTime,
-      0.05
-    );
+    deltaTime =
+      Math.min(
+        deltaTime,
+        0.05
+      );
 
     if (this.state === "menu") {
       this.updateMenu(deltaTime);
+
       return;
     }
 
     if (this.state === "paused") {
+      this.input.endFrame();
+
       return;
     }
 
     if (this.state === "completed") {
-      this.updateParticles(deltaTime);
+      this.input.endFrame();
+
       return;
     }
 
     if (this.state !== "playing") {
+      this.input.endFrame();
+
       return;
     }
 
-    // ===================================================
+    // =======================================================
     // MENSAGEM
-    // ===================================================
+    // =======================================================
 
     if (this.messageOpen) {
-      if (this.input.wantsConfirm()) {
+      if (
+        this.input.wasPressed(
+          "Enter"
+        ) ||
+        this.input.wasPressed(
+          " "
+        ) ||
+        this.input.wasPressed(
+          "e"
+        )
+      ) {
         this.closeMessage();
       }
 
@@ -452,9 +589,9 @@ export class Game {
       return;
     }
 
-    // ===================================================
+    // =======================================================
     // PUZZLE
-    // ===================================================
+    // =======================================================
 
     if (this.currentPuzzle) {
       this.input.endFrame();
@@ -462,9 +599,9 @@ export class Game {
       return;
     }
 
-    // ===================================================
+    // =======================================================
     // TERMINAL
-    // ===================================================
+    // =======================================================
 
     if (this.currentTerminal) {
       this.input.endFrame();
@@ -472,127 +609,153 @@ export class Game {
       return;
     }
 
-    // ===================================================
+    // =======================================================
     // TEMPO
-    // ===================================================
+    // =======================================================
 
-    this.elapsedTime += deltaTime;
     this.gameTime += deltaTime;
 
-    // ===================================================
-    // COOLDOWN
-    // ===================================================
+    this.elapsedTime += deltaTime;
 
-    if (this.interactionCooldown > 0) {
+    // =======================================================
+    // COOLDOWN
+    // =======================================================
+
+    if (
+      this.interactionCooldown > 0
+    ) {
       this.interactionCooldown -=
         deltaTime;
+
+      if (
+        this.interactionCooldown < 0
+      ) {
+        this.interactionCooldown = 0;
+      }
     }
 
-    // ===================================================
-    // CAMERA SHAKE
-    // ===================================================
+    // =======================================================
+    // SHAKE
+    // =======================================================
 
-    if (this.shakeTime > 0) {
-      this.shakeTime -= deltaTime;
+    if (
+      this.shakeTime > 0
+    ) {
+      this.shakeTime -=
+        deltaTime;
 
-      if (this.shakeTime <= 0) {
+      if (
+        this.shakeTime <= 0
+      ) {
         this.shakeTime = 0;
         this.shakeStrength = 0;
       }
     }
 
-    // ===================================================
-    // PAUSE
-    // ===================================================
+    // =======================================================
+    // PAUSA
+    // =======================================================
 
-    this.handlePauseInput();
+    if (
+      this.input.wantsPause()
+    ) {
+      this.togglePause();
 
-    if (this.state !== "playing") {
       this.input.endFrame();
+
       return;
     }
 
-    // ===================================================
+    // =======================================================
     // PLAYER
-    // ===================================================
+    // =======================================================
 
-    if (this.player) {
-      this.player.update(
-        deltaTime,
-        this.input
-      );
-    }
+    this.player.update(
+      deltaTime,
+      this.input
+    );
 
-    // ===================================================
+    // =======================================================
     // WORLD
-    // =====================================================
+    // =======================================================
 
-    if (this.world) {
-      this.world.update(deltaTime);
-    }
+    this.world.update(
+      deltaTime
+    );
 
-    // ===================================================
-    // CAMERA
-    // =====================================================
+    // =======================================================
+    // CÂMERA
+    // =======================================================
 
     this.updateCamera();
 
-    // ===================================================
+    // =======================================================
     // INTERAÇÃO
-    // =====================================================
+    // =======================================================
 
     this.updateInteraction();
 
     this.handleInteraction();
 
-    // ===================================================
-    // SAÍDA
-    // ===================================================
+    // =======================================================
+    // PORTA
+    // =======================================================
 
     this.handleDoorExit();
 
-    // ===================================================
+    // =======================================================
     // PARTÍCULAS
-    // ===================================================
+    // =======================================================
 
-    this.updateParticles(deltaTime);
+    this.updateParticles(
+      deltaTime
+    );
+
+    // =======================================================
+    // INPUT
+    // =======================================================
 
     this.input.endFrame();
   }
+
+  // =========================================================
+  // MENU
+  // =========================================================
 
   updateMenu(deltaTime) {
     if (this.world) {
-      this.world.update(deltaTime);
+      this.world.update(
+        deltaTime
+      );
     }
-
-    this.updateParticles(deltaTime);
 
     this.input.endFrame();
   }
 
-  // =====================================================
-  // PAUSE
-  // =====================================================
-
-  handlePauseInput() {
-    if (this.input.wantsPause()) {
-      this.togglePause();
-    }
-  }
+  // =========================================================
+  // PAUSA
+  // =========================================================
 
   togglePause() {
-    if (this.state === "playing") {
+    if (
+      this.state === "playing"
+    ) {
       this.pause();
+
       return;
     }
 
-    if (this.state === "paused") {
+    if (
+      this.state === "paused"
+    ) {
       this.resume();
     }
   }
 
   pause() {
-    if (this.state !== "playing") {
+    if (
+      this.state !== "playing"
+    ) {
       return;
     }
 
@@ -614,7 +777,9 @@ export class Game {
   }
 
   resume() {
-    if (this.state !== "paused") {
+    if (
+      this.state !== "paused"
+    ) {
       return;
     }
 
@@ -625,11 +790,15 @@ export class Game {
     );
 
     this.showGameplayUI();
+
+    if (this.canvas) {
+      this.canvas.focus();
+    }
   }
 
-  // =====================================================
-  // RESTART
-  // =====================================================
+  // =========================================================
+  // REINICIAR
+  // =========================================================
 
   restart() {
     this.closeAllOverlays();
@@ -638,22 +807,40 @@ export class Game {
 
     this.state = "playing";
 
-    this.hideScreen("menuScreen");
-    this.hideScreen("pauseScreen");
-    this.hideScreen("completionScreen");
+    this.hideScreen(
+      "menuScreen"
+    );
+
+    this.hideScreen(
+      "pauseScreen"
+    );
+
+    this.hideScreen(
+      "completionScreen"
+    );
 
     this.showGameplayUI();
+
+    this.setObjective(
+      "Encontre uma maneira de escapar da sala."
+    );
+
+    this.setStatus(
+      "Explore a sala."
+    );
 
     this.startAudio();
 
     this.createInitialParticles();
 
-    this.showIntroMessage();
+    if (this.canvas) {
+      this.canvas.focus();
+    }
   }
 
-  // =====================================================
-  // CAMERA
-  // =====================================================
+  // =========================================================
+  // CÂMERA
+  // =========================================================
 
   updateCamera(force = false) {
     if (!this.player) {
@@ -668,17 +855,19 @@ export class Game {
       this.player.y -
       this.height / 2;
 
-    const maxX = Math.max(
-      0,
-      this.worldWidth -
-        this.width
-    );
+    const maxX =
+      Math.max(
+        0,
+        this.worldWidth -
+          this.width
+      );
 
-    const maxY = Math.max(
-      0,
-      this.worldHeight -
-        this.height
-    );
+    const maxY =
+      Math.max(
+        0,
+        this.worldHeight -
+          this.height
+      );
 
     this.camera.targetX =
       this.clamp(
@@ -708,7 +897,7 @@ export class Game {
       1 -
       Math.exp(
         -this.camera.smoothing *
-          (1 / 60)
+        (1 / 60)
       );
 
     this.camera.x +=
@@ -724,9 +913,9 @@ export class Game {
       ) * amount;
   }
 
-  // =====================================================
+  // =========================================================
   // INTERAÇÃO
-  // =====================================================
+  // =========================================================
 
   updateInteraction() {
     if (
@@ -736,22 +925,22 @@ export class Game {
       return;
     }
 
-    const target =
+    const interaction =
       this.world.getNearestInteraction(
         this.player
       );
 
     this.currentInteraction =
-      target;
+      interaction;
 
     if (
-      target &&
+      interaction &&
       !this.messageOpen &&
       !this.currentPuzzle &&
       !this.currentTerminal
     ) {
       this.showInteractionHint(
-        target
+        interaction
       );
     } else {
       this.hideInteractionHint();
@@ -760,7 +949,8 @@ export class Game {
 
   handleInteraction() {
     if (
-      this.interactionCooldown > 0
+      this.interactionCooldown >
+      0
     ) {
       return;
     }
@@ -779,7 +969,9 @@ export class Game {
       return;
     }
 
-    if (!this.currentInteraction) {
+    if (
+      !this.currentInteraction
+    ) {
       return;
     }
 
@@ -817,31 +1009,62 @@ export class Game {
         this.interactComputer();
         break;
 
+      case "desk_1":
+      case "desk_2":
+      case "desk_3":
+      case "desk_4":
+      case "desk_5":
+      case "desk_6":
+        this.interactDesk(target);
+        break;
+
+      case "poster_left":
+      case "poster_right":
+        this.interactPoster(target);
+        break;
+
+      /*
+       * A nova world.js usa "exit".
+       *
+       * Antes o game.js esperava "door".
+       *
+       * Agora os dois são aceitos.
+       */
+
       case "exit":
       case "door":
         this.interactDoor();
         break;
 
+      case "teacherDesk":
+        this.interactTeacherDesk();
+        break;
+
+      case "flag":
+        this.interactFlag();
+        break;
+
       default:
         this.openMessage(
           target.label ||
-            "Objeto",
+            "OBJETO",
           target.message ||
             target.prompt ||
-            "Você não encontra nada de útil aqui."
+            "Não há nada de interessante aqui."
         );
+
         break;
     }
   }
 
-  // =====================================================
+  // =========================================================
   // QUADRO
-  // =====================================================
+  // =========================================================
 
   interactBoard() {
     this.openMessage(
       "O QUADRO",
-      "As anotações foram parcialmente apagadas. Ainda é possível perceber alguns números e marcas. Talvez as pistas estejam espalhadas pela sala."
+      "As marcas de giz parecem formar uma sequência. Há números parcialmente apagados e alguns símbolos destacados."
     );
 
     this.setStatus(
@@ -850,100 +1073,216 @@ export class Game {
 
     this.spawnSparkles(
       this.player.x,
-      this.player.y - 30,
+      this.player.y - 35,
       12
     );
   }
 
-  // =====================================================
+  // =========================================================
   // RELÓGIO
-  // =====================================================
+  // =========================================================
 
   interactClock() {
     this.openMessage(
       "O RELÓGIO",
-      "O relógio está parado. Os ponteiros apontam para uma hora específica. Você tem a sensação de que isso não aconteceu por acaso."
+      "O relógio está parado. Os ponteiros apontam para uma hora específica. Talvez esse horário seja importante."
     );
 
     this.setStatus(
-      "Observe os ponteiros."
+      "Observe o relógio."
     );
 
     this.spawnSparkles(
-      1335,
-      180,
+      this.player.x,
+      this.player.y - 30,
       10
     );
   }
 
-  // =====================================================
+  // =========================================================
   // ESTANTE
-  // =====================================================
+  // =========================================================
 
   interactBookshelf() {
     this.openMessage(
       "A ESTANTE",
-      "Alguns livros estão fora de ordem. Um deles parece ter sido colocado às pressas. Talvez exista algo escondido atrás dele."
+      "Alguns livros estão fora de ordem. Um deles parece ter sido retirado e colocado de volta às pressas."
     );
 
     this.setObjective(
-      "Continue procurando pistas."
+      "Procure pistas nos objetos da sala."
+    );
+
+    this.setStatus(
+      "Talvez exista um padrão nos livros."
     );
 
     this.spawnSparkles(
-      1300,
-      680,
+      this.player.x,
+      this.player.y - 25,
       14
     );
   }
 
-  // =====================================================
+  // =========================================================
+  // CARTEIRAS
+  // =========================================================
+
+  interactDesk(target) {
+    const messages = {
+      desk_1:
+        "Dentro da carteira há uma anotação: 'Comece pelo menor número e siga dobrando.'",
+
+      desk_2:
+        "Há quatro símbolos riscados na madeira. O segundo parece ter sido marcado mais vezes.",
+
+      desk_3:
+        "Uma folha dobrada diz: 'O que está escondido não precisa estar à vista.'",
+
+      desk_4:
+        "No canto da mesa há um número rabiscado: 2.",
+
+      desk_5:
+        "O mesmo símbolo aparece repetido quatro vezes. Talvez a quantidade seja importante.",
+
+      desk_6:
+        "Debaixo da mesa existe uma pequena etiqueta com a palavra: 'SEQUÊNCIA'."
+    };
+
+    this.openMessage(
+      "CARTEIRA",
+      messages[target.id] ||
+        target.message ||
+        "Há uma pequena pista escondida aqui."
+    );
+
+    this.setStatus(
+      "Uma nova pista foi encontrada."
+    );
+
+    this.spawnSparkles(
+      this.player.x,
+      this.player.y - 20,
+      8
+    );
+  }
+
+  // =========================================================
+  // CARTAZES
+  // =========================================================
+
+  interactPoster(target) {
+    if (
+      target.id ===
+      "poster_left"
+    ) {
+      this.openMessage(
+        "CARTAZ",
+        "Algumas letras estão destacadas. Quando observadas em ordem, elas parecem indicar que você deve procurar uma sequência."
+      );
+    } else {
+      this.openMessage(
+        "CARTAZ",
+        "As formas geométricas aparecem nesta ordem: círculo, quadrado, triângulo. A ordem parece proposital."
+      );
+    }
+
+    this.setStatus(
+      "Observe os detalhes."
+    );
+  }
+
+  // =========================================================
   // ARMÁRIO
-  // =====================================================
+  // =========================================================
 
   interactCabinet() {
-    if (this.doorUnlocked) {
-      this.openMessage(
-        "ARMÁRIO",
-        "Você já encontrou a pista escondida aqui."
-      );
+    if (
+      !this.doorUnlocked
+    ) {
+      this.openPuzzle({
+        id: "cabinet",
+
+        title:
+          "O ARMÁRIO",
+
+        question:
+          "Qual número completa a sequência: 2, 4, 8, 16, ?",
+
+        options: [
+          "24",
+          "28",
+          "32",
+          "36"
+        ],
+
+        answer:
+          "32",
+
+        success:
+          "A fechadura se abre. Dentro do armário há uma anotação com quatro números.",
+
+        failure:
+          "A fechadura não se move."
+      });
 
       return;
     }
 
-    this.openPuzzle({
-      id: "cabinet",
-      title: "O ARMÁRIO",
-      question:
-        "Qual número completa a sequência?\n\n2 — 4 — 8 — 16 — ?",
-      options: [
-        "24",
-        "28",
-        "32",
-        "36"
-      ],
-      answer: "32",
-      success:
-        "A fechadura se abre. Dentro do armário há uma chave e um bilhete. A porta principal parece ter sido destrancada.",
-      failure:
-        "A fechadura não se move. Pense no padrão da sequência."
-    });
+    this.openMessage(
+      "ARMÁRIO ABERTO",
+      "O armário já foi aberto. A pista encontrada aqui pode ajudar a descobrir o código do terminal."
+    );
   }
 
-  // =====================================================
+  // =========================================================
   // COMPUTADOR
-  // =====================================================
+  // =========================================================
 
   interactComputer() {
     this.openTerminal();
   }
 
-  // =====================================================
+  // =========================================================
+  // MESA DO PROFESSOR
+  // =========================================================
+
+  interactTeacherDesk() {
+    this.openMessage(
+      "MESA DO PROFESSOR",
+      "Há papéis, um livro e algumas anotações. Uma frase está circulada várias vezes: 'Nem tudo precisa ser visto para ser encontrado.'"
+    );
+
+    this.setObjective(
+      "Use as pistas para descobrir o código."
+    );
+  }
+
+  // =========================================================
+  // BANDEIRA
+  // =========================================================
+
+  interactFlag() {
+    this.openMessage(
+      "BANDEIRA DO BRASIL",
+      "Atrás da bandeira existe uma pequena marca no reboco. Não parece ser uma coincidência."
+    );
+
+    this.spawnSparkles(
+      this.player.x,
+      this.player.y - 25,
+      8
+    );
+  }
+
+  // =========================================================
   // PORTA
-  // =====================================================
+  // =========================================================
 
   interactDoor() {
-    if (this.doorUnlocked) {
+    if (
+      this.doorUnlocked
+    ) {
       this.openDoor();
 
       return;
@@ -951,17 +1290,21 @@ export class Game {
 
     this.openMessage(
       "A PORTA",
-      "A porta está trancada. Ao lado da maçaneta existe uma fechadura numérica."
+      "Está trancada. Ao lado da maçaneta existe uma pequena fechadura numérica."
     );
 
     this.setObjective(
-      "Descubra como abrir a porta."
+      "Encontre o código para abrir a porta."
+    );
+
+    this.setStatus(
+      "A saída ainda está bloqueada."
     );
   }
 
-  // =====================================================
+  // =========================================================
   // TERMINAL
-  // =====================================================
+  // =========================================================
 
   openTerminal() {
     this.currentTerminal = {
@@ -987,11 +1330,15 @@ export class Game {
 
     this.updateTerminalDisplay();
 
-    this.setTerminalFeedback("");
+    this.setTerminalFeedback(
+      "Digite o código encontrado."
+    );
 
     this.setStatus(
-      "Digite o código."
+      "Terminal de segurança."
     );
+
+    this.setupTerminalButtons();
   }
 
   setupTerminalButtons() {
@@ -1008,14 +1355,11 @@ export class Game {
       );
 
     buttons.forEach(button => {
-      button.addEventListener(
-        "click",
-        () => {
-          this.handleTerminalKey(
-            button.dataset.key
-          );
-        }
-      );
+      button.onclick = () => {
+        this.handleTerminalKey(
+          button.dataset.key
+        );
+      };
     });
 
     const clearButton =
@@ -1024,21 +1368,22 @@ export class Game {
       );
 
     if (clearButton) {
-      clearButton.addEventListener(
-        "click",
-        () => {
-          if (!this.currentTerminal) {
-            return;
-          }
-
-          this.currentTerminal.entered =
-            "";
-
-          this.updateTerminalDisplay();
-
-          this.setTerminalFeedback("");
+      clearButton.onclick = () => {
+        if (
+          !this.currentTerminal
+        ) {
+          return;
         }
-      );
+
+        this.currentTerminal.entered =
+          "";
+
+        this.updateTerminalDisplay();
+
+        this.setTerminalFeedback(
+          ""
+        );
+      };
     }
 
     const enterButton =
@@ -1047,12 +1392,9 @@ export class Game {
       );
 
     if (enterButton) {
-      enterButton.addEventListener(
-        "click",
-        () => {
-          this.submitTerminal();
-        }
-      );
+      enterButton.onclick = () => {
+        this.submitTerminal();
+      };
     }
 
     const closeButton =
@@ -1061,27 +1403,28 @@ export class Game {
       );
 
     if (closeButton) {
-      closeButton.addEventListener(
-        "click",
-        () => {
-          this.closeTerminal();
-        }
-      );
+      closeButton.onclick = () => {
+        this.closeTerminal();
+      };
     }
   }
 
   handleTerminalKey(key) {
-    if (!this.currentTerminal) {
-      return;
-    }
-
-    if (!/^\d$/.test(key)) {
+    if (
+      !this.currentTerminal
+    ) {
       return;
     }
 
     if (
-      this.currentTerminal.entered.length >=
-      4
+      !/^\d$/.test(key)
+    ) {
+      return;
+    }
+
+    if (
+      this.currentTerminal.entered
+        .length >= 4
     ) {
       return;
     }
@@ -1092,8 +1435,8 @@ export class Game {
     this.updateTerminalDisplay();
 
     if (
-      this.currentTerminal.entered.length ===
-      4
+      this.currentTerminal.entered
+        .length === 4
     ) {
       this.submitTerminal();
     }
@@ -1107,16 +1450,20 @@ export class Game {
       return;
     }
 
-    if (!this.currentTerminal) {
-      display.textContent = "----";
+    if (
+      !this.currentTerminal
+    ) {
+      display.textContent =
+        "----";
+
       return;
     }
 
-    const entered =
+    const value =
       this.currentTerminal.entered;
 
     display.textContent =
-      entered.padEnd(
+      value.padEnd(
         4,
         "•"
       );
@@ -1126,23 +1473,29 @@ export class Game {
     const feedback =
       this.elements.terminalFeedback;
 
-    if (feedback) {
-      feedback.textContent =
-        text || "";
+    if (!feedback) {
+      return;
     }
+
+    feedback.textContent =
+      text || "";
   }
 
   submitTerminal() {
-    if (!this.currentTerminal) {
+    if (
+      !this.currentTerminal
+    ) {
       return;
     }
 
     const entered =
       this.currentTerminal.entered;
 
-    if (entered.length !== 4) {
+    if (
+      entered.length !== 4
+    ) {
       this.setTerminalFeedback(
-        "Digite os 4 números."
+        "Digite 4 números."
       );
 
       return;
@@ -1152,56 +1505,66 @@ export class Game {
       entered ===
       this.currentTerminal.code
     ) {
-      this.doorUnlocked = true;
+      this.doorUnlocked =
+        true;
 
-      if (this.world) {
-        this.world.setDoorOpen(true);
-      }
+      this.world.setDoorOpen(
+        true
+      );
 
       this.closeTerminal();
 
       this.setObjective(
-        "A porta está aberta. Encontre a saída."
+        "A porta está aberta. Vá até a saída."
       );
 
       this.setStatus(
-        "Código correto!"
+        "Sistema de segurança desativado."
       );
 
       this.openMessage(
         "CÓDIGO CORRETO",
-        "A fechadura faz um clique. A porta se abre lentamente. Agora você só precisa atravessá-la."
+        "O terminal emite um sinal. A fechadura da porta é liberada e a saída está disponível."
       );
+
+      this.shakeTime =
+        0.2;
+
+      this.shakeStrength =
+        2;
 
       this.spawnSparkles(
         this.player.x,
         this.player.y,
-        25
+        24
       );
-
-      this.shakeTime = 0.2;
-      this.shakeStrength = 2;
 
       this.playSuccessSound();
-    } else {
-      this.setTerminalFeedback(
-        "Código incorreto."
-      );
 
-      this.currentTerminal.entered =
-        "";
-
-      this.updateTerminalDisplay();
-
-      this.shakeTime = 0.15;
-      this.shakeStrength = 3;
-
-      this.playErrorSound();
+      return;
     }
+
+    this.setTerminalFeedback(
+      "Código incorreto."
+    );
+
+    this.currentTerminal.entered =
+      "";
+
+    this.updateTerminalDisplay();
+
+    this.shakeTime =
+      0.15;
+
+    this.shakeStrength =
+      3;
+
+    this.playErrorSound();
   }
 
   closeTerminal() {
-    this.currentTerminal = null;
+    this.currentTerminal =
+      null;
 
     const overlay =
       this.elements.terminalOverlay;
@@ -1220,9 +1583,9 @@ export class Game {
     );
   }
 
-  // =====================================================
+  // =========================================================
   // PUZZLE
-  // =====================================================
+  // =========================================================
 
   openPuzzle(data) {
     if (!data) {
@@ -1255,7 +1618,7 @@ export class Game {
     if (title) {
       title.textContent =
         data.title ||
-        "Desafio";
+        "DESAFIO";
     }
 
     if (question) {
@@ -1323,7 +1686,9 @@ export class Game {
   }
 
   answerPuzzle(answer) {
-    if (!this.currentPuzzle) {
+    if (
+      !this.currentPuzzle
+    ) {
       return;
     }
 
@@ -1331,19 +1696,23 @@ export class Game {
       this.currentPuzzle;
 
     if (
-      String(answer) ===
-      String(puzzle.answer)
+      answer ===
+      puzzle.answer
     ) {
       this.closePuzzle();
+
+      /*
+       * O puzzle libera a segurança.
+       * O terminal continua sendo um elemento
+       * explorável, mas a porta já está liberada.
+       */
 
       this.doorUnlocked =
         true;
 
-      if (this.world) {
-        this.world.setDoorOpen(
-          true
-        );
-      }
+      this.world.setDoorOpen(
+        true
+      );
 
       this.setObjective(
         "A porta está aberta. Encontre a saída."
@@ -1362,7 +1731,7 @@ export class Game {
       this.spawnSparkles(
         this.player.x,
         this.player.y,
-        22
+        20
       );
 
       this.playSuccessSound();
@@ -1379,8 +1748,11 @@ export class Game {
         "Resposta incorreta.";
     }
 
-    this.shakeTime = 0.12;
-    this.shakeStrength = 2;
+    this.shakeTime =
+      0.12;
+
+    this.shakeStrength =
+      2;
 
     this.playErrorSound();
   }
@@ -1406,15 +1778,13 @@ export class Game {
     );
   }
 
-  // =====================================================
+  // =========================================================
   // MENSAGENS
-  // =====================================================
+  // =========================================================
 
   openMessage(title, text) {
     this.messageOpen =
       true;
-
-    this.hideInteractionHint();
 
     const container =
       this.elements.messageContainer;
@@ -1423,14 +1793,20 @@ export class Game {
       return;
     }
 
-    if (this.elements.messageTitle) {
-      this.elements.messageTitle.textContent =
+    const titleElement =
+      this.elements.messageTitle;
+
+    const textElement =
+      this.elements.messageText;
+
+    if (titleElement) {
+      titleElement.textContent =
         title ||
-        "Mensagem";
+        "MENSAGEM";
     }
 
-    if (this.elements.messageText) {
-      this.elements.messageText.textContent =
+    if (textElement) {
+      textElement.textContent =
         text ||
         "";
     }
@@ -1466,27 +1842,28 @@ export class Game {
     );
   }
 
-  // =====================================================
-  // SAÍDA
-  // =====================================================
+  // =========================================================
+  // PORTA / SAÍDA
+  // =========================================================
 
   handleDoorExit() {
     if (
       !this.doorUnlocked ||
-      this.completed ||
-      !this.player ||
-      !this.world
+      this.completed
     ) {
       return;
     }
 
     const door =
-      this.world.exitDoor || {
-        x: 110,
-        y: 330,
-        width: 120,
-        height: 190
-      };
+      this.world &&
+      this.world.exitDoor
+        ? this.world.exitDoor
+        : {
+            x: 110,
+            y: 330,
+            width: 120,
+            height: 190
+          };
 
     const doorCenterX =
       door.x +
@@ -1500,25 +1877,29 @@ export class Game {
       Math.hypot(
         this.player.x -
           doorCenterX,
+
         this.player.y -
           doorCenterY
       );
 
-    if (distance < 110) {
+    if (
+      distance < 95 &&
+      !this.messageOpen
+    ) {
       this.completeGame();
     }
   }
 
   openDoor() {
-    if (!this.doorUnlocked) {
+    if (
+      !this.doorUnlocked
+    ) {
       return;
     }
 
-    if (this.world) {
-      this.world.setDoorOpen(
-        true
-      );
-    }
+    this.world.setDoorOpen(
+      true
+    );
 
     this.setObjective(
       "Atravesse a porta."
@@ -1527,14 +1908,22 @@ export class Game {
     this.setStatus(
       "A saída está aberta."
     );
+
+    this.spawnSparkles(
+      this.player.x,
+      this.player.y,
+      18
+    );
   }
 
-  // =====================================================
+  // =========================================================
   // CONCLUSÃO
-  // =====================================================
+  // =========================================================
 
   completeGame() {
-    if (this.completed) {
+    if (
+      this.completed
+    ) {
       return;
     }
 
@@ -1544,11 +1933,9 @@ export class Game {
     this.state =
       "completed";
 
-    if (this.world) {
-      this.world.setDoorOpen(
-        true
-      );
-    }
+    this.world.setDoorOpen(
+      true
+    );
 
     this.hideGameplayUI();
 
@@ -1564,22 +1951,22 @@ export class Game {
         );
     }
 
-    this.showScreen(
-      "completionScreen"
-    );
-
     this.spawnSparkles(
       this.player.x,
       this.player.y,
-      45
+      40
     );
 
     this.playSuccessSound();
+
+    this.showScreen(
+      "completionScreen"
+    );
   }
 
-  // =====================================================
+  // =========================================================
   // RENDER
-  // =====================================================
+  // =========================================================
 
   render() {
     const ctx =
@@ -1605,7 +1992,9 @@ export class Game {
     let shakeX = 0;
     let shakeY = 0;
 
-    if (this.shakeTime > 0) {
+    if (
+      this.shakeTime > 0
+    ) {
       shakeX =
         (
           Math.random() -
@@ -1631,9 +2020,9 @@ export class Game {
         shakeY
     };
 
-    // -----------------------------------------------------
+    // =======================================================
     // MUNDO
-    // -----------------------------------------------------
+    // =======================================================
 
     if (this.world) {
       this.world.render(
@@ -1642,18 +2031,18 @@ export class Game {
       );
     }
 
-    // -----------------------------------------------------
+    // =======================================================
     // PARTÍCULAS
-    // -----------------------------------------------------
+    // =======================================================
 
     this.renderParticles(
       ctx,
       renderCamera
     );
 
-    // -----------------------------------------------------
+    // =======================================================
     // PLAYER
-    // -----------------------------------------------------
+    // =======================================================
 
     if (this.player) {
       this.player.render(
@@ -1662,13 +2051,14 @@ export class Game {
       );
     }
 
-    // -----------------------------------------------------
+    // =======================================================
     // ILUMINAÇÃO
-    // -----------------------------------------------------
+    // =======================================================
 
     if (
       this.world &&
-      this.player
+      typeof this.world.renderLighting ===
+        "function"
     ) {
       this.world.renderLighting(
         ctx,
@@ -1678,9 +2068,9 @@ export class Game {
       );
     }
 
-    // -----------------------------------------------------
+    // =======================================================
     // ATMOSFERA
-    // -----------------------------------------------------
+    // =======================================================
 
     this.renderAtmosphere(
       ctx
@@ -1689,9 +2079,9 @@ export class Game {
     ctx.restore();
   }
 
-  // =====================================================
+  // =========================================================
   // FUNDO
-  // =====================================================
+  // =========================================================
 
   drawCanvasBackground(ctx) {
     const gradient =
@@ -1704,12 +2094,12 @@ export class Game {
 
     gradient.addColorStop(
       0,
-      "#07090d"
+      "#070b0f"
     );
 
     gradient.addColorStop(
       1,
-      "#12171c"
+      "#10161b"
     );
 
     ctx.fillStyle =
@@ -1723,9 +2113,9 @@ export class Game {
     );
   }
 
-  // =====================================================
+  // =========================================================
   // ATMOSFERA
-  // =====================================================
+  // =========================================================
 
   renderAtmosphere(ctx) {
     ctx.save();
@@ -1769,9 +2159,9 @@ export class Game {
     ctx.restore();
   }
 
-  // =====================================================
+  // =========================================================
   // PARTÍCULAS
-  // =====================================================
+  // =========================================================
 
   createInitialParticles() {
     this.particles =
@@ -1779,13 +2169,12 @@ export class Game {
 
     for (
       let i = 0;
-      i < 28;
+      i < 24;
       i++
     ) {
-      const life =
+      const maxLife =
         2 +
-        Math.random() *
-          3;
+        Math.random() * 3;
 
       this.particles.push({
         x:
@@ -1793,25 +2182,26 @@ export class Game {
           this.worldWidth,
 
         y:
-          320 +
+          520 +
           Math.random() *
-            480,
+            300,
 
         vx:
           (
             Math.random() -
             0.5
-          ) * 8,
+          ) *
+          8,
 
         vy:
           -Math.random() *
           5,
 
         life:
-          life,
+          maxLife,
 
         maxLife:
-          life,
+          maxLife,
 
         size:
           Math.random() >
@@ -1835,7 +2225,7 @@ export class Game {
       i < amount;
       i++
     ) {
-      const life =
+      const maxLife =
         0.5 +
         Math.random() *
           0.8;
@@ -1872,10 +2262,10 @@ export class Game {
           50,
 
         life:
-          life,
+          maxLife,
 
         maxLife:
-          life,
+          maxLife,
 
         size:
           Math.random() >
@@ -1889,12 +2279,16 @@ export class Game {
     }
   }
 
-  updateParticles(deltaTime) {
+  updateParticles(
+    deltaTime
+  ) {
     for (
       let i =
         this.particles.length -
         1;
+
       i >= 0;
+
       i--
     ) {
       const particle =
@@ -1904,8 +2298,7 @@ export class Game {
         deltaTime;
 
       if (
-        particle.life <=
-        0
+        particle.life <= 0
       ) {
         this.particles.splice(
           i,
@@ -2001,9 +2394,9 @@ export class Game {
     ctx.restore();
   }
 
-  // =====================================================
+  // =========================================================
   // HUD
-  // =====================================================
+  // =========================================================
 
   setObjective(text) {
     const element =
@@ -2031,6 +2424,12 @@ export class Game {
     const hint =
       this.elements.interactionHint;
 
+    const key =
+      this.elements.interactionKey;
+
+    const text =
+      this.elements.interactionText;
+
     if (!hint) {
       return;
     }
@@ -2039,17 +2438,16 @@ export class Game {
       "is-visible"
     );
 
-    if (
-      this.elements.interactionKey
-    ) {
-      this.elements.interactionKey.textContent =
+    hint.style.pointerEvents =
+      "none";
+
+    if (key) {
+      key.textContent =
         "E";
     }
 
-    if (
-      this.elements.interactionText
-    ) {
-      this.elements.interactionText.textContent =
+    if (text) {
+      text.textContent =
         `Interagir: ${
           target.label ||
           "objeto"
@@ -2137,9 +2535,9 @@ export class Game {
     }
   }
 
-  // =====================================================
+  // =========================================================
   // TELAS
-  // =====================================================
+  // =========================================================
 
   showScreen(id) {
     const screens = [
@@ -2148,41 +2546,40 @@ export class Game {
       "completionScreen"
     ];
 
-    for (
-      const screenId of
-      screens
-    ) {
-      const element =
-        this.elements[
-          screenId
-        ];
+    screens.forEach(
+      screenId => {
+        const element =
+          this.elements[
+            screenId
+          ];
 
-      if (!element) {
-        continue;
+        if (!element) {
+          return;
+        }
+
+        if (
+          screenId === id
+        ) {
+          element.classList.add(
+            "is-visible"
+          );
+
+          element.setAttribute(
+            "aria-hidden",
+            "false"
+          );
+        } else {
+          element.classList.remove(
+            "is-visible"
+          );
+
+          element.setAttribute(
+            "aria-hidden",
+            "true"
+          );
+        }
       }
-
-      if (
-        screenId === id
-      ) {
-        element.classList.add(
-          "is-visible"
-        );
-
-        element.setAttribute(
-          "aria-hidden",
-          "false"
-        );
-      } else {
-        element.classList.remove(
-          "is-visible"
-        );
-
-        element.setAttribute(
-          "aria-hidden",
-          "true"
-        );
-      }
-    }
+    );
   }
 
   hideScreen(id) {
@@ -2203,9 +2600,9 @@ export class Game {
     );
   }
 
-  // =====================================================
+  // =========================================================
   // OVERLAYS
-  // =====================================================
+  // =========================================================
 
   hideOverlayElements() {
     this.hideInteractionHint();
@@ -2266,12 +2663,22 @@ export class Game {
     this.hideOverlayElements();
   }
 
-  // =====================================================
+  // =========================================================
   // ÁUDIO
-  // =====================================================
+  // =========================================================
 
   startAudio() {
-    if (this.audioStarted) {
+    if (
+      this.audioStarted
+    ) {
+      if (
+        this.audioContext &&
+        this.audioContext.state ===
+          "suspended"
+      ) {
+        this.audioContext.resume();
+      }
+
       return;
     }
 
@@ -2299,7 +2706,9 @@ export class Game {
     type = "sine",
     volume = 0.025
   ) {
-    if (!this.audioContext) {
+    if (
+      !this.audioContext
+    ) {
       return;
     }
 
@@ -2357,8 +2766,7 @@ export class Game {
         now + duration
       );
     } catch (error) {
-      // O jogo continua normalmente
-      // mesmo sem áudio.
+      // O jogo continua normalmente sem áudio.
     }
   }
 
@@ -2404,9 +2812,9 @@ export class Game {
     );
   }
 
-  // =====================================================
+  // =========================================================
   // TECLADO
-  // =====================================================
+  // =========================================================
 
   handleKeyDown(event) {
     if (!event) {
@@ -2414,60 +2822,107 @@ export class Game {
     }
 
     const key =
-      typeof event.key ===
-      "string"
-        ? event.key.toLowerCase()
-        : "";
+      event.key;
 
-    // -----------------------------------------------------
-    // Mensagem
-    // -----------------------------------------------------
+    // =======================================================
+    // MENSAGEM
+    // =======================================================
 
     if (
-      key === "enter" &&
-      this.messageOpen
+      this.messageOpen &&
+      (
+        key === "Enter" ||
+        key === " " ||
+        key === "e" ||
+        key === "E"
+      )
     ) {
-      event.preventDefault();
-
       this.closeMessage();
 
       return;
     }
 
-    // -----------------------------------------------------
-    // Terminal
-    // -----------------------------------------------------
+    // =======================================================
+    // TERMINAL
+    // =======================================================
 
     if (
-      key === "escape" &&
       this.currentTerminal
     ) {
-      event.preventDefault();
+      if (
+        /^\d$/.test(key)
+      ) {
+        this.handleTerminalKey(
+          key
+        );
 
-      this.closeTerminal();
+        return;
+      }
+
+      if (
+        key === "Enter"
+      ) {
+        this.submitTerminal();
+
+        return;
+      }
+
+      if (
+        key === "Backspace"
+      ) {
+        this.currentTerminal.entered =
+          this.currentTerminal.entered.slice(
+            0,
+            -1
+          );
+
+        this.updateTerminalDisplay();
+
+        return;
+      }
+
+      if (
+        key === "Escape"
+      ) {
+        this.closeTerminal();
+
+        return;
+      }
 
       return;
     }
 
-    // -----------------------------------------------------
-    // Puzzle
-    // -----------------------------------------------------
+    // =======================================================
+    // PUZZLE
+    // =======================================================
 
     if (
-      key === "escape" &&
       this.currentPuzzle
     ) {
-      event.preventDefault();
-
-      this.closePuzzle();
+      if (
+        key === "Escape"
+      ) {
+        this.closePuzzle();
+      }
 
       return;
+    }
+
+    // =======================================================
+    // PAUSA
+    // =======================================================
+
+    if (
+      key === "Escape" &&
+      this.state === "playing"
+    ) {
+      this.togglePause();
     }
   }
 
-  // =====================================================
+  // =========================================================
   // UTILIDADES
-  // =====================================================
+  // =========================================================
 
   clamp(
     value,
@@ -2483,7 +2938,9 @@ export class Game {
     );
   }
 
-  formatTime(seconds) {
+  formatTime(
+    seconds
+  ) {
     const totalSeconds =
       Math.max(
         0,
@@ -2500,37 +2957,51 @@ export class Game {
     const remaining =
       totalSeconds % 60;
 
-    return (
-      String(minutes).padStart(
-        2,
-        "0"
-      ) +
-      ":" +
-      String(remaining).padStart(
-        2,
-        "0"
-      )
-    );
+    return `${String(
+      minutes
+    ).padStart(
+      2,
+      "0"
+    )}:${String(
+      remaining
+    ).padStart(
+      2,
+      "0"
+    )}`;
   }
 
-  // =====================================================
+  // =========================================================
   // DESTRUIR
-  // =====================================================
+  // =========================================================
 
   destroy() {
-    if (this.input) {
+    if (
+      this.input &&
+      typeof this.input.destroy ===
+        "function"
+    ) {
       this.input.destroy();
     }
 
-    if (this.world) {
+    if (
+      this.world &&
+      typeof this.world.destroy ===
+        "function"
+    ) {
       this.world.destroy();
     }
 
-    if (this.player) {
+    if (
+      this.player &&
+      typeof this.player.destroy ===
+        "function"
+    ) {
       this.player.destroy();
     }
 
-    if (this.audioContext) {
+    if (
+      this.audioContext
+    ) {
       try {
         this.audioContext.close();
       } catch (error) {
@@ -2539,10 +3010,15 @@ export class Game {
     }
 
     this.input = null;
+
     this.world = null;
+
     this.player = null;
-    this.canvas = null;
-    this.ctx = null;
+
     this.audioContext = null;
+
+    this.canvas = null;
+
+    this.ctx = null;
   }
 }
