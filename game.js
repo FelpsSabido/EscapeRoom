@@ -3,1350 +3,1127 @@ import { Player } from "./player.js";
 import { World } from "./world.js";
 
 export class Game {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext("2d");
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d");
 
-        this.width = 960;
-        this.height = 540;
+    this.width = canvas.width;
+    this.height = canvas.height;
 
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
+    this.world = new World({
+      width: 1500,
+      height: 900
+    });
 
-        this.ctx.imageSmoothingEnabled = false;
+    const spawn = this.world.getSpawnPoint();
 
-        this.state = "loading";
+    this.player = new Player({
+      x: spawn.x,
+      y: spawn.y
+    });
 
-        this.lastTime = 0;
-        this.deltaTime = 0;
+    this.input = new Input(this);
 
-        this.fps = 60;
-        this.frameCounter = 0;
-        this.fpsTimer = 0;
+    this.state = "menu";
 
-        this.camera = {
-            x: 0,
-            y: 0,
-            targetX: 0,
-            targetY: 0,
-            smoothness: 8,
-            shake: 0
-        };
+    this.camera = {
+      x: 0,
+      y: 0,
+      width: this.width,
+      height: this.height
+    };
 
-        this.world = new World({
-            width: 1500,
-            height: 900
-        });
+    this.elapsedTime = 0;
+    this.startedAt = 0;
 
-        this.input = new Input(this);
+    this.interactionTarget = null;
+    this.messageTimer = 0;
 
-        const spawn = this.world.getSpawnPoint();
+    this.particles = [];
 
-        this.player = new Player({
-            input: this.input,
-            world: this.world,
-            x: spawn.x,
-            y: spawn.y,
-            width: 30,
-            height: 42,
-            speed: 180,
-            maxSpeed: 180,
-            acceleration: 1250,
-            deceleration: 1500
-        });
+    this.lastPlayerX = this.player.x;
+    this.lastPlayerY = this.player.y;
 
-        this.interaction = {
-            current: null,
-            pulse: 0
-        };
+    this.dom = {
+      menu: document.getElementById("menuScreen"),
+      pause: document.getElementById("pauseScreen"),
+      completed: document.getElementById("completedScreen"),
 
-        this.particles = [];
+      startButton: document.getElementById("startButton"),
+      restartButton: document.getElementById("restartButton"),
+      pauseButton: document.getElementById("pauseButton"),
+      resumeButton: document.getElementById("resumeButton"),
+      pauseRestartButton: document.getElementById("pauseRestartButton"),
 
-        this.lightTime = 0;
+      objectivePanel: document.getElementById("objectivePanel"),
+      objectiveText: document.getElementById("objectiveText"),
 
-        this.screenFlash = 0;
+      interactionHint: document.getElementById("interactionHint"),
+      interactionText: document.getElementById("interactionText"),
 
-        this.vignetteStrength = 0.25;
+      completionTime: document.getElementById("completionTime"),
 
-        this.debug = false;
+      messageContainer: document.getElementById("messageContainer"),
+      messageTitle: document.getElementById("messageTitle"),
+      messageText: document.getElementById("messageText")
+    };
 
-        this.running = false;
+    this.setupDomEvents();
+    this.showMenu();
+  }
 
-        this.callbacks = {
-            onComplete: null,
-            onPause: null,
-            onResume: null,
-            onInteraction: null,
-            onPlayerMove: null
-        };
-
-        this.world.initialize();
-
-        this.player.initialize();
-
-        this.updateCamera(1);
-
-        this.state = "menu";
-
-        this.render();
-
-        this.loop = this.loop.bind(this);
+  setupDomEvents() {
+    if (this.dom.startButton) {
+      this.dom.startButton.addEventListener("click", () => {
+        this.startFromMenu();
+      });
     }
 
-    start() {
-        if (this.running) {
-            return;
-        }
-
-        this.running = true;
-
-        this.state = "playing";
-
-        this.lastTime = performance.now();
-
-        requestAnimationFrame(this.loop);
+    if (this.dom.restartButton) {
+      this.dom.restartButton.addEventListener("click", () => {
+        this.restart();
+      });
     }
 
-    loop(timestamp) {
-        if (!this.running) {
-            return;
-        }
-
-        this.deltaTime =
-            Math.min(
-                (timestamp - this.lastTime) / 1000,
-                0.05
-            );
-
-        this.lastTime = timestamp;
-
-        this.update(this.deltaTime);
-
-        this.render();
-
-        requestAnimationFrame(this.loop);
+    if (this.dom.pauseButton) {
+      this.dom.pauseButton.addEventListener("click", () => {
+        this.togglePause();
+      });
     }
 
-    update(deltaTime) {
-        if (this.state === "playing") {
-            this.world.update(deltaTime);
-
-            this.player.update(deltaTime);
-
-            this.updateCamera(deltaTime);
-
-            this.updateInteraction(deltaTime);
-
-            this.updateParticles(deltaTime);
-
-            this.updateLighting(deltaTime);
-
-            this.updateEffects(deltaTime);
-
-            this.checkGameState();
-        }
-
-        this.updateFPS(deltaTime);
-
-        if (this.input) {
-            if (this.input.wantsPause()) {
-                this.togglePause();
-            }
-
-            if (this.input.wantsInteract()) {
-                this.interact();
-            }
-
-            this.input.endFrame();
-        }
+    if (this.dom.resumeButton) {
+      this.dom.resumeButton.addEventListener("click", () => {
+        this.resume();
+      });
     }
 
-    updateCamera(deltaTime) {
-        if (!this.player) {
-            return;
-        }
+    if (this.dom.pauseRestartButton) {
+      this.dom.pauseRestartButton.addEventListener("click", () => {
+        this.restart();
+      });
+    }
+  }
 
-        this.camera.targetX =
-            this.player.x - this.width / 2;
-
-        this.camera.targetY =
-            this.player.y - this.height / 2;
-
-        const maxCameraX =
-            this.world.width - this.width;
-
-        const maxCameraY =
-            this.world.height - this.height;
-
-        this.camera.targetX =
-            Math.max(
-                0,
-                Math.min(
-                    maxCameraX,
-                    this.camera.targetX
-                )
-            );
-
-        this.camera.targetY =
-            Math.max(
-                0,
-                Math.min(
-                    maxCameraY,
-                    this.camera.targetY
-                )
-            );
-
-        const interpolation =
-            1 -
-            Math.exp(
-                -this.camera.smoothness *
-                deltaTime
-            );
-
-        this.camera.x +=
-            (this.camera.targetX - this.camera.x) *
-            interpolation;
-
-        this.camera.y +=
-            (this.camera.targetY - this.camera.y) *
-            interpolation;
-
-        if (this.camera.shake > 0) {
-            this.camera.shake -= deltaTime;
-
-            if (this.camera.shake < 0) {
-                this.camera.shake = 0;
-            }
-        }
+  startFromMenu() {
+    if (this.state !== "menu") {
+      return;
     }
 
-    updateInteraction(deltaTime) {
-        this.interaction.pulse +=
-            deltaTime * 4;
+    this.start();
+  }
 
-        const target =
-            this.world.getNearestInteraction(
-                this.player.x,
-                this.player.y,
-                95
-            );
+  start() {
+    this.state = "playing";
 
-        this.interaction.current = target;
+    this.elapsedTime = 0;
+    this.startedAt = performance.now();
+
+    this.hideAllScreens();
+
+    this.showHud();
+
+    this.world.reset();
+
+    const spawn = this.world.getSpawnPoint();
+
+    this.player.reset(spawn.x, spawn.y);
+
+    this.camera.x = 0;
+    this.camera.y = 0;
+
+    this.interactionTarget = null;
+
+    this.clearMessage();
+
+    this.particles = [];
+
+    this.updateObjective(
+      "Explore a sala, encontre as pistas e descubra como escapar."
+    );
+
+    this.canvas.focus();
+  }
+
+  resume() {
+    if (this.state !== "paused") {
+      return;
     }
 
-    updateParticles(deltaTime) {
-        for (const particle of this.particles) {
-            particle.x +=
-                particle.vx * deltaTime;
+    this.state = "playing";
 
-            particle.y +=
-                particle.vy * deltaTime;
+    this.hidePauseScreen();
 
-            particle.life -= deltaTime;
+    this.showHud();
 
-            particle.alpha =
-                Math.max(
-                    0,
-                    particle.life /
-                    particle.maxLife
-                );
-        }
+    this.canvas.focus();
+  }
 
-        this.particles =
-            this.particles.filter(
-                particle =>
-                    particle.life > 0
-            );
-
-        if (
-            this.particles.length < 70 &&
-            Math.random() < deltaTime * 8
-        ) {
-            this.createDustParticle();
-        }
+  togglePause() {
+    if (this.state === "playing") {
+      this.pause();
+      return;
     }
 
-    createDustParticle() {
-        const x =
-            this.camera.x +
-            Math.random() * this.width;
+    if (this.state === "paused") {
+      this.resume();
+    }
+  }
 
-        const y =
-            this.camera.y +
-            Math.random() * this.height;
-
-        if (
-            x < 70 ||
-            x > this.world.width - 70 ||
-            y < 80 ||
-            y > this.world.height - 70
-        ) {
-            return;
-        }
-
-        this.particles.push({
-            x,
-            y,
-            vx: (Math.random() - 0.5) * 8,
-            vy: -5 - Math.random() * 8,
-            life: 1.2 + Math.random() * 2,
-            maxLife: 1.2 + Math.random() * 2,
-            alpha: 0,
-            size: 1 + Math.random() * 2
-        });
+  pause() {
+    if (this.state !== "playing") {
+      return;
     }
 
-    updateLighting(deltaTime) {
-        this.lightTime += deltaTime;
+    this.state = "paused";
 
-        this.vignetteStrength =
-            0.23 +
-            Math.sin(this.lightTime * 0.8) *
-            0.015;
+    this.showPauseScreen();
+  }
+
+  restart() {
+    this.state = "playing";
+
+    this.elapsedTime = 0;
+    this.startedAt = performance.now();
+
+    this.world.reset();
+
+    const spawn = this.world.getSpawnPoint();
+
+    this.player.reset(spawn.x, spawn.y);
+
+    this.camera.x = 0;
+    this.camera.y = 0;
+
+    this.interactionTarget = null;
+
+    this.particles = [];
+
+    this.clearMessage();
+
+    this.hideAllScreens();
+
+    this.showHud();
+
+    this.updateObjective(
+      "Explore a sala, encontre as pistas e descubra como escapar."
+    );
+
+    this.canvas.focus();
+  }
+
+  complete() {
+    if (this.state === "completed") {
+      return;
     }
 
-    updateEffects(deltaTime) {
-        if (this.screenFlash > 0) {
-            this.screenFlash -= deltaTime;
+    this.state = "completed";
 
-            if (this.screenFlash < 0) {
-                this.screenFlash = 0;
-            }
-        }
+    this.elapsedTime = (performance.now() - this.startedAt) / 1000;
+
+    if (this.dom.completionTime) {
+      this.dom.completionTime.textContent = this.formatTime(
+        this.elapsedTime
+      );
     }
 
-    checkGameState() {
-        if (
-            this.world.door.open &&
-            this.player.x >
-            this.world.door.x + 25 &&
-            this.player.x <
-            this.world.door.x +
-            this.world.door.width - 25 &&
-            this.player.y < 80
-        ) {
-            this.complete();
-        }
+    this.hideHud();
 
-        if (this.callbacks.onPlayerMove) {
-            this.callbacks.onPlayerMove({
-                x: this.player.x,
-                y: this.player.y
-            });
-        }
+    this.hidePauseScreen();
+
+    if (this.dom.completed) {
+      this.dom.completed.classList.add("active");
+      this.dom.completed.removeAttribute("hidden");
     }
 
-    interact() {
-        if (this.state !== "playing") {
-            return;
-        }
+    this.spawnSuccessParticles();
 
-        const target =
-            this.interaction.current;
+    if (this.world && typeof this.world.setDoorOpen === "function") {
+      this.world.setDoorOpen(true);
+    }
+  }
 
-        if (!target) {
-            return;
-        }
-
-        if (target.id === "door") {
-            this.tryDoor();
-        } else {
-            this.triggerInteraction(target);
-        }
+  update(deltaTime) {
+    if (!this.input) {
+      return;
     }
 
-    triggerInteraction(target) {
-        if (this.callbacks.onInteraction) {
-            this.callbacks.onInteraction(target);
-        }
-
-        this.spawnInteractionParticles(
-            target.x + target.width / 2,
-            target.y + target.height / 2
-        );
-
-        this.camera.shake = 0.08;
+    if (this.input.wantsPause()) {
+      if (this.state === "playing" || this.state === "paused") {
+        this.togglePause();
+      }
     }
 
-    tryDoor() {
-        if (this.world.door.open) {
-            return;
-        }
-
-        if (this.callbacks.onInteraction) {
-            this.callbacks.onInteraction({
-                id: "door",
-                type: "door",
-                label: "Porta",
-                message:
-                    "A porta está trancada. Você precisa descobrir a senha."
-            });
-        }
-
-        this.spawnInteractionParticles(
-            this.world.door.x +
-            this.world.door.width / 2,
-            this.world.door.y +
-            this.world.door.height / 2
-        );
+    if (this.state === "menu") {
+      this.input.endFrame();
+      return;
     }
 
-    openDoor() {
-        this.world.setDoorOpen(true);
-
-        this.screenFlash = 0.15;
-
-        this.camera.shake = 0.2;
-
-        this.spawnInteractionParticles(
-            this.world.door.x +
-            this.world.door.width / 2,
-            this.world.door.y +
-            this.world.door.height / 2,
-            20
-        );
+    if (this.state === "paused") {
+      this.input.endFrame();
+      return;
     }
 
-    spawnInteractionParticles(
-        x,
-        y,
-        amount = 8
+    if (this.state === "completed") {
+      if (this.input.wantsRestart()) {
+        this.restart();
+      }
+
+      this.updateParticles(deltaTime);
+
+      this.input.endFrame();
+      return;
+    }
+
+    if (this.state !== "playing") {
+      this.input.endFrame();
+      return;
+    }
+
+    this.elapsedTime =
+      (performance.now() - this.startedAt) / 1000;
+
+    this.player.update(deltaTime, this.input, this.world);
+
+    this.updateCamera(deltaTime);
+
+    this.updateInteraction();
+
+    if (this.input.wantsInteract()) {
+      this.handleInteraction();
+    }
+
+    this.updateParticles(deltaTime);
+
+    if (this.messageTimer > 0) {
+      this.messageTimer -= deltaTime;
+
+      if (this.messageTimer <= 0) {
+        this.clearMessage();
+      }
+    }
+
+    this.checkEscape();
+
+    this.input.endFrame();
+  }
+
+  updateCamera(deltaTime) {
+    const targetX =
+      this.player.x -
+      this.camera.width / 2;
+
+    const targetY =
+      this.player.y -
+      this.camera.height / 2;
+
+    const maxCameraX =
+      this.world.width -
+      this.camera.width;
+
+    const maxCameraY =
+      this.world.height -
+      this.camera.height;
+
+    const desiredX = Math.max(
+      0,
+      Math.min(maxCameraX, targetX)
+    );
+
+    const desiredY = Math.max(
+      0,
+      Math.min(maxCameraY, targetY)
+    );
+
+    const smoothing = Math.min(
+      1,
+      deltaTime * 8
+    );
+
+    this.camera.x +=
+      (desiredX - this.camera.x) *
+      smoothing;
+
+    this.camera.y +=
+      (desiredY - this.camera.y) *
+      smoothing;
+  }
+
+  updateInteraction() {
+    if (!this.world || !this.player) {
+      this.interactionTarget = null;
+      this.hideInteractionHint();
+      return;
+    }
+
+    if (
+      typeof this.world.getNearestInteraction !==
+      "function"
     ) {
-        for (let i = 0; i < amount; i++) {
-            const angle =
-                Math.random() *
-                Math.PI *
-                2;
-
-            const speed =
-                20 +
-                Math.random() * 45;
-
-            const life =
-                0.35 +
-                Math.random() * 0.5;
-
-            this.particles.push({
-                x,
-                y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life,
-                maxLife: life,
-                alpha: 1,
-                size:
-                    1 +
-                    Math.random() * 3
-            });
-        }
+      this.interactionTarget = null;
+      this.hideInteractionHint();
+      return;
     }
 
-    render() {
-        const ctx = this.ctx;
+    this.interactionTarget =
+      this.world.getNearestInteraction(
+        this.player.x,
+        this.player.y
+      );
 
-        ctx.clearRect(
-            0,
-            0,
-            this.width,
-            this.height
-        );
+    if (this.interactionTarget) {
+      this.showInteractionHint(
+        this.interactionTarget
+      );
+    } else {
+      this.hideInteractionHint();
+    }
+  }
 
-        this.renderBackground(ctx);
-
-        ctx.save();
-
-        let shakeX = 0;
-        let shakeY = 0;
-
-        if (this.camera.shake > 0) {
-            const intensity =
-                this.camera.shake * 18;
-
-            shakeX =
-                (Math.random() - 0.5) *
-                intensity;
-
-            shakeY =
-                (Math.random() - 0.5) *
-                intensity;
-        }
-
-        ctx.translate(
-            -Math.floor(this.camera.x) +
-            shakeX,
-            -Math.floor(this.camera.y) +
-            shakeY
-        );
-
-        this.world.render(ctx);
-
-        this.renderParticles(ctx);
-
-        this.player.render(ctx);
-
-        this.renderPlayerLight(ctx);
-
-        ctx.restore();
-
-        this.renderLighting(ctx);
-
-        this.renderInteractionHint(ctx);
-
-        this.renderHUD(ctx);
-
-        this.renderScreenEffects(ctx);
-
-        if (this.debug) {
-            this.renderDebug(ctx);
-        }
+  handleInteraction() {
+    if (!this.interactionTarget) {
+      return;
     }
 
-    renderBackground(ctx) {
-        const gradient =
-            ctx.createLinearGradient(
-                0,
-                0,
-                0,
-                this.height
-            );
+    const target = this.interactionTarget;
 
-        gradient.addColorStop(
-            0,
-            "#6d8fa1"
+    const type =
+      target.type ||
+      target.id ||
+      target.name ||
+      "object";
+
+    switch (type) {
+      case "board":
+        this.interactBoard(target);
+        break;
+
+      case "computer":
+        this.interactComputer(target);
+        break;
+
+      case "cabinet":
+        this.interactCabinet(target);
+        break;
+
+      case "bookshelf":
+        this.interactBookshelf(target);
+        break;
+
+      case "door":
+        this.interactDoor(target);
+        break;
+
+      case "teacherDesk":
+      case "teacher-desk":
+        this.interactTeacherDesk(target);
+        break;
+
+      default:
+        this.showMessage(
+          "Interação",
+          "Você encontrou algo interessante, mas ainda não sabe como usar.",
+          3
         );
+        break;
+    }
+  }
 
-        gradient.addColorStop(
-            0.45,
-            "#9eb5ad"
-        );
+  interactBoard() {
+    this.showMessage(
+      "Quadro",
+      "Há anotações espalhadas pelo quadro. Talvez alguma delas seja importante para resolver o enigma.",
+      5
+    );
 
-        gradient.addColorStop(
-            1,
-            "#536b69"
-        );
+    this.updateObjective(
+      "Observe o quadro e procure uma pista."
+    );
+  }
 
-        ctx.fillStyle = gradient;
+  interactComputer() {
+    this.showMessage(
+      "Computador",
+      "O computador está ligado, mas pede uma senha. Você ainda precisa descobrir o código.",
+      5
+    );
 
-        ctx.fillRect(
-            0,
-            0,
-            this.width,
-            this.height
-        );
+    this.updateObjective(
+      "Encontre a senha necessária para acessar o computador."
+    );
+  }
+
+  interactCabinet() {
+    this.showMessage(
+      "Armário",
+      "Você encontrou alguns materiais escolares. Entre eles há uma pista escondida.",
+      5
+    );
+
+    this.updateObjective(
+      "Continue investigando a sala em busca de pistas."
+    );
+  }
+
+  interactBookshelf() {
+    this.showMessage(
+      "Estante",
+      "Entre os livros existe uma anotação estranha. Parece fazer parte do enigma.",
+      5
+    );
+
+    this.updateObjective(
+      "Use as pistas encontradas para descobrir o código."
+    );
+  }
+
+  interactTeacherDesk() {
+    this.showMessage(
+      "Mesa do professor",
+      "Há papéis e objetos sobre a mesa. Um deles parece indicar algo importante.",
+      5
+    );
+
+    this.updateObjective(
+      "Investigue todos os pontos importantes da sala."
+    );
+  }
+
+  interactDoor() {
+    if (
+      typeof this.world.setDoorOpen ===
+      "function"
+    ) {
+      this.world.setDoorOpen(true);
     }
 
-    renderParticles(ctx) {
-        for (const particle of this.particles) {
-            ctx.save();
+    this.showMessage(
+      "Porta",
+      "Você conseguiu abrir a porta! A saída está logo à frente.",
+      4
+    );
 
-            ctx.globalAlpha =
-                particle.alpha * 0.65;
+    this.updateObjective(
+      "Saia da sala pela porta."
+    );
 
-            ctx.fillStyle = "#fff0c7";
+    this.complete();
+  }
 
-            ctx.fillRect(
-                Math.floor(particle.x),
-                Math.floor(particle.y),
-                particle.size,
-                particle.size
-            );
-
-            ctx.restore();
-        }
+  checkEscape() {
+    if (this.state !== "playing") {
+      return;
     }
 
-    renderPlayerLight(ctx) {
-        if (!this.player) {
-            return;
-        }
-
-        const x = this.player.x;
-        const y = this.player.y;
-
-        const gradient =
-            ctx.createRadialGradient(
-                x,
-                y,
-                10,
-                x,
-                y,
-                135
-            );
-
-        gradient.addColorStop(
-            0,
-            "rgba(255,245,205,0.10)"
-        );
-
-        gradient.addColorStop(
-            0.55,
-            "rgba(255,220,150,0.035)"
-        );
-
-        gradient.addColorStop(
-            1,
-            "rgba(255,220,150,0)"
-        );
-
-        ctx.save();
-
-        ctx.fillStyle = gradient;
-
-        ctx.beginPath();
-
-        ctx.arc(
-            x,
-            y,
-            135,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fill();
-
-        ctx.restore();
+    if (!this.player || !this.world) {
+      return;
     }
 
-    renderLighting(ctx) {
-        ctx.save();
+    const targets =
+      typeof this.world.getInteractionTargets ===
+      "function"
+        ? this.world.getInteractionTargets()
+        : [];
 
-        ctx.globalCompositeOperation =
-            "multiply";
+    const door = targets.find(target => {
+      const type =
+        target.type ||
+        target.id ||
+        target.name ||
+        "";
 
-        const gradient =
-            ctx.createRadialGradient(
-                this.width / 2,
-                this.height / 2,
-                120,
-                this.width / 2,
-                this.height / 2,
-                620
-            );
+      return type === "door";
+    });
 
-        gradient.addColorStop(
-            0,
-            "rgba(255,255,255,1)"
-        );
-
-        gradient.addColorStop(
-            0.55,
-            "rgba(255,255,255,0.95)"
-        );
-
-        gradient.addColorStop(
-            1,
-            `rgba(30,35,50,${this.vignetteStrength})`
-        );
-
-        ctx.fillStyle = gradient;
-
-        ctx.fillRect(
-            0,
-            0,
-            this.width,
-            this.height
-        );
-
-        ctx.restore();
-
-        this.renderCeilingGlow(ctx);
+    if (!door) {
+      return;
     }
 
-    renderCeilingGlow(ctx) {
-        const lights = [
-            {
-                x: 515 - this.camera.x,
-                y: 100 - this.camera.y
-            },
-            {
-                x: 915 - this.camera.x,
-                y: 100 - this.camera.y
-            },
-            {
-                x: 1250 - this.camera.x,
-                y: 100 - this.camera.y
-            }
-        ];
+    const distance = Math.hypot(
+      this.player.x - door.x,
+      this.player.y - door.y
+    );
 
-        ctx.save();
+    if (
+      distance < 48 &&
+      door.open === true
+    ) {
+      this.complete();
+    }
+  }
 
-        ctx.globalCompositeOperation =
-            "screen";
+  updateObjective(text) {
+    if (this.dom.objectiveText) {
+      this.dom.objectiveText.textContent = text;
+    }
+  }
 
-        for (const light of lights) {
-            const flicker =
-                0.88 +
-                Math.sin(
-                    this.lightTime * 6 +
-                    light.x
-                ) *
-                0.035;
-
-            const gradient =
-                ctx.createRadialGradient(
-                    light.x,
-                    light.y,
-                    10,
-                    light.x,
-                    light.y,
-                    170
-                );
-
-            gradient.addColorStop(
-                0,
-                `rgba(255,235,175,${0.13 * flicker})`
-            );
-
-            gradient.addColorStop(
-                0.5,
-                `rgba(255,220,150,${0.045 * flicker})`
-            );
-
-            gradient.addColorStop(
-                1,
-                "rgba(255,220,150,0)"
-            );
-
-            ctx.fillStyle = gradient;
-
-            ctx.beginPath();
-
-            ctx.arc(
-                light.x,
-                light.y,
-                170,
-                0,
-                Math.PI * 2
-            );
-
-            ctx.fill();
-        }
-
-        ctx.restore();
+  showInteractionHint(target) {
+    if (!this.dom.interactionHint) {
+      return;
     }
 
-    renderInteractionHint(ctx) {
-        const target =
-            this.interaction.current;
+    this.dom.interactionHint.classList.add(
+      "active"
+    );
 
-        if (!target) {
-            return;
-        }
+    this.dom.interactionHint.removeAttribute(
+      "hidden"
+    );
 
-        const pulse =
-            Math.sin(
-                this.interaction.pulse
-            ) * 2;
+    let label = "objeto";
 
-        const text =
-            `E  •  ${target.label}`;
-
-        ctx.save();
-
-        ctx.font =
-            "bold 14px Arial, sans-serif";
-
-        const textWidth =
-            ctx.measureText(text).width;
-
-        const boxWidth =
-            textWidth + 28;
-
-        const boxHeight = 34;
-
-        const x =
-            this.width / 2 -
-            boxWidth / 2;
-
-        const y =
-            this.height - 68 +
-            pulse;
-
-        ctx.fillStyle =
-            "rgba(30,35,38,0.88)";
-
-        this.roundRect(
-            ctx,
-            x,
-            y,
-            boxWidth,
-            boxHeight,
-            8
-        );
-
-        ctx.fill();
-
-        ctx.strokeStyle =
-            "rgba(255,235,190,0.35)";
-
-        ctx.lineWidth = 1;
-
-        this.roundRect(
-            ctx,
-            x,
-            y,
-            boxWidth,
-            boxHeight,
-            8
-        );
-
-        ctx.stroke();
-
-        ctx.fillStyle =
-            "#fff0c8";
-
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-
-        ctx.fillText(
-            text,
-            this.width / 2,
-            y + boxHeight / 2
-        );
-
-        ctx.restore();
+    if (target) {
+      label =
+        target.label ||
+        target.name ||
+        target.type ||
+        "objeto";
     }
 
-    renderHUD(ctx) {
-        if (this.state === "menu") {
-            this.renderMenu(ctx);
-            return;
-        }
+    if (this.dom.interactionText) {
+      this.dom.interactionText.textContent =
+        `Pressione E para interagir com ${label}.`;
+    }
+  }
 
-        if (this.state === "paused") {
-            this.renderPause(ctx);
-            return;
-        }
-
-        if (this.state === "completed") {
-            this.renderCompleted(ctx);
-        }
+  hideInteractionHint() {
+    if (!this.dom.interactionHint) {
+      return;
     }
 
-    renderMenu(ctx) {
-        ctx.save();
+    this.dom.interactionHint.classList.remove(
+      "active"
+    );
 
-        ctx.fillStyle =
-            "rgba(20,25,30,0.45)";
+    this.dom.interactionHint.setAttribute(
+      "hidden",
+      ""
+    );
+  }
 
-        ctx.fillRect(
-            0,
-            0,
-            this.width,
-            this.height
-        );
+  showMessage(title, text, duration = 4) {
+    if (this.dom.messageContainer) {
+      this.dom.messageContainer.classList.add(
+        "active"
+      );
 
-        ctx.fillStyle =
-            "#f8e8c4";
-
-        ctx.textAlign = "center";
-
-        ctx.font =
-            "bold 38px Arial, sans-serif";
-
-        ctx.fillText(
-            "ESCAPE ROOM",
-            this.width / 2,
-            185
-        );
-
-        ctx.font =
-            "bold 20px Arial, sans-serif";
-
-        ctx.fillStyle =
-            "#f0cf78";
-
-        ctx.fillText(
-            "A SALA DE AULA",
-            this.width / 2,
-            220
-        );
-
-        ctx.font =
-            "16px Arial, sans-serif";
-
-        ctx.fillStyle =
-            "#fff4dd";
-
-        ctx.fillText(
-            "Encontre as pistas, descubra a senha e escape.",
-            this.width / 2,
-            270
-        );
-
-        ctx.font =
-            "bold 17px Arial, sans-serif";
-
-        ctx.fillStyle =
-            "#ffffff";
-
-        ctx.fillText(
-            "WASD / SETAS  •  Mover",
-            this.width / 2,
-            325
-        );
-
-        ctx.fillText(
-            "E  •  Interagir",
-            this.width / 2,
-            355
-        );
-
-        ctx.fillStyle =
-            "#e4bf68";
-
-        ctx.font =
-            "bold 18px Arial, sans-serif";
-
-        ctx.fillText(
-            "Pressione ENTER para começar",
-            this.width / 2,
-            420
-        );
-
-        ctx.restore();
+      this.dom.messageContainer.removeAttribute(
+        "hidden"
+      );
     }
 
-    renderPause(ctx) {
-        ctx.save();
-
-        ctx.fillStyle =
-            "rgba(15,20,25,0.62)";
-
-        ctx.fillRect(
-            0,
-            0,
-            this.width,
-            this.height
-        );
-
-        ctx.textAlign = "center";
-
-        ctx.fillStyle =
-            "#fff0cd";
-
-        ctx.font =
-            "bold 34px Arial, sans-serif";
-
-        ctx.fillText(
-            "PAUSADO",
-            this.width / 2,
-            this.height / 2 - 20
-        );
-
-        ctx.font =
-            "16px Arial, sans-serif";
-
-        ctx.fillText(
-            "Pressione ESC ou P para continuar",
-            this.width / 2,
-            this.height / 2 + 25
-        );
-
-        ctx.restore();
+    if (this.dom.messageTitle) {
+      this.dom.messageTitle.textContent =
+        title;
     }
 
-    renderCompleted(ctx) {
-        ctx.save();
-
-        ctx.fillStyle =
-            "rgba(15,25,20,0.78)";
-
-        ctx.fillRect(
-            0,
-            0,
-            this.width,
-            this.height
-        );
-
-        ctx.textAlign = "center";
-
-        ctx.fillStyle =
-            "#e7d078";
-
-        ctx.font =
-            "bold 40px Arial, sans-serif";
-
-        ctx.fillText(
-            "VOCÊ ESCAPOU!",
-            this.width / 2,
-            220
-        );
-
-        ctx.fillStyle =
-            "#fff3d2";
-
-        ctx.font =
-            "18px Arial, sans-serif";
-
-        ctx.fillText(
-            "Parabéns! Você conseguiu encontrar a saída.",
-            this.width / 2,
-            265
-        );
-
-        ctx.fillStyle =
-            "#e8c66f";
-
-        ctx.font =
-            "bold 18px Arial, sans-serif";
-
-        ctx.fillText(
-            "Pressione ENTER para jogar novamente",
-            this.width / 2,
-            330
-        );
-
-        ctx.restore();
+    if (this.dom.messageText) {
+      this.dom.messageText.textContent =
+        text;
     }
 
-    renderScreenEffects(ctx) {
-        if (this.screenFlash > 0) {
-            ctx.save();
+    this.messageTimer = duration;
+  }
 
-            ctx.globalAlpha =
-                Math.min(
-                    1,
-                    this.screenFlash * 4
-                );
+  clearMessage() {
+    this.messageTimer = 0;
 
-            ctx.fillStyle =
-                "#fff3ce";
+    if (this.dom.messageContainer) {
+      this.dom.messageContainer.classList.remove(
+        "active"
+      );
 
-            ctx.fillRect(
-                0,
-                0,
-                this.width,
-                this.height
-            );
+      this.dom.messageContainer.setAttribute(
+        "hidden",
+        ""
+      );
+    }
+  }
 
-            ctx.restore();
-        }
+  showMenu() {
+    this.hidePauseScreen();
 
-        // Pequena camada cinematográfica
-        ctx.save();
+    this.hideCompletedScreen();
 
-        ctx.fillStyle =
-            "rgba(20,25,30,0.07)";
+    this.hideHud();
 
-        ctx.fillRect(
-            0,
-            0,
-            this.width,
-            2
+    if (this.dom.menu) {
+      this.dom.menu.classList.add("active");
+      this.dom.menu.removeAttribute("hidden");
+    }
+  }
+
+  hideMenu() {
+    if (!this.dom.menu) {
+      return;
+    }
+
+    this.dom.menu.classList.remove("active");
+    this.dom.menu.setAttribute("hidden", "");
+  }
+
+  showPauseScreen() {
+    this.hideMenu();
+    this.hideCompletedScreen();
+
+    if (this.dom.pause) {
+      this.dom.pause.classList.add("active");
+      this.dom.pause.removeAttribute("hidden");
+    }
+  }
+
+  hidePauseScreen() {
+    if (!this.dom.pause) {
+      return;
+    }
+
+    this.dom.pause.classList.remove("active");
+    this.dom.pause.setAttribute("hidden", "");
+  }
+
+  hideCompletedScreen() {
+    if (!this.dom.completed) {
+      return;
+    }
+
+    this.dom.completed.classList.remove(
+      "active"
+    );
+
+    this.dom.completed.setAttribute(
+      "hidden",
+      ""
+    );
+  }
+
+  showHud() {
+    if (this.dom.objectivePanel) {
+      this.dom.objectivePanel.classList.add(
+        "active"
+      );
+
+      this.dom.objectivePanel.removeAttribute(
+        "hidden"
+      );
+    }
+
+    if (this.dom.pauseButton) {
+      this.dom.pauseButton.classList.add(
+        "active"
+      );
+
+      this.dom.pauseButton.removeAttribute(
+        "hidden"
+      );
+    }
+  }
+
+  hideHud() {
+    if (this.dom.objectivePanel) {
+      this.dom.objectivePanel.classList.remove(
+        "active"
+      );
+
+      this.dom.objectivePanel.setAttribute(
+        "hidden",
+        ""
+      );
+    }
+
+    this.hideInteractionHint();
+
+    if (this.dom.pauseButton) {
+      this.dom.pauseButton.classList.remove(
+        "active"
+      );
+
+      this.dom.pauseButton.setAttribute(
+        "hidden",
+        ""
+      );
+    }
+  }
+
+  hideAllScreens() {
+    this.hideMenu();
+    this.hidePauseScreen();
+    this.hideCompletedScreen();
+  }
+
+  formatTime(seconds) {
+    const totalSeconds = Math.max(
+      0,
+      Math.floor(seconds)
+    );
+
+    const minutes = Math.floor(
+      totalSeconds / 60
+    );
+
+    const remainingSeconds =
+      totalSeconds % 60;
+
+    return `${String(minutes).padStart(2, "0")}:${String(
+      remainingSeconds
+    ).padStart(2, "0")}`;
+  }
+
+  spawnSuccessParticles() {
+    const centerX = this.player
+      ? this.player.x
+      : this.world.width / 2;
+
+    const centerY = this.player
+      ? this.player.y
+      : this.world.height / 2;
+
+    for (let i = 0; i < 80; i++) {
+      const angle =
+        Math.random() *
+        Math.PI *
+        2;
+
+      const speed =
+        50 +
+        Math.random() *
+        180;
+
+      this.particles.push({
+        x: centerX,
+        y: centerY,
+        vx:
+          Math.cos(angle) *
+          speed,
+        vy:
+          Math.sin(angle) *
+          speed,
+
+        life: 1.5 +
+          Math.random(),
+
+        maxLife: 2.5,
+
+        size:
+          2 +
+          Math.random() *
+          4
+      });
+    }
+  }
+
+  updateParticles(deltaTime) {
+    for (
+      let i = this.particles.length - 1;
+      i >= 0;
+      i--
+    ) {
+      const particle =
+        this.particles[i];
+
+      particle.x +=
+        particle.vx *
+        deltaTime;
+
+      particle.y +=
+        particle.vy *
+        deltaTime;
+
+      particle.vy +=
+        100 *
+        deltaTime;
+
+      particle.life -=
+        deltaTime;
+
+      if (particle.life <= 0) {
+        this.particles.splice(i, 1);
+      }
+    }
+  }
+
+  renderParticles() {
+    if (!this.ctx) {
+      return;
+    }
+
+    const ctx = this.ctx;
+
+    for (const particle of this.particles) {
+      const alpha =
+        Math.max(
+          0,
+          particle.life /
+            particle.maxLife
         );
 
-        ctx.fillRect(
-            0,
-            this.height - 2,
-            this.width,
-            2
-        );
+      const screenX =
+        particle.x -
+        this.camera.x;
 
-        ctx.restore();
+      const screenY =
+        particle.y -
+        this.camera.y;
+
+      ctx.save();
+
+      ctx.globalAlpha = alpha;
+
+      ctx.fillStyle = "#ffffff";
+
+      ctx.fillRect(
+        Math.round(screenX),
+        Math.round(screenY),
+        particle.size,
+        particle.size
+      );
+
+      ctx.restore();
+    }
+  }
+
+  render() {
+    if (!this.ctx) {
+      return;
     }
 
-    renderDebug(ctx) {
-        ctx.save();
+    const ctx = this.ctx;
 
-        ctx.fillStyle =
-            "rgba(0,0,0,0.75)";
+    ctx.clearRect(
+      0,
+      0,
+      this.width,
+      this.height
+    );
 
-        ctx.fillRect(
-            10,
-            10,
-            220,
-            125
-        );
+    ctx.imageSmoothingEnabled = false;
 
-        ctx.fillStyle =
-            "#ffffff";
+    this.renderBackground();
 
-        ctx.font =
-            "12px monospace";
+    ctx.save();
 
-        ctx.fillText(
-            `FPS: ${this.fps}`,
-            20,
-            30
-        );
-
-        ctx.fillText(
-            `STATE: ${this.state}`,
-            20,
-            48
-        );
-
-        ctx.fillText(
-            `PLAYER X: ${this.player.x.toFixed(1)}`,
-            20,
-            66
-        );
-
-        ctx.fillText(
-            `PLAYER Y: ${this.player.y.toFixed(1)}`,
-            20,
-            84
-        );
-
-        ctx.fillText(
-            `CAMERA X: ${this.camera.x.toFixed(1)}`,
-            20,
-            102
-        );
-
-        ctx.fillText(
-            `CAMERA Y: ${this.camera.y.toFixed(1)}`,
-            20,
-            120
-        );
-
-        ctx.restore();
-    }
-
-    updateFPS(deltaTime) {
-        this.frameCounter++;
-        this.fpsTimer += deltaTime;
-
-        if (this.fpsTimer >= 1) {
-            this.fps =
-                this.frameCounter;
-
-            this.frameCounter = 0;
-
-            this.fpsTimer = 0;
-        }
-    }
-
-    togglePause() {
-        if (this.state === "playing") {
-            this.pause();
-        } else if (this.state === "paused") {
-            this.resume();
-        }
-    }
-
-    pause() {
-        if (this.state !== "playing") {
-            return;
-        }
-
-        this.state = "paused";
-
-        if (this.callbacks.onPause) {
-            this.callbacks.onPause();
-        }
-    }
-
-    resume() {
-        if (this.state !== "paused") {
-            return;
-        }
-
-        this.state = "playing";
-
-        if (this.callbacks.onResume) {
-            this.callbacks.onResume();
-        }
-    }
-
-    complete() {
-        if (this.state === "completed") {
-            return;
-        }
-
-        this.state = "completed";
-
-        if (this.callbacks.onComplete) {
-            this.callbacks.onComplete();
-        }
-    }
-
-    restart() {
-        const spawn =
-            this.world.getSpawnPoint();
-
-        this.world.reset();
-
-        this.player.reset(
-            spawn.x,
-            spawn.y
-        );
-
-        this.particles = [];
-
-        this.interaction.current = null;
-
-        this.camera.x =
-            Math.max(
-                0,
-                spawn.x -
-                this.width / 2
-            );
-
-        this.camera.y =
-            Math.max(
-                0,
-                spawn.y -
-                this.height / 2
-            );
-
-        this.camera.targetX =
-            this.camera.x;
-
-        this.camera.targetY =
-            this.camera.y;
-
-        this.state = "playing";
-
-        this.lastTime =
-            performance.now();
-    }
-
-    startFromMenu() {
-        if (this.state === "menu") {
-            this.state = "playing";
-            this.lastTime = performance.now();
-        }
-    }
-
-    handleKeyDown(event) {
-        if (
-            this.state === "menu" &&
-            event.key === "Enter"
-        ) {
-            this.startFromMenu();
-            return;
-        }
-
-        if (
-            this.state === "completed" &&
-            event.key === "Enter"
-        ) {
-            this.restart();
-            return;
-        }
-
-        if (
-            event.key === "Escape" ||
-            event.key.toLowerCase() === "p"
-        ) {
-            this.togglePause();
-        }
-
-        if (
-            event.key.toLowerCase() === "e"
-        ) {
-            this.interact();
-        }
-    }
-
-    setCallbacks(callbacks = {}) {
-        this.callbacks = {
-            ...this.callbacks,
-            ...callbacks
-        };
-    }
-
-    getState() {
-        return this.state;
-    }
-
-    getPlayerPosition() {
-        return {
-            x: this.player.x,
-            y: this.player.y
-        };
-    }
-
-    roundRect(
+    if (
+      this.world &&
+      typeof this.world.render ===
+        "function"
+    ) {
+      this.world.render(
         ctx,
+        this.camera
+      );
+    }
+
+    if (
+      this.player &&
+      typeof this.player.render ===
+        "function"
+    ) {
+      this.player.render(
+        ctx,
+        this.camera
+      );
+    }
+
+    this.renderParticles();
+
+    ctx.restore();
+
+    this.renderLighting();
+
+    if (this.state === "completed") {
+      this.renderCompletionOverlay();
+    }
+
+    if (this.state === "paused") {
+      this.renderPauseOverlay();
+    }
+  }
+
+  renderBackground() {
+    const ctx = this.ctx;
+
+    const gradient =
+      ctx.createLinearGradient(
+        0,
+        0,
+        0,
+        this.height
+      );
+
+    gradient.addColorStop(
+      0,
+      "#101827"
+    );
+
+    gradient.addColorStop(
+      1,
+      "#172235"
+    );
+
+    ctx.fillStyle = gradient;
+
+    ctx.fillRect(
+      0,
+      0,
+      this.width,
+      this.height
+    );
+  }
+
+  renderLighting() {
+    const ctx = this.ctx;
+
+    if (!this.player) {
+      return;
+    }
+
+    const x =
+      this.player.x -
+      this.camera.x;
+
+    const y =
+      this.player.y -
+      this.camera.y;
+
+    const gradient =
+      ctx.createRadialGradient(
         x,
         y,
-        width,
-        height,
-        radius
+        40,
+        x,
+        y,
+        300
+      );
+
+    gradient.addColorStop(
+      0,
+      "rgba(255,255,255,0)"
+    );
+
+    gradient.addColorStop(
+      0.55,
+      "rgba(0,0,0,0.04)"
+    );
+
+    gradient.addColorStop(
+      1,
+      "rgba(0,0,0,0.38)"
+    );
+
+    ctx.save();
+
+    ctx.fillStyle = gradient;
+
+    ctx.fillRect(
+      0,
+      0,
+      this.width,
+      this.height
+    );
+
+    ctx.restore();
+  }
+
+  renderPauseOverlay() {
+    const ctx = this.ctx;
+
+    ctx.save();
+
+    ctx.fillStyle =
+      "rgba(5,10,20,0.38)";
+
+    ctx.fillRect(
+      0,
+      0,
+      this.width,
+      this.height
+    );
+
+    ctx.restore();
+  }
+
+  renderCompletionOverlay() {
+    const ctx = this.ctx;
+
+    ctx.save();
+
+    const gradient =
+      ctx.createRadialGradient(
+        this.width / 2,
+        this.height / 2,
+        50,
+        this.width / 2,
+        this.height / 2,
+        500
+      );
+
+    gradient.addColorStop(
+      0,
+      "rgba(255,255,255,0.08)"
+    );
+
+    gradient.addColorStop(
+      1,
+      "rgba(0,0,0,0.35)"
+    );
+
+    ctx.fillStyle = gradient;
+
+    ctx.fillRect(
+      0,
+      0,
+      this.width,
+      this.height
+    );
+
+    ctx.restore();
+  }
+
+  handleKeyDown(event) {
+    if (!event) {
+      return;
+    }
+
+    const key =
+      typeof event.key === "string"
+        ? event.key.toLowerCase()
+        : "";
+
+    if (key === "enter") {
+      if (this.state === "menu") {
+        this.startFromMenu();
+      } else if (this.state === "paused") {
+        this.resume();
+      } else if (this.state === "completed") {
+        this.restart();
+      }
+    }
+  }
+
+  destroy() {
+    if (this.input) {
+      this.input.destroy();
+    }
+
+    if (
+      this.player &&
+      typeof this.player.destroy ===
+        "function"
     ) {
-        const r =
-            Math.min(
-                radius,
-                width / 2,
-                height / 2
-            );
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            x + r,
-            y
-        );
-
-        ctx.lineTo(
-            x + width - r,
-            y
-        );
-
-        ctx.quadraticCurveTo(
-            x + width,
-            y,
-            x + width,
-            y + r
-        );
-
-        ctx.lineTo(
-            x + width,
-            y + height - r
-        );
-
-        ctx.quadraticCurveTo(
-            x + width,
-            y + height,
-            x + width - r,
-            y + height
-        );
-
-        ctx.lineTo(
-            x + r,
-            y + height
-        );
-
-        ctx.quadraticCurveTo(
-            x,
-            y + height,
-            x,
-            y + height - r
-        );
-
-        ctx.lineTo(
-            x,
-            y + r
-        );
-
-        ctx.quadraticCurveTo(
-            x,
-            y,
-            x + r,
-            y
-        );
-
-        ctx.closePath();
+      this.player.destroy();
     }
 
-    destroy() {
-        this.running = false;
-
-        if (this.input) {
-            this.input.destroy();
-        }
-
-        if (this.player) {
-            this.player.destroy();
-        }
-
-        if (this.world) {
-            this.world.destroy();
-        }
-
-        this.particles = [];
+    if (
+      this.world &&
+      typeof this.world.destroy ===
+        "function"
+    ) {
+      this.world.destroy();
     }
+
+    this.player = null;
+    this.world = null;
+    this.input = null;
+    this.canvas = null;
+    this.ctx = null;
+  }
 }
