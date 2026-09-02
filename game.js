@@ -1,1310 +1,385 @@
-// game.js
-// Escape Room — Controlador principal
-// Integra jogador, mundo, câmera, interações, puzzles,
-// terminal, iluminação, partículas, áudio, HUD e telas.
-
-import { Input } from "./input.js";
-import { Player } from "./player.js";
-import { World } from "./world.js";
+import { Input } from "./input.js?v=20260902-4";
+import { Player } from "./player.js?v=20260902-4";
+import { World } from "./world.js?v=20260902-4";
 
 export class Game {
   constructor(canvas) {
     this.canvas = canvas;
-
-    if (!this.canvas) {
-      throw new Error("Canvas não encontrado.");
-    }
-
-    this.ctx = this.canvas.getContext("2d");
+    this.ctx = canvas.getContext("2d", { alpha: false });
 
     if (!this.ctx) {
-      throw new Error(
-        "Não foi possível obter o contexto 2D do Canvas."
-      );
+      throw new Error("Canvas 2D indisponível.");
     }
 
     this.ctx.imageSmoothingEnabled = false;
 
     this.width = 960;
     this.height = 540;
-
     this.worldWidth = 1600;
     this.worldHeight = 900;
 
-    // =========================================================
-    // ESTADO
-    // =========================================================
-
     this.state = "menu";
-
-    this.elapsedTime = 0;
     this.gameTime = 0;
-
     this.completed = false;
 
-    this.doorUnlocked = false;
+    this.world = new World(this.worldWidth, this.worldHeight);
+    this.player = new Player({ world: this.world });
+    this.input = new Input();
 
-    this.messageOpen = false;
-
-    this.currentPuzzle = null;
-
-    this.currentTerminal = null;
+    this.camera = { x: 0, y: 0, targetX: 0, targetY: 0 };
+    this.cameraSmoothing = 10;
 
     this.currentInteraction = null;
+    this.messageOpen = false;
+    this.currentPuzzle = null;
+    this.currentTerminal = null;
 
-    this.interactionCooldown = 0;
-
-    // =========================================================
-    // CÂMERA
-    // =========================================================
-
-    this.camera = {
-      x: 0,
-      y: 0,
-
-      targetX: 0,
-      targetY: 0,
-
-      smoothing: 10
-    };
-
-    // =========================================================
-    // EFEITOS
-    // =========================================================
+    this.doorUnlocked = false;
+    this.elapsedTime = 0;
 
     this.particles = [];
-
     this.shakeTime = 0;
     this.shakeStrength = 0;
 
-    // =========================================================
-    // ÁUDIO
-    // =========================================================
-
-    this.audioStarted = false;
     this.audioContext = null;
 
-    // =========================================================
-    // MUNDO
-    // =========================================================
-
-    // IMPORTANTE:
-    // World recebe width e height diretamente.
-    this.world = new World(
-      this.worldWidth,
-      this.worldHeight
-    );
-
-    // =========================================================
-    // PLAYER
-    // =========================================================
-
-    this.player = new Player({
-      world: this.world
-    });
-
-    // =========================================================
-    // INPUT
-    // =========================================================
-
-    this.input = new Input(this);
-
-    // =========================================================
-    // DOM
-    // =========================================================
-
     this.elements = {};
-
-    this.setupCanvas();
-    this.setupDOM();
-
-    // =========================================================
-    // RESET INICIAL
-    // =========================================================
+    this.cacheDOM();
+    this.bindDOM();
 
     this.reset();
-
-    // Garante que o jogo começa no menu.
-    this.state = "menu";
-
     this.showScreen("menuScreen");
 
-    this.hideGameplayUI();
-
-    this.hideOverlayElements();
+    console.log("Escape Room v2026-09-02-4 carregado.");
   }
 
-  // =========================================================
-  // CANVAS
-  // =========================================================
+  cacheDOM() {
+    const ids = [
+      "menuScreen", "pauseScreen", "completionScreen",
+      "startButton", "resumeButton", "pauseRestartButton", "restartButton",
+      "objectivePanel", "objectiveText", "interactionHint", "interactionKey",
+      "interactionText", "statusPanel", "statusText", "pauseButton",
+      "sceneTransition", "messageContainer", "messageTitle", "messageText",
+      "messageContinue", "terminalOverlay", "terminalDisplay",
+      "terminalFeedback", "puzzleOverlay", "puzzleTitle", "puzzleQuestion",
+      "puzzleOptions", "puzzleFeedback", "completionTime"
+    ];
 
-  setupCanvas() {
-    this.canvas.width = 960;
-    this.canvas.height = 540;
-
-    this.width = this.canvas.width;
-    this.height = this.canvas.height;
-
-    this.canvas.style.imageRendering = "pixelated";
-
-    this.ctx.imageSmoothingEnabled = false;
-
-    this.canvas.setAttribute(
-      "aria-label",
-      "Escape Room — A Sala"
-    );
-
-    this.canvas.setAttribute(
-      "role",
-      "application"
-    );
-
-    this.canvas.setAttribute(
-      "tabindex",
-      "0"
-    );
-  }
-
-  // =========================================================
-  // DOM
-  // =========================================================
-
-  setupDOM() {
-    this.elements = {
-      menuScreen:
-        document.getElementById("menuScreen"),
-
-      pauseScreen:
-        document.getElementById("pauseScreen"),
-
-      completionScreen:
-        document.getElementById("completionScreen"),
-
-      startButton:
-        document.getElementById("startButton"),
-
-      resumeButton:
-        document.getElementById("resumeButton"),
-
-      pauseRestartButton:
-        document.getElementById("pauseRestartButton"),
-
-      restartButton:
-        document.getElementById("restartButton"),
-
-      objectivePanel:
-        document.getElementById("objectivePanel"),
-
-      objectiveText:
-        document.getElementById("objectiveText"),
-
-      interactionHint:
-        document.getElementById("interactionHint"),
-
-      interactionKey:
-        document.getElementById("interactionKey"),
-
-      interactionText:
-        document.getElementById("interactionText"),
-
-      statusPanel:
-        document.getElementById("statusPanel"),
-
-      statusText:
-        document.getElementById("statusText"),
-
-      pauseButton:
-        document.getElementById("pauseButton"),
-
-      sceneTransition:
-        document.getElementById("sceneTransition"),
-
-      screenVignette:
-        document.getElementById("screenVignette"),
-
-      messageContainer:
-        document.getElementById("messageContainer"),
-
-      messageTitle:
-        document.getElementById("messageTitle"),
-
-      messageText:
-        document.getElementById("messageText"),
-
-      messageContinue:
-        document.getElementById("messageContinue"),
-
-      terminalOverlay:
-        document.getElementById("terminalOverlay"),
-
-      terminalDisplay:
-        document.getElementById("terminalDisplay"),
-
-      terminalFeedback:
-        document.getElementById("terminalFeedback"),
-
-      puzzleOverlay:
-        document.getElementById("puzzleOverlay"),
-
-      puzzleTitle:
-        document.getElementById("puzzleTitle"),
-
-      puzzleQuestion:
-        document.getElementById("puzzleQuestion"),
-
-      puzzleOptions:
-        document.getElementById("puzzleOptions"),
-
-      puzzleFeedback:
-        document.getElementById("puzzleFeedback"),
-
-      completionTime:
-        document.getElementById("completionTime"),
-
-      loadingScreen:
-        document.getElementById("loadingScreen"),
-
-      gameError:
-        document.getElementById("gameError")
-    };
-
-    this.bindDOMEvents();
-  }
-
-  // =========================================================
-  // EVENTOS DOM
-  // =========================================================
-
-  bindDOMEvents() {
-    const {
-      resumeButton,
-      pauseRestartButton,
-      messageContinue
-    } = this.elements;
-
-    /*
-     * O botão JOGAR, REINICIAR e PAUSAR já são
-     * controlados pelo main.js.
-     *
-     * Não registramos esses eventos novamente aqui
-     * para evitar o jogo iniciar duas vezes.
-     */
-
-    if (resumeButton) {
-      resumeButton.addEventListener(
-        "click",
-        () => {
-          this.resume();
-        }
-      );
-    }
-
-    if (pauseRestartButton) {
-      pauseRestartButton.addEventListener(
-        "click",
-        () => {
-          this.restart();
-        }
-      );
-    }
-
-    if (messageContinue) {
-      messageContinue.addEventListener(
-        "click",
-        () => {
-          this.closeMessage();
-        }
-      );
+    for (const id of ids) {
+      this.elements[id] = document.getElementById(id);
     }
   }
 
-  // =========================================================
-  // RESET
-  // =========================================================
+  bindDOM() {
+    this.elements.startButton?.addEventListener("click", () => this.start());
+    this.elements.resumeButton?.addEventListener("click", () => this.resume());
+    this.elements.pauseRestartButton?.addEventListener("click", () => this.restart());
+    this.elements.restartButton?.addEventListener("click", () => this.restart());
+    this.elements.pauseButton?.addEventListener("click", () => this.togglePause());
+    this.elements.messageContinue?.addEventListener("click", () => this.closeMessage());
+
+    this.elements.terminalOverlay?.querySelectorAll("[data-key]").forEach(button => {
+      button.addEventListener("click", () => this.handleTerminalKey(button.dataset.key));
+    });
+
+    this.elements.terminalOverlay?.querySelector("[data-action='clear']")
+      ?.addEventListener("click", () => this.clearTerminal());
+
+    this.elements.terminalOverlay?.querySelector("[data-action='enter']")
+      ?.addEventListener("click", () => this.submitTerminal());
+
+    this.elements.terminalOverlay?.querySelector("[data-action='close']")
+      ?.addEventListener("click", () => this.closeTerminal());
+  }
 
   reset() {
-    this.elapsedTime = 0;
-
+    this.state = "menu";
     this.gameTime = 0;
-
+    this.elapsedTime = 0;
     this.completed = false;
-
     this.doorUnlocked = false;
 
     this.currentInteraction = null;
-
-    this.interactionCooldown = 0;
-
     this.messageOpen = false;
-
     this.currentPuzzle = null;
-
     this.currentTerminal = null;
 
+    this.world.reset();
+    this.player.reset();
+
     this.particles = [];
-
     this.shakeTime = 0;
-
     this.shakeStrength = 0;
 
-    if (this.world) {
-      this.world.reset();
-    }
-
-    if (this.player) {
-      this.player.reset();
-
-      this.ensureSafeSpawn();
-    }
-
     this.updateCamera(true);
+    this.hideAllOverlays();
 
-    this.hideOverlayElements();
-
-    this.setObjective(
-      "Encontre uma maneira de escapar da sala."
-    );
-
-    this.setStatus(
-      "Explore a sala."
-    );
-  }
-
-  // =========================================================
-  // SPAWN SEGURO
-  // =========================================================
-
-  ensureSafeSpawn() {
-    if (!this.player || !this.world) {
-      return;
-    }
-
-    let spawn = null;
-
-    if (
-      typeof this.world.getSpawnPoint ===
-      "function"
-    ) {
-      spawn =
-        this.world.getSpawnPoint();
-    }
-
-    if (
-      !spawn ||
-      !Number.isFinite(spawn.x) ||
-      !Number.isFinite(spawn.y)
-    ) {
-      spawn = {
-        x: 930,
-        y: 620
-      };
-    }
-
-    /*
-     * Primeiro tenta o spawn definido pelo mundo.
-     */
-
-    if (
-      this.world.canPlayerMoveTo(
-        this.player,
-        spawn.x,
-        spawn.y
-      )
-    ) {
-      this.player.setPosition(
-        spawn.x,
-        spawn.y
-      );
-
-      return;
-    }
-
-    /*
-     * Se o spawn estiver dentro de uma colisão,
-     * procura automaticamente um espaço livre.
-     */
-
-    const candidates = [
-      { x: 930, y: 620 },
-      { x: 930, y: 500 },
-      { x: 930, y: 760 },
-      { x: 400, y: 500 },
-      { x: 450, y: 620 },
-      { x: 1180, y: 500 },
-      { x: 1180, y: 620 },
-      { x: 800, y: 760 },
-      { x: 650, y: 480 },
-      { x: 1050, y: 620 }
-    ];
-
-    for (const candidate of candidates) {
-      if (
-        this.world.canPlayerMoveTo(
-          this.player,
-          candidate.x,
-          candidate.y
-        )
-      ) {
-        this.player.setPosition(
-          candidate.x,
-          candidate.y
-        );
-
-        return;
-      }
-    }
-
-    /*
-     * Último recurso.
-     */
-
-    this.player.setPosition(
-      930,
-      620
-    );
-  }
-
-  // =========================================================
-  // COMEÇAR
-  // =========================================================
-
-  startFromMenu() {
-    /*
-     * Evita que o botão seja processado duas vezes.
-     */
-
-    if (this.state === "playing") {
-      return;
-    }
-
-    this.closeAllOverlays();
-
-    this.reset();
-
-    this.state = "playing";
-
-    this.elapsedTime = 0;
-
-    this.gameTime = 0;
-
-    this.hideScreen("menuScreen");
-
-    this.hideScreen("pauseScreen");
-
-    this.hideScreen(
-      "completionScreen"
-    );
-
-    this.showGameplayUI();
-
-    this.setObjective(
-      "Encontre uma maneira de escapar da sala."
-    );
-
-    this.setStatus(
-      "Use WASD ou as setas para explorar. Pressione E para interagir."
-    );
-
-    this.startAudio();
-
-    this.createInitialParticles();
-
-    /*
-     * NÃO abrimos a mensagem inicial aqui.
-     *
-     * Antes ela travava o update() do Player.
-     *
-     * Agora o jogador pode andar imediatamente.
-     */
-
-    if (this.canvas) {
-      this.canvas.focus();
-    }
+    this.setObjective("Encontre uma maneira de escapar da sala.");
+    this.setStatus("Explore a sala.");
   }
 
   start() {
-    this.startFromMenu();
+    this.reset();
+    this.state = "playing";
+    this.hideScreen("menuScreen");
+    this.hideScreen("pauseScreen");
+    this.hideScreen("completionScreen");
+    this.showGameplayUI();
+    this.startAudio();
+
+    // Não abre uma caixa de diálogo no início:
+    // o jogador já começa com controle total.
+    this.openingPulse();
   }
 
-  // =========================================================
-  // UPDATE
-  // =========================================================
+  restart() {
+    this.start();
+  }
 
   update(deltaTime) {
-    if (!Number.isFinite(deltaTime)) {
-      deltaTime = 0;
-    }
-
-    deltaTime =
-      Math.min(
-        deltaTime,
-        0.05
-      );
+    if (!Number.isFinite(deltaTime)) deltaTime = 0;
+    deltaTime = Math.min(deltaTime, 0.05);
 
     if (this.state === "menu") {
-      this.updateMenu(deltaTime);
-
+      this.world.update(deltaTime);
+      this.input.endFrame();
       return;
     }
 
-    if (this.state === "paused") {
+    if (this.state === "paused" || this.state === "completed") {
       this.input.endFrame();
-
-      return;
-    }
-
-    if (this.state === "completed") {
-      this.input.endFrame();
-
       return;
     }
 
     if (this.state !== "playing") {
       this.input.endFrame();
-
       return;
     }
-
-    // =======================================================
-    // MENSAGEM
-    // =======================================================
 
     if (this.messageOpen) {
-      if (
-        this.input.wasPressed(
-          "Enter"
-        ) ||
-        this.input.wasPressed(
-          " "
-        ) ||
-        this.input.wasPressed(
-          "e"
-        )
-      ) {
-        this.closeMessage();
+      if (this.input.wantsConfirm()) this.closeMessage();
+      this.input.endFrame();
+      return;
+    }
+
+    if (this.currentPuzzle || this.currentTerminal) {
+      const digit = this.input.getPressedDigit();
+      if (this.currentTerminal && digit) this.handleTerminalKey(digit);
+      if (this.input.wantsConfirm() && this.currentTerminal) this.submitTerminal();
+      if (this.input.wantsConfirm() && this.currentPuzzle) {
+        // O puzzle é respondido pelos botões para evitar escolhas acidentais.
       }
-
       this.input.endFrame();
-
       return;
     }
 
-    // =======================================================
-    // PUZZLE
-    // =======================================================
-
-    if (this.currentPuzzle) {
+    if (this.input.wantsPause()) {
+      this.pause();
       this.input.endFrame();
-
       return;
     }
-
-    // =======================================================
-    // TERMINAL
-    // =======================================================
-
-    if (this.currentTerminal) {
-      this.input.endFrame();
-
-      return;
-    }
-
-    // =======================================================
-    // TEMPO
-    // =======================================================
 
     this.gameTime += deltaTime;
-
     this.elapsedTime += deltaTime;
 
-    // =======================================================
-    // COOLDOWN
-    // =======================================================
+    this.player.update(deltaTime, this.input);
+    this.world.update(deltaTime);
+    this.updateCamera();
+    this.updateInteraction();
+    this.updateParticles(deltaTime);
 
-    if (
-      this.interactionCooldown > 0
-    ) {
-      this.interactionCooldown -=
-        deltaTime;
-
-      if (
-        this.interactionCooldown < 0
-      ) {
-        this.interactionCooldown = 0;
-      }
+    if (this.input.wantsInteract()) {
+      this.handleInteraction();
     }
 
-    // =======================================================
-    // SHAKE
-    // =======================================================
+    this.handleDoorExit();
 
-    if (
-      this.shakeTime > 0
-    ) {
-      this.shakeTime -=
-        deltaTime;
-
-      if (
-        this.shakeTime <= 0
-      ) {
+    if (this.shakeTime > 0) {
+      this.shakeTime -= deltaTime;
+      if (this.shakeTime <= 0) {
         this.shakeTime = 0;
         this.shakeStrength = 0;
       }
     }
 
-    // =======================================================
-    // PAUSA
-    // =======================================================
-
-    if (
-      this.input.wantsPause()
-    ) {
-      this.togglePause();
-
-      this.input.endFrame();
-
-      return;
-    }
-
-    // =======================================================
-    // PLAYER
-    // =======================================================
-
-    this.player.update(
-      deltaTime,
-      this.input
-    );
-
-    // =======================================================
-    // WORLD
-    // =======================================================
-
-    this.world.update(
-      deltaTime
-    );
-
-    // =======================================================
-    // CÂMERA
-    // =======================================================
-
-    this.updateCamera();
-
-    // =======================================================
-    // INTERAÇÃO
-    // =======================================================
-
-    this.updateInteraction();
-
-    this.handleInteraction();
-
-    // =======================================================
-    // PORTA
-    // =======================================================
-
-    this.handleDoorExit();
-
-    // =======================================================
-    // PARTÍCULAS
-    // =======================================================
-
-    this.updateParticles(
-      deltaTime
-    );
-
-    // =======================================================
-    // INPUT
-    // =======================================================
-
     this.input.endFrame();
-  }
-
-  // =========================================================
-  // MENU
-  // =========================================================
-
-  updateMenu(deltaTime) {
-    if (this.world) {
-      this.world.update(
-        deltaTime
-      );
-    }
-
-    this.input.endFrame();
-  }
-
-  // =========================================================
-  // PAUSA
-  // =========================================================
-
-  togglePause() {
-    if (
-      this.state === "playing"
-    ) {
-      this.pause();
-
-      return;
-    }
-
-    if (
-      this.state === "paused"
-    ) {
-      this.resume();
-    }
   }
 
   pause() {
-    if (
-      this.state !== "playing"
-    ) {
-      return;
-    }
-
-    if (
-      this.messageOpen ||
-      this.currentPuzzle ||
-      this.currentTerminal
-    ) {
-      return;
-    }
-
+    if (this.state !== "playing" || this.messageOpen || this.currentPuzzle || this.currentTerminal) return;
     this.state = "paused";
-
-    this.showScreen(
-      "pauseScreen"
-    );
-
+    this.showScreen("pauseScreen");
     this.hideGameplayUI();
   }
 
   resume() {
-    if (
-      this.state !== "paused"
-    ) {
-      return;
-    }
-
+    if (this.state !== "paused") return;
     this.state = "playing";
-
-    this.hideScreen(
-      "pauseScreen"
-    );
-
+    this.hideScreen("pauseScreen");
     this.showGameplayUI();
-
-    if (this.canvas) {
-      this.canvas.focus();
-    }
   }
 
-  // =========================================================
-  // REINICIAR
-  // =========================================================
-
-  restart() {
-    this.closeAllOverlays();
-
-    this.reset();
-
-    this.state = "playing";
-
-    this.hideScreen(
-      "menuScreen"
-    );
-
-    this.hideScreen(
-      "pauseScreen"
-    );
-
-    this.hideScreen(
-      "completionScreen"
-    );
-
-    this.showGameplayUI();
-
-    this.setObjective(
-      "Encontre uma maneira de escapar da sala."
-    );
-
-    this.setStatus(
-      "Explore a sala."
-    );
-
-    this.startAudio();
-
-    this.createInitialParticles();
-
-    if (this.canvas) {
-      this.canvas.focus();
-    }
+  togglePause() {
+    if (this.state === "playing") this.pause();
+    else if (this.state === "paused") this.resume();
   }
-
-  // =========================================================
-  // CÂMERA
-  // =========================================================
 
   updateCamera(force = false) {
-    if (!this.player) {
-      return;
-    }
+    const targetX = this.clamp(
+      this.player.x - this.width / 2,
+      0,
+      Math.max(0, this.worldWidth - this.width)
+    );
 
-    const targetX =
-      this.player.x -
-      this.width / 2;
+    const targetY = this.clamp(
+      this.player.y - this.height / 2,
+      0,
+      Math.max(0, this.worldHeight - this.height)
+    );
 
-    const targetY =
-      this.player.y -
-      this.height / 2;
-
-    const maxX =
-      Math.max(
-        0,
-        this.worldWidth -
-          this.width
-      );
-
-    const maxY =
-      Math.max(
-        0,
-        this.worldHeight -
-          this.height
-      );
-
-    this.camera.targetX =
-      this.clamp(
-        targetX,
-        0,
-        maxX
-      );
-
-    this.camera.targetY =
-      this.clamp(
-        targetY,
-        0,
-        maxY
-      );
+    this.camera.targetX = targetX;
+    this.camera.targetY = targetY;
 
     if (force) {
-      this.camera.x =
-        this.camera.targetX;
-
-      this.camera.y =
-        this.camera.targetY;
-
+      this.camera.x = targetX;
+      this.camera.y = targetY;
       return;
     }
 
-    const amount =
-      1 -
-      Math.exp(
-        -this.camera.smoothing *
-        (1 / 60)
-      );
-
-    this.camera.x +=
-      (
-        this.camera.targetX -
-        this.camera.x
-      ) * amount;
-
-    this.camera.y +=
-      (
-        this.camera.targetY -
-        this.camera.y
-      ) * amount;
+    const amount = 1 - Math.exp(-this.cameraSmoothing / 60);
+    this.camera.x += (targetX - this.camera.x) * amount;
+    this.camera.y += (targetY - this.camera.y) * amount;
   }
 
-  // =========================================================
-  // INTERAÇÃO
-  // =========================================================
-
   updateInteraction() {
-    if (
-      !this.world ||
-      !this.player
-    ) {
-      return;
-    }
+    this.currentInteraction = this.world.getNearestInteraction(this.player);
 
-    const interaction =
-      this.world.getNearestInteraction(
-        this.player
-      );
-
-    this.currentInteraction =
-      interaction;
-
-    if (
-      interaction &&
-      !this.messageOpen &&
-      !this.currentPuzzle &&
-      !this.currentTerminal
-    ) {
-      this.showInteractionHint(
-        interaction
-      );
+    if (this.currentInteraction) {
+      this.showInteractionHint(this.currentInteraction);
     } else {
       this.hideInteractionHint();
     }
   }
 
   handleInteraction() {
-    if (
-      this.interactionCooldown >
-      0
-    ) {
-      return;
-    }
-
-    if (
-      this.messageOpen ||
-      this.currentPuzzle ||
-      this.currentTerminal
-    ) {
-      return;
-    }
-
-    if (
-      !this.input.wantsInteract()
-    ) {
-      return;
-    }
-
-    if (
-      !this.currentInteraction
-    ) {
-      return;
-    }
-
-    this.interactionCooldown =
-      0.25;
-
-    this.interactWith(
-      this.currentInteraction
-    );
-  }
-
-  interactWith(target) {
-    if (!target) {
-      return;
-    }
+    const target = this.currentInteraction;
+    if (!target) return;
 
     switch (target.id) {
       case "board":
-        this.interactBoard();
+        this.openMessage(
+          "O QUADRO",
+          "Algumas marcas de giz formam uma sequência. A sala parece ter sido preparada para esconder informações."
+        );
+        this.setStatus("Uma pista foi encontrada.");
         break;
 
       case "clock":
-        this.interactClock();
+        this.openMessage(
+          "O RELÓGIO",
+          "Os ponteiros estão quase imóveis. Talvez a hora marcada seja uma pista."
+        );
         break;
 
       case "bookshelf":
-        this.interactBookshelf();
+        this.openMessage(
+          "A ESTANTE",
+          "Um dos livros está deslocado. Atrás dele há uma anotação: quatro números podem ser importantes."
+        );
+        this.setObjective("Use as pistas para descobrir o código.");
         break;
 
       case "cabinet":
-        this.interactCabinet();
+        this.openCabinetPuzzle();
         break;
 
       case "computer":
-        this.interactComputer();
-        break;
-
-      case "desk_1":
-      case "desk_2":
-      case "desk_3":
-      case "desk_4":
-      case "desk_5":
-      case "desk_6":
-        this.interactDesk(target);
-        break;
-
-      case "poster_left":
-      case "poster_right":
-        this.interactPoster(target);
-        break;
-
-      /*
-       * A nova world.js usa "exit".
-       *
-       * Antes o game.js esperava "door".
-       *
-       * Agora os dois são aceitos.
-       */
-
-      case "exit":
-      case "door":
-        this.interactDoor();
+        this.openTerminal();
         break;
 
       case "teacherDesk":
-        this.interactTeacherDesk();
+        this.openMessage(
+          "MESA DO PROFESSOR",
+          "Entre os papéis existe uma frase circulada: “Nem tudo precisa ser visto para ser encontrado.”"
+        );
         break;
 
       case "flag":
-        this.interactFlag();
+        this.openMessage(
+          "BANDEIRA",
+          "A bandeira do Brasil está presa à parede. Atrás dela existe apenas uma pequena marca no reboco."
+        );
+        break;
+
+      case "exit":
+        if (this.doorUnlocked) {
+          this.openDoor();
+        } else {
+          this.openMessage(
+            "A PORTA",
+            "Está trancada. Primeiro encontre a solução dos desafios e descubra o código do terminal."
+          );
+          this.setObjective("Encontre o código para abrir a porta.");
+        }
         break;
 
       default:
         this.openMessage(
-          target.label ||
-            "OBJETO",
-          target.message ||
-            target.prompt ||
-            "Não há nada de interessante aqui."
+          target.label || "OBJETO",
+          "Não há nada para fazer aqui."
         );
-
         break;
     }
   }
 
-  // =========================================================
-  // QUADRO
-  // =========================================================
-
-  interactBoard() {
-    this.openMessage(
-      "O QUADRO",
-      "As marcas de giz parecem formar uma sequência. Há números parcialmente apagados e alguns símbolos destacados."
-    );
-
-    this.setStatus(
-      "Você encontrou uma pista."
-    );
-
-    this.spawnSparkles(
-      this.player.x,
-      this.player.y - 35,
-      12
-    );
-  }
-
-  // =========================================================
-  // RELÓGIO
-  // =========================================================
-
-  interactClock() {
-    this.openMessage(
-      "O RELÓGIO",
-      "O relógio está parado. Os ponteiros apontam para uma hora específica. Talvez esse horário seja importante."
-    );
-
-    this.setStatus(
-      "Observe o relógio."
-    );
-
-    this.spawnSparkles(
-      this.player.x,
-      this.player.y - 30,
-      10
-    );
-  }
-
-  // =========================================================
-  // ESTANTE
-  // =========================================================
-
-  interactBookshelf() {
-    this.openMessage(
-      "A ESTANTE",
-      "Alguns livros estão fora de ordem. Um deles parece ter sido retirado e colocado de volta às pressas."
-    );
-
-    this.setObjective(
-      "Procure pistas nos objetos da sala."
-    );
-
-    this.setStatus(
-      "Talvez exista um padrão nos livros."
-    );
-
-    this.spawnSparkles(
-      this.player.x,
-      this.player.y - 25,
-      14
-    );
-  }
-
-  // =========================================================
-  // CARTEIRAS
-  // =========================================================
-
-  interactDesk(target) {
-    const messages = {
-      desk_1:
-        "Dentro da carteira há uma anotação: 'Comece pelo menor número e siga dobrando.'",
-
-      desk_2:
-        "Há quatro símbolos riscados na madeira. O segundo parece ter sido marcado mais vezes.",
-
-      desk_3:
-        "Uma folha dobrada diz: 'O que está escondido não precisa estar à vista.'",
-
-      desk_4:
-        "No canto da mesa há um número rabiscado: 2.",
-
-      desk_5:
-        "O mesmo símbolo aparece repetido quatro vezes. Talvez a quantidade seja importante.",
-
-      desk_6:
-        "Debaixo da mesa existe uma pequena etiqueta com a palavra: 'SEQUÊNCIA'."
+  openCabinetPuzzle() {
+    this.currentPuzzle = {
+      title: "O ARMÁRIO",
+      question: "Qual número completa a sequência: 2, 4, 8, 16, ?",
+      options: ["24", "28", "32", "36"],
+      answer: "32"
     };
 
-    this.openMessage(
-      "CARTEIRA",
-      messages[target.id] ||
-        target.message ||
-        "Há uma pequena pista escondida aqui."
-    );
+    this.elements.puzzleTitle.textContent = this.currentPuzzle.title;
+    this.elements.puzzleQuestion.textContent = this.currentPuzzle.question;
+    this.elements.puzzleFeedback.textContent = "";
+    this.elements.puzzleOptions.innerHTML = "";
 
-    this.setStatus(
-      "Uma nova pista foi encontrada."
-    );
+    for (const option of this.currentPuzzle.options) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "puzzle-option";
+      button.textContent = option;
+      button.addEventListener("click", () => this.answerPuzzle(option));
+      this.elements.puzzleOptions.appendChild(button);
+    }
 
-    this.spawnSparkles(
-      this.player.x,
-      this.player.y - 20,
-      8
-    );
+    this.elements.puzzleOverlay.classList.add("is-visible");
+    this.elements.puzzleOverlay.setAttribute("aria-hidden", "false");
   }
 
-  // =========================================================
-  // CARTAZES
-  // =========================================================
+  answerPuzzle(answer) {
+    if (!this.currentPuzzle) return;
 
-  interactPoster(target) {
-    if (
-      target.id ===
-      "poster_left"
-    ) {
+    if (answer === this.currentPuzzle.answer) {
+      this.currentPuzzle = null;
+      this.elements.puzzleOverlay.classList.remove("is-visible");
+      this.elements.puzzleOverlay.setAttribute("aria-hidden", "true");
+
+      this.setStatus("Desafio resolvido.");
+      this.setObjective("Encontre o terminal e use o código encontrado.");
       this.openMessage(
-        "CARTAZ",
-        "Algumas letras estão destacadas. Quando observadas em ordem, elas parecem indicar que você deve procurar uma sequência."
+        "PISTA DESCOBERTA",
+        "O armário se abre. Dentro dele há um bilhete com uma sequência de quatro dígitos: 4 — 8 — 1 — 6."
       );
+      this.spawnSparkles(this.player.x, this.player.y, 24);
+      this.playSuccessSound();
     } else {
-      this.openMessage(
-        "CARTAZ",
-        "As formas geométricas aparecem nesta ordem: círculo, quadrado, triângulo. A ordem parece proposital."
-      );
+      this.elements.puzzleFeedback.textContent = "Essa resposta não completa a sequência.";
+      this.shake(0.14, 3);
+      this.playErrorSound();
     }
-
-    this.setStatus(
-      "Observe os detalhes."
-    );
   }
-
-  // =========================================================
-  // ARMÁRIO
-  // =========================================================
-
-  interactCabinet() {
-    if (
-      !this.doorUnlocked
-    ) {
-      this.openPuzzle({
-        id: "cabinet",
-
-        title:
-          "O ARMÁRIO",
-
-        question:
-          "Qual número completa a sequência: 2, 4, 8, 16, ?",
-
-        options: [
-          "24",
-          "28",
-          "32",
-          "36"
-        ],
-
-        answer:
-          "32",
-
-        success:
-          "A fechadura se abre. Dentro do armário há uma anotação com quatro números.",
-
-        failure:
-          "A fechadura não se move."
-      });
-
-      return;
-    }
-
-    this.openMessage(
-      "ARMÁRIO ABERTO",
-      "O armário já foi aberto. A pista encontrada aqui pode ajudar a descobrir o código do terminal."
-    );
-  }
-
-  // =========================================================
-  // COMPUTADOR
-  // =========================================================
-
-  interactComputer() {
-    this.openTerminal();
-  }
-
-  // =========================================================
-  // MESA DO PROFESSOR
-  // =========================================================
-
-  interactTeacherDesk() {
-    this.openMessage(
-      "MESA DO PROFESSOR",
-      "Há papéis, um livro e algumas anotações. Uma frase está circulada várias vezes: 'Nem tudo precisa ser visto para ser encontrado.'"
-    );
-
-    this.setObjective(
-      "Use as pistas para descobrir o código."
-    );
-  }
-
-  // =========================================================
-  // BANDEIRA
-  // =========================================================
-
-  interactFlag() {
-    this.openMessage(
-      "BANDEIRA DO BRASIL",
-      "Atrás da bandeira existe uma pequena marca no reboco. Não parece ser uma coincidência."
-    );
-
-    this.spawnSparkles(
-      this.player.x,
-      this.player.y - 25,
-      8
-    );
-  }
-
-  // =========================================================
-  // PORTA
-  // =========================================================
-
-  interactDoor() {
-    if (
-      this.doorUnlocked
-    ) {
-      this.openDoor();
-
-      return;
-    }
-
-    this.openMessage(
-      "A PORTA",
-      "Está trancada. Ao lado da maçaneta existe uma pequena fechadura numérica."
-    );
-
-    this.setObjective(
-      "Encontre o código para abrir a porta."
-    );
-
-    this.setStatus(
-      "A saída ainda está bloqueada."
-    );
-  }
-
-  // =========================================================
-  // TERMINAL
-  // =========================================================
 
   openTerminal() {
     this.currentTerminal = {
@@ -1312,1713 +387,371 @@ export class Game {
       entered: ""
     };
 
-    const overlay =
-      this.elements.terminalOverlay;
-
-    if (!overlay) {
-      return;
-    }
-
-    overlay.classList.add(
-      "is-visible"
-    );
-
-    overlay.setAttribute(
-      "aria-hidden",
-      "false"
-    );
-
-    this.updateTerminalDisplay();
-
-    this.setTerminalFeedback(
-      "Digite o código encontrado."
-    );
-
-    this.setStatus(
-      "Terminal de segurança."
-    );
-
-    this.setupTerminalButtons();
-  }
-
-  setupTerminalButtons() {
-    const overlay =
-      this.elements.terminalOverlay;
-
-    if (!overlay) {
-      return;
-    }
-
-    const buttons =
-      overlay.querySelectorAll(
-        "[data-key]"
-      );
-
-    buttons.forEach(button => {
-      button.onclick = () => {
-        this.handleTerminalKey(
-          button.dataset.key
-        );
-      };
-    });
-
-    const clearButton =
-      overlay.querySelector(
-        "[data-action='clear']"
-      );
-
-    if (clearButton) {
-      clearButton.onclick = () => {
-        if (
-          !this.currentTerminal
-        ) {
-          return;
-        }
-
-        this.currentTerminal.entered =
-          "";
-
-        this.updateTerminalDisplay();
-
-        this.setTerminalFeedback(
-          ""
-        );
-      };
-    }
-
-    const enterButton =
-      overlay.querySelector(
-        "[data-action='enter']"
-      );
-
-    if (enterButton) {
-      enterButton.onclick = () => {
-        this.submitTerminal();
-      };
-    }
-
-    const closeButton =
-      overlay.querySelector(
-        "[data-action='close']"
-      );
-
-    if (closeButton) {
-      closeButton.onclick = () => {
-        this.closeTerminal();
-      };
-    }
+    this.elements.terminalDisplay.textContent = "----";
+    this.elements.terminalFeedback.textContent = "";
+    this.elements.terminalOverlay.classList.add("is-visible");
+    this.elements.terminalOverlay.setAttribute("aria-hidden", "false");
+    this.setStatus("Digite o código encontrado.");
   }
 
   handleTerminalKey(key) {
-    if (
-      !this.currentTerminal
-    ) {
-      return;
-    }
+    if (!this.currentTerminal || !/^\d$/.test(key)) return;
+    if (this.currentTerminal.entered.length >= 4) return;
 
-    if (
-      !/^\d$/.test(key)
-    ) {
-      return;
-    }
+    this.currentTerminal.entered += key;
+    this.elements.terminalDisplay.textContent =
+      this.currentTerminal.entered.padEnd(4, "•");
 
-    if (
-      this.currentTerminal.entered
-        .length >= 4
-    ) {
-      return;
-    }
-
-    this.currentTerminal.entered +=
-      key;
-
-    this.updateTerminalDisplay();
-
-    if (
-      this.currentTerminal.entered
-        .length === 4
-    ) {
+    if (this.currentTerminal.entered.length === 4) {
       this.submitTerminal();
     }
   }
 
-  updateTerminalDisplay() {
-    const display =
-      this.elements.terminalDisplay;
-
-    if (!display) {
-      return;
-    }
-
-    if (
-      !this.currentTerminal
-    ) {
-      display.textContent =
-        "----";
-
-      return;
-    }
-
-    const value =
-      this.currentTerminal.entered;
-
-    display.textContent =
-      value.padEnd(
-        4,
-        "•"
-      );
-  }
-
-  setTerminalFeedback(text) {
-    const feedback =
-      this.elements.terminalFeedback;
-
-    if (!feedback) {
-      return;
-    }
-
-    feedback.textContent =
-      text || "";
+  clearTerminal() {
+    if (!this.currentTerminal) return;
+    this.currentTerminal.entered = "";
+    this.elements.terminalDisplay.textContent = "----";
+    this.elements.terminalFeedback.textContent = "";
   }
 
   submitTerminal() {
-    if (
-      !this.currentTerminal
-    ) {
+    if (!this.currentTerminal) return;
+
+    if (this.currentTerminal.entered.length !== 4) {
+      this.elements.terminalFeedback.textContent = "Digite 4 números.";
       return;
     }
 
-    const entered =
-      this.currentTerminal.entered;
+    if (this.currentTerminal.entered === this.currentTerminal.code) {
+      this.currentTerminal = null;
+      this.elements.terminalOverlay.classList.remove("is-visible");
+      this.elements.terminalOverlay.setAttribute("aria-hidden", "true");
 
-    if (
-      entered.length !== 4
-    ) {
-      this.setTerminalFeedback(
-        "Digite 4 números."
-      );
+      this.doorUnlocked = true;
+      this.world.setDoorOpen(true);
 
-      return;
-    }
-
-    if (
-      entered ===
-      this.currentTerminal.code
-    ) {
-      this.doorUnlocked =
-        true;
-
-      this.world.setDoorOpen(
-        true
-      );
-
-      this.closeTerminal();
-
-      this.setObjective(
-        "A porta está aberta. Vá até a saída."
-      );
-
-      this.setStatus(
-        "Sistema de segurança desativado."
-      );
-
-      this.openMessage(
-        "CÓDIGO CORRETO",
-        "O terminal emite um sinal. A fechadura da porta é liberada e a saída está disponível."
-      );
-
-      this.shakeTime =
-        0.2;
-
-      this.shakeStrength =
-        2;
-
-      this.spawnSparkles(
-        this.player.x,
-        this.player.y,
-        24
-      );
-
+      this.setObjective("A porta está aberta. Vá até a saída.");
+      this.setStatus("Sistema de segurança desativado.");
+      this.spawnSparkles(this.player.x, this.player.y, 32);
+      this.shake(0.22, 2);
       this.playSuccessSound();
 
-      return;
+      this.openMessage(
+        "PORTA DESBLOQUEADA",
+        "O sistema de segurança foi desativado. A porta agora está aberta. Vá até a esquerda da sala e atravesse a saída."
+      );
+    } else {
+      this.elements.terminalFeedback.textContent = "Código incorreto.";
+      this.currentTerminal.entered = "";
+      this.elements.terminalDisplay.textContent = "----";
+      this.shake(0.16, 3);
+      this.playErrorSound();
     }
-
-    this.setTerminalFeedback(
-      "Código incorreto."
-    );
-
-    this.currentTerminal.entered =
-      "";
-
-    this.updateTerminalDisplay();
-
-    this.shakeTime =
-      0.15;
-
-    this.shakeStrength =
-      3;
-
-    this.playErrorSound();
   }
 
   closeTerminal() {
-    this.currentTerminal =
-      null;
-
-    const overlay =
-      this.elements.terminalOverlay;
-
-    if (!overlay) {
-      return;
-    }
-
-    overlay.classList.remove(
-      "is-visible"
-    );
-
-    overlay.setAttribute(
-      "aria-hidden",
-      "true"
-    );
+    this.currentTerminal = null;
+    this.elements.terminalOverlay.classList.remove("is-visible");
+    this.elements.terminalOverlay.setAttribute("aria-hidden", "true");
   }
 
-  // =========================================================
-  // PUZZLE
-  // =========================================================
-
-  openPuzzle(data) {
-    if (!data) {
-      return;
-    }
-
-    this.currentPuzzle = {
-      ...data
-    };
-
-    const overlay =
-      this.elements.puzzleOverlay;
-
-    if (!overlay) {
-      return;
-    }
-
-    const title =
-      this.elements.puzzleTitle;
-
-    const question =
-      this.elements.puzzleQuestion;
-
-    const options =
-      this.elements.puzzleOptions;
-
-    const feedback =
-      this.elements.puzzleFeedback;
-
-    if (title) {
-      title.textContent =
-        data.title ||
-        "DESAFIO";
-    }
-
-    if (question) {
-      question.textContent =
-        data.question ||
-        "";
-    }
-
-    if (feedback) {
-      feedback.textContent =
-        "";
-    }
-
-    if (options) {
-      options.innerHTML =
-        "";
-
-      const puzzleOptions =
-        Array.isArray(
-          data.options
-        )
-          ? data.options
-          : [];
-
-      puzzleOptions.forEach(
-        option => {
-          const button =
-            document.createElement(
-              "button"
-            );
-
-          button.type =
-            "button";
-
-          button.className =
-            "puzzle-option";
-
-          button.textContent =
-            option;
-
-          button.addEventListener(
-            "click",
-            () => {
-              this.answerPuzzle(
-                option
-              );
-            }
-          );
-
-          options.appendChild(
-            button
-          );
-        }
-      );
-    }
-
-    overlay.classList.add(
-      "is-visible"
-    );
-
-    overlay.setAttribute(
-      "aria-hidden",
-      "false"
-    );
+  openDoor() {
+    if (!this.doorUnlocked) return;
+    this.world.setDoorOpen(true);
+    this.setObjective("Atravesse a porta.");
+    this.setStatus("A saída está aberta.");
   }
-
-  answerPuzzle(answer) {
-    if (
-      !this.currentPuzzle
-    ) {
-      return;
-    }
-
-    const puzzle =
-      this.currentPuzzle;
-
-    if (
-      answer ===
-      puzzle.answer
-    ) {
-      this.closePuzzle();
-
-      /*
-       * O puzzle libera a segurança.
-       * O terminal continua sendo um elemento
-       * explorável, mas a porta já está liberada.
-       */
-
-      this.doorUnlocked =
-        true;
-
-      this.world.setDoorOpen(
-        true
-      );
-
-      this.setObjective(
-        "A porta está aberta. Encontre a saída."
-      );
-
-      this.setStatus(
-        "Desafio resolvido!"
-      );
-
-      this.openMessage(
-        "PISTA DESCOBERTA",
-        puzzle.success ||
-          "Você resolveu o desafio."
-      );
-
-      this.spawnSparkles(
-        this.player.x,
-        this.player.y,
-        20
-      );
-
-      this.playSuccessSound();
-
-      return;
-    }
-
-    const feedback =
-      this.elements.puzzleFeedback;
-
-    if (feedback) {
-      feedback.textContent =
-        puzzle.failure ||
-        "Resposta incorreta.";
-    }
-
-    this.shakeTime =
-      0.12;
-
-    this.shakeStrength =
-      2;
-
-    this.playErrorSound();
-  }
-
-  closePuzzle() {
-    this.currentPuzzle =
-      null;
-
-    const overlay =
-      this.elements.puzzleOverlay;
-
-    if (!overlay) {
-      return;
-    }
-
-    overlay.classList.remove(
-      "is-visible"
-    );
-
-    overlay.setAttribute(
-      "aria-hidden",
-      "true"
-    );
-  }
-
-  // =========================================================
-  // MENSAGENS
-  // =========================================================
-
-  openMessage(title, text) {
-    this.messageOpen =
-      true;
-
-    const container =
-      this.elements.messageContainer;
-
-    if (!container) {
-      return;
-    }
-
-    const titleElement =
-      this.elements.messageTitle;
-
-    const textElement =
-      this.elements.messageText;
-
-    if (titleElement) {
-      titleElement.textContent =
-        title ||
-        "MENSAGEM";
-    }
-
-    if (textElement) {
-      textElement.textContent =
-        text ||
-        "";
-    }
-
-    container.classList.add(
-      "is-visible"
-    );
-
-    container.setAttribute(
-      "aria-hidden",
-      "false"
-    );
-  }
-
-  closeMessage() {
-    this.messageOpen =
-      false;
-
-    const container =
-      this.elements.messageContainer;
-
-    if (!container) {
-      return;
-    }
-
-    container.classList.remove(
-      "is-visible"
-    );
-
-    container.setAttribute(
-      "aria-hidden",
-      "true"
-    );
-  }
-
-  // =========================================================
-  // PORTA / SAÍDA
-  // =========================================================
 
   handleDoorExit() {
-    if (
-      !this.doorUnlocked ||
-      this.completed
-    ) {
-      return;
-    }
+    if (!this.doorUnlocked || this.completed) return;
 
-    const door =
-      this.world &&
-      this.world.exitDoor
-        ? this.world.exitDoor
-        : {
-            x: 110,
-            y: 330,
-            width: 120,
-            height: 190
-          };
-
-    const doorCenterX =
-      door.x +
-      door.width / 2;
-
-    const doorCenterY =
-      door.y +
-      door.height / 2;
-
-    const distance =
-      Math.hypot(
-        this.player.x -
-          doorCenterX,
-
-        this.player.y -
-          doorCenterY
-      );
+    const door = this.world.exitDoor;
+    const centerX = door.x + door.width / 2;
+    const centerY = door.y + door.height / 2;
 
     if (
-      distance < 95 &&
-      !this.messageOpen
+      Math.hypot(this.player.x - centerX, this.player.y - centerY) < 80
     ) {
       this.completeGame();
     }
   }
 
-  openDoor() {
-    if (
-      !this.doorUnlocked
-    ) {
-      return;
-    }
-
-    this.world.setDoorOpen(
-      true
-    );
-
-    this.setObjective(
-      "Atravesse a porta."
-    );
-
-    this.setStatus(
-      "A saída está aberta."
-    );
-
-    this.spawnSparkles(
-      this.player.x,
-      this.player.y,
-      18
-    );
-  }
-
-  // =========================================================
-  // CONCLUSÃO
-  // =========================================================
-
   completeGame() {
-    if (
-      this.completed
-    ) {
-      return;
-    }
+    if (this.completed) return;
 
-    this.completed =
-      true;
-
-    this.state =
-      "completed";
-
-    this.world.setDoorOpen(
-      true
-    );
+    this.completed = true;
+    this.state = "completed";
+    this.world.setDoorOpen(true);
 
     this.hideGameplayUI();
+    this.hideAllOverlays();
 
-    this.closeAllOverlays();
+    this.elements.completionTime.textContent = this.formatTime(this.elapsedTime);
+    this.showScreen("completionScreen");
 
-    const completionTime =
-      this.elements.completionTime;
-
-    if (completionTime) {
-      completionTime.textContent =
-        this.formatTime(
-          this.elapsedTime
-        );
-    }
-
-    this.spawnSparkles(
-      this.player.x,
-      this.player.y,
-      40
-    );
-
+    this.spawnSparkles(this.player.x, this.player.y, 50);
     this.playSuccessSound();
-
-    this.showScreen(
-      "completionScreen"
-    );
   }
 
-  // =========================================================
-  // RENDER
-  // =========================================================
+  openMessage(title, text) {
+    this.messageOpen = true;
+    this.elements.messageTitle.textContent = title || "Mensagem";
+    this.elements.messageText.textContent = text || "";
+    this.elements.messageContainer.classList.add("is-visible");
+    this.elements.messageContainer.setAttribute("aria-hidden", "false");
+    this.hideInteractionHint();
+  }
 
-  render() {
-    const ctx =
-      this.ctx;
+  closeMessage() {
+    this.messageOpen = false;
+    this.elements.messageContainer.classList.remove("is-visible");
+    this.elements.messageContainer.setAttribute("aria-hidden", "true");
+  }
 
-    if (!ctx) {
-      return;
+  showInteractionHint(target) {
+    this.elements.interactionKey.textContent = "E";
+    this.elements.interactionText.textContent =
+      `Interagir: ${target.label || "objeto"}`;
+
+    this.elements.interactionHint.classList.add("is-visible");
+    this.elements.interactionHint.setAttribute("aria-hidden", "false");
+  }
+
+  hideInteractionHint() {
+    this.elements.interactionHint.classList.remove("is-visible");
+    this.elements.interactionHint.setAttribute("aria-hidden", "true");
+  }
+
+  setObjective(text) {
+    this.elements.objectiveText.textContent = text;
+  }
+
+  setStatus(text) {
+    this.elements.statusText.textContent = text;
+  }
+
+  showGameplayUI() {
+    this.elements.objectivePanel.classList.add("is-visible");
+    this.elements.statusPanel.classList.add("is-visible");
+    this.elements.pauseButton.classList.add("is-visible");
+  }
+
+  hideGameplayUI() {
+    this.elements.objectivePanel.classList.remove("is-visible");
+    this.elements.statusPanel.classList.remove("is-visible");
+    this.elements.pauseButton.classList.remove("is-visible");
+    this.hideInteractionHint();
+  }
+
+  showScreen(id) {
+    for (const screenId of ["menuScreen", "pauseScreen", "completionScreen"]) {
+      const element = this.elements[screenId];
+      if (!element) continue;
+
+      const active = screenId === id;
+      element.classList.toggle("is-visible", active);
+      element.setAttribute("aria-hidden", active ? "false" : "true");
+    }
+  }
+
+  hideScreen(id) {
+    const element = this.elements[id];
+    if (!element) return;
+    element.classList.remove("is-visible");
+    element.setAttribute("aria-hidden", "true");
+  }
+
+  hideAllOverlays() {
+    this.messageOpen = false;
+    this.currentPuzzle = null;
+    this.currentTerminal = null;
+
+    for (const id of ["messageContainer", "puzzleOverlay", "terminalOverlay"]) {
+      const element = this.elements[id];
+      if (!element) continue;
+      element.classList.remove("is-visible");
+      element.setAttribute("aria-hidden", "true");
     }
 
-    ctx.save();
+    this.hideInteractionHint();
+  }
 
-    ctx.clearRect(
-      0,
-      0,
-      this.width,
-      this.height
-    );
+  openingPulse() {
+    this.spawnSparkles(this.player.x, this.player.y, 8);
+  }
 
-    this.drawCanvasBackground(
-      ctx
-    );
+  shake(duration, strength) {
+    this.shakeTime = duration;
+    this.shakeStrength = strength;
+  }
+
+  spawnSparkles(x, y, amount) {
+    for (let i = 0; i < amount; i += 1) {
+      const life = 0.5 + Math.random() * 0.8;
+      this.particles.push({
+        x: x + (Math.random() - 0.5) * 50,
+        y: y + (Math.random() - 0.5) * 50,
+        vx: (Math.random() - 0.5) * 60,
+        vy: (Math.random() - 0.5) * 60,
+        life,
+        maxLife: life,
+        size: Math.random() > 0.5 ? 2 : 1
+      });
+    }
+  }
+
+  updateParticles(deltaTime) {
+    for (let i = this.particles.length - 1; i >= 0; i -= 1) {
+      const p = this.particles[i];
+      p.life -= deltaTime;
+
+      if (p.life <= 0) {
+        this.particles.splice(i, 1);
+        continue;
+      }
+
+      p.x += p.vx * deltaTime;
+      p.y += p.vy * deltaTime;
+      p.vy += 18 * deltaTime;
+      p.vx *= 0.985;
+      p.vy *= 0.985;
+    }
+  }
+
+  renderParticles(ctx, camera) {
+    for (const p of this.particles) {
+      const x = p.x - camera.x;
+      const y = p.y - camera.y;
+      const alpha = Math.max(0, p.life / p.maxLife);
+
+      if (x < -5 || y < -5 || x > this.width + 5 || y > this.height + 5) continue;
+
+      ctx.fillStyle = `rgba(245,220,160,${alpha * 0.7})`;
+      ctx.fillRect(Math.round(x), Math.round(y), p.size, p.size);
+    }
+  }
+
+  render() {
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, this.width, this.height);
 
     let shakeX = 0;
     let shakeY = 0;
 
-    if (
-      this.shakeTime > 0
-    ) {
-      shakeX =
-        (
-          Math.random() -
-          0.5
-        ) *
-        this.shakeStrength;
-
-      shakeY =
-        (
-          Math.random() -
-          0.5
-        ) *
-        this.shakeStrength;
+    if (this.shakeTime > 0) {
+      shakeX = (Math.random() - 0.5) * this.shakeStrength;
+      shakeY = (Math.random() - 0.5) * this.shakeStrength;
     }
 
-    const renderCamera = {
-      x:
-        this.camera.x -
-        shakeX,
-
-      y:
-        this.camera.y -
-        shakeY
+    const camera = {
+      x: this.camera.x - shakeX,
+      y: this.camera.y - shakeY
     };
 
-    // =======================================================
-    // MUNDO
-    // =======================================================
-
-    if (this.world) {
-      this.world.render(
-        ctx,
-        renderCamera
-      );
-    }
-
-    // =======================================================
-    // PARTÍCULAS
-    // =======================================================
-
-    this.renderParticles(
-      ctx,
-      renderCamera
-    );
-
-    // =======================================================
-    // PLAYER
-    // =======================================================
-
-    if (this.player) {
-      this.player.render(
-        ctx,
-        renderCamera
-      );
-    }
-
-    // =======================================================
-    // ILUMINAÇÃO
-    // =======================================================
-
-    if (
-      this.world &&
-      typeof this.world.renderLighting ===
-        "function"
-    ) {
-      this.world.renderLighting(
-        ctx,
-        this.player,
-        renderCamera,
-        this.gameTime
-      );
-    }
-
-    // =======================================================
-    // ATMOSFERA
-    // =======================================================
-
-    this.renderAtmosphere(
-      ctx
-    );
-
-    ctx.restore();
+    this.drawBackground(ctx);
+    this.world.render(ctx, camera);
+    this.renderParticles(ctx, camera);
+    this.player.render(ctx, camera);
+    this.world.renderLighting(ctx, this.player, camera, this.gameTime);
+    this.renderAtmosphere(ctx);
   }
 
-  // =========================================================
-  // FUNDO
-  // =========================================================
-
-  drawCanvasBackground(ctx) {
-    const gradient =
-      ctx.createLinearGradient(
-        0,
-        0,
-        0,
-        this.height
-      );
-
-    gradient.addColorStop(
-      0,
-      "#070b0f"
-    );
-
-    gradient.addColorStop(
-      1,
-      "#10161b"
-    );
-
-    ctx.fillStyle =
-      gradient;
-
-    ctx.fillRect(
-      0,
-      0,
-      this.width,
-      this.height
-    );
+  drawBackground(ctx) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
+    gradient.addColorStop(0, "#070a0d");
+    gradient.addColorStop(1, "#11171a");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, this.width, this.height);
   }
-
-  // =========================================================
-  // ATMOSFERA
-  // =========================================================
 
   renderAtmosphere(ctx) {
     ctx.save();
 
-    for (
-      let i = 0;
-      i < 70;
-      i++
-    ) {
-      const x =
-        (
-          i * 137.31 +
-          this.gameTime * 3
-        ) %
-        this.width;
+    for (let i = 0; i < 38; i += 1) {
+      const x = (i * 97.13 + this.gameTime * 2.5) % this.width;
+      const y = (i * 51.77 + Math.sin(this.gameTime * 0.4 + i) * 5) % this.height;
 
-      const y =
-        (
-          i * 71.19 +
-          Math.sin(
-            this.gameTime +
-            i
-          ) *
-            4
-        ) %
-        this.height;
+      ctx.fillStyle = i % 4 === 0
+        ? "rgba(255,255,255,0.03)"
+        : "rgba(255,255,255,0.012)";
 
-      ctx.fillStyle =
-        i % 3 === 0
-          ? "rgba(255,255,255,0.025)"
-          : "rgba(255,255,255,0.012)";
-
-      ctx.fillRect(
-        Math.floor(x),
-        Math.floor(y),
-        1,
-        1
-      );
+      ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
     }
 
     ctx.restore();
   }
-
-  // =========================================================
-  // PARTÍCULAS
-  // =========================================================
-
-  createInitialParticles() {
-    this.particles =
-      [];
-
-    for (
-      let i = 0;
-      i < 24;
-      i++
-    ) {
-      const maxLife =
-        2 +
-        Math.random() * 3;
-
-      this.particles.push({
-        x:
-          Math.random() *
-          this.worldWidth,
-
-        y:
-          520 +
-          Math.random() *
-            300,
-
-        vx:
-          (
-            Math.random() -
-            0.5
-          ) *
-          8,
-
-        vy:
-          -Math.random() *
-          5,
-
-        life:
-          maxLife,
-
-        maxLife:
-          maxLife,
-
-        size:
-          Math.random() >
-          0.75
-            ? 2
-            : 1,
-
-        type:
-          "dust"
-      });
-    }
-  }
-
-  spawnSparkles(
-    x,
-    y,
-    amount = 12
-  ) {
-    for (
-      let i = 0;
-      i < amount;
-      i++
-    ) {
-      const maxLife =
-        0.5 +
-        Math.random() *
-          0.8;
-
-      this.particles.push({
-        x:
-          x +
-          (
-            Math.random() -
-            0.5
-          ) *
-            40,
-
-        y:
-          y +
-          (
-            Math.random() -
-            0.5
-          ) *
-            40,
-
-        vx:
-          (
-            Math.random() -
-            0.5
-          ) *
-          50,
-
-        vy:
-          (
-            Math.random() -
-            0.5
-          ) *
-          50,
-
-        life:
-          maxLife,
-
-        maxLife:
-          maxLife,
-
-        size:
-          Math.random() >
-          0.5
-            ? 2
-            : 1,
-
-        type:
-          "spark"
-      });
-    }
-  }
-
-  updateParticles(
-    deltaTime
-  ) {
-    for (
-      let i =
-        this.particles.length -
-        1;
-
-      i >= 0;
-
-      i--
-    ) {
-      const particle =
-        this.particles[i];
-
-      particle.life -=
-        deltaTime;
-
-      if (
-        particle.life <= 0
-      ) {
-        this.particles.splice(
-          i,
-          1
-        );
-
-        continue;
-      }
-
-      particle.x +=
-        particle.vx *
-        deltaTime;
-
-      particle.y +=
-        particle.vy *
-        deltaTime;
-
-      if (
-        particle.type ===
-        "dust"
-      ) {
-        particle.vy -=
-          0.5 *
-          deltaTime;
-
-        particle.vx *=
-          0.995;
-      } else {
-        particle.vy +=
-          20 *
-          deltaTime;
-
-        particle.vx *=
-          0.98;
-      }
-    }
-  }
-
-  renderParticles(
-    ctx,
-    camera
-  ) {
-    ctx.save();
-
-    for (
-      const particle of
-      this.particles
-    ) {
-      const x =
-        particle.x -
-        camera.x;
-
-      const y =
-        particle.y -
-        camera.y;
-
-      if (
-        x < -10 ||
-        y < -10 ||
-        x >
-          this.width +
-            10 ||
-        y >
-          this.height +
-            10
-      ) {
-        continue;
-      }
-
-      const alpha =
-        particle.life /
-        particle.maxLife;
-
-      if (
-        particle.type ===
-        "spark"
-      ) {
-        ctx.fillStyle =
-          `rgba(245,220,160,${alpha * 0.8})`;
-      } else {
-        ctx.fillStyle =
-          `rgba(220,208,178,${alpha * 0.16})`;
-      }
-
-      ctx.fillRect(
-        Math.round(x),
-        Math.round(y),
-        particle.size,
-        particle.size
-      );
-    }
-
-    ctx.restore();
-  }
-
-  // =========================================================
-  // HUD
-  // =========================================================
-
-  setObjective(text) {
-    const element =
-      this.elements.objectiveText;
-
-    if (element) {
-      element.textContent =
-        text || "";
-    }
-  }
-
-  setStatus(text) {
-    const element =
-      this.elements.statusText;
-
-    if (element) {
-      element.textContent =
-        text || "";
-    }
-  }
-
-  showInteractionHint(
-    target
-  ) {
-    const hint =
-      this.elements.interactionHint;
-
-    const key =
-      this.elements.interactionKey;
-
-    const text =
-      this.elements.interactionText;
-
-    if (!hint) {
-      return;
-    }
-
-    hint.classList.add(
-      "is-visible"
-    );
-
-    hint.style.pointerEvents =
-      "none";
-
-    if (key) {
-      key.textContent =
-        "E";
-    }
-
-    if (text) {
-      text.textContent =
-        `Interagir: ${
-          target.label ||
-          "objeto"
-        }`;
-    }
-  }
-
-  hideInteractionHint() {
-    const hint =
-      this.elements.interactionHint;
-
-    if (!hint) {
-      return;
-    }
-
-    hint.classList.remove(
-      "is-visible"
-    );
-  }
-
-  showGameplayUI() {
-    const objective =
-      this.elements.objectivePanel;
-
-    const status =
-      this.elements.statusPanel;
-
-    const pause =
-      this.elements.pauseButton;
-
-    if (objective) {
-      objective.classList.add(
-        "is-visible"
-      );
-    }
-
-    if (status) {
-      status.classList.add(
-        "is-visible"
-      );
-    }
-
-    if (pause) {
-      pause.classList.add(
-        "is-visible"
-      );
-    }
-  }
-
-  hideGameplayUI() {
-    const objective =
-      this.elements.objectivePanel;
-
-    const status =
-      this.elements.statusPanel;
-
-    const hint =
-      this.elements.interactionHint;
-
-    const pause =
-      this.elements.pauseButton;
-
-    if (objective) {
-      objective.classList.remove(
-        "is-visible"
-      );
-    }
-
-    if (status) {
-      status.classList.remove(
-        "is-visible"
-      );
-    }
-
-    if (hint) {
-      hint.classList.remove(
-        "is-visible"
-      );
-    }
-
-    if (pause) {
-      pause.classList.remove(
-        "is-visible"
-      );
-    }
-  }
-
-  // =========================================================
-  // TELAS
-  // =========================================================
-
-  showScreen(id) {
-    const screens = [
-      "menuScreen",
-      "pauseScreen",
-      "completionScreen"
-    ];
-
-    screens.forEach(
-      screenId => {
-        const element =
-          this.elements[
-            screenId
-          ];
-
-        if (!element) {
-          return;
-        }
-
-        if (
-          screenId === id
-        ) {
-          element.classList.add(
-            "is-visible"
-          );
-
-          element.setAttribute(
-            "aria-hidden",
-            "false"
-          );
-        } else {
-          element.classList.remove(
-            "is-visible"
-          );
-
-          element.setAttribute(
-            "aria-hidden",
-            "true"
-          );
-        }
-      }
-    );
-  }
-
-  hideScreen(id) {
-    const element =
-      this.elements[id];
-
-    if (!element) {
-      return;
-    }
-
-    element.classList.remove(
-      "is-visible"
-    );
-
-    element.setAttribute(
-      "aria-hidden",
-      "true"
-    );
-  }
-
-  // =========================================================
-  // OVERLAYS
-  // =========================================================
-
-  hideOverlayElements() {
-    this.hideInteractionHint();
-
-    const message =
-      this.elements.messageContainer;
-
-    if (message) {
-      message.classList.remove(
-        "is-visible"
-      );
-
-      message.setAttribute(
-        "aria-hidden",
-        "true"
-      );
-    }
-
-    const terminal =
-      this.elements.terminalOverlay;
-
-    if (terminal) {
-      terminal.classList.remove(
-        "is-visible"
-      );
-
-      terminal.setAttribute(
-        "aria-hidden",
-        "true"
-      );
-    }
-
-    const puzzle =
-      this.elements.puzzleOverlay;
-
-    if (puzzle) {
-      puzzle.classList.remove(
-        "is-visible"
-      );
-
-      puzzle.setAttribute(
-        "aria-hidden",
-        "true"
-      );
-    }
-  }
-
-  closeAllOverlays() {
-    this.messageOpen =
-      false;
-
-    this.currentPuzzle =
-      null;
-
-    this.currentTerminal =
-      null;
-
-    this.hideOverlayElements();
-  }
-
-  // =========================================================
-  // ÁUDIO
-  // =========================================================
 
   startAudio() {
-    if (
-      this.audioStarted
-    ) {
-      if (
-        this.audioContext &&
-        this.audioContext.state ===
-          "suspended"
-      ) {
-        this.audioContext.resume();
-      }
-
+    if (this.audioContext) {
+      if (this.audioContext.state === "suspended") this.audioContext.resume();
       return;
     }
 
-    this.audioStarted =
-      true;
-
     try {
-      const AudioContext =
-        window.AudioContext ||
-        window.webkitAudioContext;
-
-      if (AudioContext) {
-        this.audioContext =
-          new AudioContext();
-      }
-    } catch (error) {
-      this.audioContext =
-        null;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      this.audioContext = new AudioContext();
+    } catch {
+      this.audioContext = null;
     }
   }
 
-  playTone(
-    frequency,
-    duration = 0.08,
-    type = "sine",
-    volume = 0.025
-  ) {
-    if (
-      !this.audioContext
-    ) {
-      return;
-    }
+  playTone(frequency, duration = 0.08, type = "sine", volume = 0.025) {
+    if (!this.audioContext) return;
 
     try {
-      if (
-        this.audioContext.state ===
-        "suspended"
-      ) {
-        this.audioContext.resume();
-      }
+      if (this.audioContext.state === "suspended") this.audioContext.resume();
 
-      const oscillator =
-        this.audioContext.createOscillator();
+      const now = this.audioContext.currentTime;
+      const oscillator = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
 
-      const gain =
-        this.audioContext.createGain();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, now);
 
-      oscillator.type =
-        type;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-      oscillator.frequency.value =
-        frequency;
+      oscillator.connect(gain);
+      gain.connect(this.audioContext.destination);
 
-      const now =
-        this.audioContext.currentTime;
-
-      gain.gain.setValueAtTime(
-        0,
-        now
-      );
-
-      gain.gain.linearRampToValueAtTime(
-        volume,
-        now + 0.01
-      );
-
-      gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        now + duration
-      );
-
-      oscillator.connect(
-        gain
-      );
-
-      gain.connect(
-        this.audioContext.destination
-      );
-
-      oscillator.start(
-        now
-      );
-
-      oscillator.stop(
-        now + duration
-      );
-    } catch (error) {
-      // O jogo continua normalmente sem áudio.
+      oscillator.start(now);
+      oscillator.stop(now + duration + 0.02);
+    } catch {
+      // O jogo continua funcionando sem áudio.
     }
   }
 
   playSuccessSound() {
-    this.playTone(
-      523.25,
-      0.12,
-      "sine",
-      0.035
-    );
-
-    window.setTimeout(
-      () => {
-        this.playTone(
-          659.25,
-          0.14,
-          "sine",
-          0.035
-        );
-      },
-      90
-    );
-
-    window.setTimeout(
-      () => {
-        this.playTone(
-          783.99,
-          0.18,
-          "sine",
-          0.035
-        );
-      },
-      190
-    );
+    this.playTone(523.25, 0.09, "sine", 0.03);
+    window.setTimeout(() => this.playTone(659.25, 0.12, "sine", 0.025), 65);
   }
 
   playErrorSound() {
-    this.playTone(
-      150,
-      0.16,
-      "square",
-      0.025
-    );
+    this.playTone(150, 0.12, "sawtooth", 0.018);
   }
 
-  // =========================================================
-  // TECLADO
-  // =========================================================
-
-  handleKeyDown(event) {
-    if (!event) {
-      return;
-    }
-
-    const key =
-      event.key;
-
-    // =======================================================
-    // MENSAGEM
-    // =======================================================
-
-    if (
-      this.messageOpen &&
-      (
-        key === "Enter" ||
-        key === " " ||
-        key === "e" ||
-        key === "E"
-      )
-    ) {
-      this.closeMessage();
-
-      return;
-    }
-
-    // =======================================================
-    // TERMINAL
-    // =======================================================
-
-    if (
-      this.currentTerminal
-    ) {
-      if (
-        /^\d$/.test(key)
-      ) {
-        this.handleTerminalKey(
-          key
-        );
-
-        return;
-      }
-
-      if (
-        key === "Enter"
-      ) {
-        this.submitTerminal();
-
-        return;
-      }
-
-      if (
-        key === "Backspace"
-      ) {
-        this.currentTerminal.entered =
-          this.currentTerminal.entered.slice(
-            0,
-            -1
-          );
-
-        this.updateTerminalDisplay();
-
-        return;
-      }
-
-      if (
-        key === "Escape"
-      ) {
-        this.closeTerminal();
-
-        return;
-      }
-
-      return;
-    }
-
-    // =======================================================
-    // PUZZLE
-    // =======================================================
-
-    if (
-      this.currentPuzzle
-    ) {
-      if (
-        key === "Escape"
-      ) {
-        this.closePuzzle();
-      }
-
-      return;
-    }
-
-    // =======================================================
-    // PAUSA
-    // =======================================================
-
-    if (
-      key === "Escape" &&
-      this.state === "playing"
-    ) {
-      this.togglePause();
-    }
+  formatTime(seconds) {
+    const total = Math.max(0, Math.floor(seconds));
+    const minutes = Math.floor(total / 60);
+    const secs = total % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   }
 
-  // =========================================================
-  // UTILIDADES
-  // =========================================================
-
-  clamp(
-    value,
-    min,
-    max
-  ) {
-    return Math.max(
-      min,
-      Math.min(
-        max,
-        value
-      )
-    );
+  clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
   }
-
-  formatTime(
-    seconds
-  ) {
-    const totalSeconds =
-      Math.max(
-        0,
-        Math.floor(
-          seconds
-        )
-      );
-
-    const minutes =
-      Math.floor(
-        totalSeconds / 60
-      );
-
-    const remaining =
-      totalSeconds % 60;
-
-    return `${String(
-      minutes
-    ).padStart(
-      2,
-      "0"
-    )}:${String(
-      remaining
-    ).padStart(
-      2,
-      "0"
-    )}`;
-  }
-
-  // =========================================================
-  // DESTRUIR
-  // =========================================================
 
   destroy() {
-    if (
-      this.input &&
-      typeof this.input.destroy ===
-        "function"
-    ) {
-      this.input.destroy();
-    }
+    this.input.destroy();
 
-    if (
-      this.world &&
-      typeof this.world.destroy ===
-        "function"
-    ) {
-      this.world.destroy();
-    }
-
-    if (
-      this.player &&
-      typeof this.player.destroy ===
-        "function"
-    ) {
-      this.player.destroy();
-    }
-
-    if (
-      this.audioContext
-    ) {
+    if (this.audioContext) {
       try {
         this.audioContext.close();
-      } catch (error) {
-        // Ignora erro de encerramento.
-      }
+      } catch {}
     }
 
-    this.input = null;
-
-    this.world = null;
-
-    this.player = null;
-
     this.audioContext = null;
-
-    this.canvas = null;
-
-    this.ctx = null;
   }
 }

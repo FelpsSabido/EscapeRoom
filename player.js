@@ -1,172 +1,102 @@
-// player.js
-// Escape Room — Personagem
-// Personagem frontal em pixel art, com movimentação suave,
-// animação de caminhada, sombra e bengala.
-
 export class Player {
   constructor(options = {}) {
     this.world = options.world || null;
 
     this.width = 42;
     this.height = 64;
-
     this.hitboxWidth = 20;
     this.hitboxHeight = 18;
 
-    this.speed = 185;
-
-    this.acceleration = 1050;
-    this.deceleration = 1350;
+    this.speed = 210;
+    this.acceleration = 1450;
+    this.deceleration = 1700;
 
     this.x = 800;
-    this.y = 800;
+    this.y = 700;
 
     this.velocityX = 0;
     this.velocityY = 0;
 
     this.direction = "down";
-
     this.walkTime = 0;
     this.walkFrame = 0;
-
-    this.isMoving = false;
-
-    this.caneWave = 0;
-
     this.bobTime = 0;
-
+    this.caneWave = 0;
+    this.isMoving = false;
     this.visible = true;
 
     this.palette = {
       skin: "#d49a76",
-      skinLight: "#e4ad86",
-      skinShadow: "#a86d55",
-
-      hair: "#17181c",
-      hairLight: "#292a2f",
-
+      skinLight: "#e7b18b",
+      skinShadow: "#a96d55",
+      hair: "#15171b",
+      hairLight: "#2a2c31",
       shirt: "#3f6687",
-      shirtLight: "#557f9f",
-      shirtDark: "#2d4b65",
-
-      pants: "#28333d",
-      pantsLight: "#34434f",
-
-      shoe: "#17191c",
-      shoeLight: "#2a2e32",
-
+      shirtLight: "#638eac",
+      shirtDark: "#2b4a63",
+      pants: "#29343e",
+      pantsLight: "#3b4b58",
+      shoe: "#16191c",
+      shoeLight: "#353a3e",
       cane: "#ded6c2",
       caneDark: "#8f8879",
-
       backpack: "#704b39",
-      backpackLight: "#8a5c45",
-
-      eye: "#161616",
-
-      shadow: "rgba(0,0,0,0.45)"
+      backpackLight: "#8d6048",
+      eye: "#111315",
+      shadow: "rgba(0,0,0,0.48)"
     };
 
     this.reset();
   }
 
-  // =========================================================
-  // RESET
-  // =========================================================
-
   reset() {
-    if (this.world && typeof this.world.getSpawnPoint === "function") {
-      const spawn = this.world.getSpawnPoint();
+    const spawn = this.world && typeof this.world.getSpawnPoint === "function"
+      ? this.world.getSpawnPoint()
+      : { x: 1110, y: 600 };
 
-      this.x = spawn.x;
-      this.y = spawn.y;
-    } else {
-      this.x = 800;
-      this.y = 800;
-    }
-
+    this.x = spawn.x;
+    this.y = spawn.y;
     this.velocityX = 0;
     this.velocityY = 0;
-
     this.direction = "down";
-
     this.walkTime = 0;
     this.walkFrame = 0;
-
-    this.isMoving = false;
-
-    this.caneWave = 0;
     this.bobTime = 0;
+    this.caneWave = 0;
+    this.isMoving = false;
   }
 
-  // =========================================================
-  // UPDATE
-  // =========================================================
-
   update(deltaTime, input) {
-    if (!input) {
-      this.stopMovement(deltaTime);
-      this.updateAnimation(deltaTime);
-      return;
-    }
+    const movement = input ? input.getMovementVector() : { x: 0, y: 0 };
 
-    const movement = input.getMovementVector();
+    const targetX = movement.x * this.speed;
+    const targetY = movement.y * this.speed;
 
-    let targetX = movement.x * this.speed;
-    let targetY = movement.y * this.speed;
+    this.velocityX = this.approach(
+      this.velocityX,
+      targetX,
+      (Math.abs(targetX) > 0.001 ? this.acceleration : this.deceleration) * deltaTime
+    );
 
-    // Aceleração horizontal
-    if (Math.abs(targetX) > 0.001) {
-      this.velocityX = this.moveTowards(
-        this.velocityX,
-        targetX,
-        this.acceleration * deltaTime
-      );
-    } else {
-      this.velocityX = this.moveTowards(
-        this.velocityX,
-        0,
-        this.deceleration * deltaTime
-      );
-    }
+    this.velocityY = this.approach(
+      this.velocityY,
+      targetY,
+      (Math.abs(targetY) > 0.001 ? this.acceleration : this.deceleration) * deltaTime
+    );
 
-    // Aceleração vertical
-    if (Math.abs(targetY) > 0.001) {
-      this.velocityY = this.moveTowards(
-        this.velocityY,
-        targetY,
-        this.acceleration * deltaTime
-      );
-    } else {
-      this.velocityY = this.moveTowards(
-        this.velocityY,
-        0,
-        this.deceleration * deltaTime
-      );
-    }
+    this.isMoving = Math.abs(movement.x) > 0 || Math.abs(movement.y) > 0;
 
-    const moving =
-      Math.abs(movement.x) > 0 ||
-      Math.abs(movement.y) > 0;
-
-    this.isMoving = moving;
-
-    if (moving) {
+    if (this.isMoving) {
       this.updateDirection(movement);
-
       this.walkTime += deltaTime;
+      this.bobTime += deltaTime * 11;
 
-      const frameDuration = 0.11;
-
-      if (this.walkTime >= frameDuration) {
-        this.walkTime -= frameDuration;
-        this.walkFrame =
-          (this.walkFrame + 1) % 4;
+      if (this.walkTime >= 0.1) {
+        this.walkTime -= 0.1;
+        this.walkFrame = (this.walkFrame + 1) % 4;
       }
-
-      this.bobTime += deltaTime * 10;
     } else {
       this.walkFrame = 0;
-
       this.bobTime += deltaTime * 2;
     }
 
@@ -178,35 +108,22 @@ export class Player {
     );
   }
 
-  // =========================================================
-  // DIREÇÃO
-  // =========================================================
+  approach(current, target, amount) {
+    if (current < target) return Math.min(current + amount, target);
+    if (current > target) return Math.max(current - amount, target);
+    return target;
+  }
 
   updateDirection(movement) {
-    if (
-      Math.abs(movement.x) >
-      Math.abs(movement.y)
-    ) {
-      if (movement.x > 0) {
-        this.direction = "right";
-      } else if (movement.x < 0) {
-        this.direction = "left";
-      }
-    } else {
-      if (movement.y > 0) {
-        this.direction = "down";
-      } else if (movement.y < 0) {
-        this.direction = "up";
-      }
+    if (Math.abs(movement.x) > Math.abs(movement.y)) {
+      this.direction = movement.x > 0 ? "right" : "left";
+    } else if (movement.y !== 0) {
+      this.direction = movement.y > 0 ? "down" : "up";
     }
   }
 
-  // =========================================================
-  // MOVIMENTO
-  // =========================================================
-
   moveWithCollision(dx, dy) {
-    if (!this.world) {
+    if (!this.world || typeof this.world.canPlayerMoveTo !== "function") {
       this.x += dx;
       this.y += dy;
       return;
@@ -214,13 +131,7 @@ export class Player {
 
     if (dx !== 0) {
       const nextX = this.x + dx;
-
-      if (
-        this.canMoveTo(
-          nextX,
-          this.y
-        )
-      ) {
+      if (this.world.canPlayerMoveTo(this, nextX, this.y)) {
         this.x = nextX;
       } else {
         this.velocityX = 0;
@@ -229,13 +140,7 @@ export class Player {
 
     if (dy !== 0) {
       const nextY = this.y + dy;
-
-      if (
-        this.canMoveTo(
-          this.x,
-          nextY
-        )
-      ) {
+      if (this.world.canPlayerMoveTo(this, this.x, nextY)) {
         this.y = nextY;
       } else {
         this.velocityY = 0;
@@ -243,862 +148,215 @@ export class Player {
     }
   }
 
-  canMoveTo(x, y) {
-    if (!this.world) {
-      return true;
-    }
+  render(ctx, camera) {
+    if (!this.visible) return;
 
-    if (
-      typeof this.world.canPlayerMoveTo !==
-      "function"
-    ) {
-      return true;
-    }
-
-    return this.world.canPlayerMoveTo(
-      this,
-      x,
-      y
-    );
-  }
-
-  // =========================================================
-  // DESACELERAÇÃO
-  // =========================================================
-
-  stopMovement(deltaTime) {
-    this.velocityX = this.moveTowards(
-      this.velocityX,
-      0,
-      this.deceleration * deltaTime
-    );
-
-    this.velocityY = this.moveTowards(
-      this.velocityY,
-      0,
-      this.deceleration * deltaTime
-    );
-
-    this.isMoving =
-      Math.abs(this.velocityX) > 1 ||
-      Math.abs(this.velocityY) > 1;
-  }
-
-  moveTowards(current, target, amount) {
-    if (current < target) {
-      return Math.min(
-        current + amount,
-        target
-      );
-    }
-
-    if (current > target) {
-      return Math.max(
-        current - amount,
-        target
-      );
-    }
-
-    return target;
-  }
-
-  // =========================================================
-  // ANIMAÇÃO
-  // =========================================================
-
-  updateAnimation(deltaTime) {
-    if (this.isMoving) {
-      this.walkTime += deltaTime;
-
-      if (this.walkTime >= 0.11) {
-        this.walkTime -= 0.11;
-
-        this.walkFrame =
-          (this.walkFrame + 1) % 4;
-      }
-    }
-  }
-
-  getWalkOffset() {
-    if (!this.isMoving) {
-      return 0;
-    }
-
-    const animation =
-      Math.sin(this.bobTime);
-
-    return animation * 2;
-  }
-
-  getLegOffset(side) {
-    if (!this.isMoving) {
-      return 0;
-    }
-
-    const frameOffsets = [
-      0,
-      3,
-      0,
-      -3
-    ];
-
-    const value =
-      frameOffsets[this.walkFrame] || 0;
-
-    return side === "left"
-      ? value
-      : -value;
-  }
-
-  // =========================================================
-  // RENDER
-  // =========================================================
-
-  render(ctx, camera = { x: 0, y: 0 }) {
-    if (!this.visible) {
-      return;
-    }
-
-    const screenX =
-      this.x - camera.x;
-
-    const screenY =
-      this.y - camera.y;
+    const screenX = this.x - camera.x;
+    const screenY = this.y - camera.y;
+    const bob = this.isMoving ? Math.sin(this.bobTime) * 2 : 0;
 
     ctx.save();
+    this.drawShadow(ctx, screenX, screenY);
+    ctx.translate(Math.round(screenX), Math.round(screenY + bob));
 
-    // Sombra fica fixa no chão
-    this.drawShadow(
-      ctx,
-      screenX,
-      screenY
-    );
-
-    // Pequeno movimento vertical
-    const bob =
-      this.getWalkOffset();
-
-    ctx.translate(
-      Math.round(screenX),
-      Math.round(screenY + bob)
-    );
-
-    this.drawCharacter(ctx);
-
-    ctx.restore();
-  }
-
-  // =========================================================
-  // SOMBRA
-  // =========================================================
-
-  drawShadow(ctx, x, y) {
-    ctx.save();
-
-    const movingScale =
-      this.isMoving
-        ? 1 + Math.sin(this.bobTime) * 0.05
-        : 1;
-
-    ctx.fillStyle =
-      this.palette.shadow;
-
-    ctx.beginPath();
-
-    ctx.ellipse(
-      x,
-      y + 4,
-      25 * movingScale,
-      8 * movingScale,
-      0,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.fill();
-
-    ctx.restore();
-  }
-
-  // =========================================================
-  // PERSONAGEM
-  // =========================================================
-
-  drawCharacter(ctx) {
-    const flip =
-      this.direction === "left"
-        ? -1
-        : 1;
-
-    ctx.save();
-
+    const flip = this.direction === "left" ? -1 : 1;
     ctx.scale(flip, 1);
 
-    // Ordem:
-    // mochila -> pernas -> corpo -> braços ->
-    // cabeça -> cabelo -> rosto -> bengala.
-
     this.drawBackpack(ctx);
-
     this.drawLegs(ctx);
-
     this.drawBody(ctx);
-
     this.drawArms(ctx);
-
     this.drawHead(ctx);
-
     this.drawHair(ctx);
-
     this.drawFace(ctx);
-
     this.drawCane(ctx);
 
     ctx.restore();
   }
 
-  // =========================================================
-  // MOCHILA
-  // =========================================================
+  drawShadow(ctx, x, y) {
+    ctx.fillStyle = this.palette.shadow;
+    ctx.beginPath();
+    ctx.ellipse(
+      x,
+      y + 5,
+      this.isMoving ? 27 : 25,
+      this.isMoving ? 8.5 : 8,
+      0, 0, Math.PI * 2
+    );
+    ctx.fill();
+  }
 
   drawBackpack(ctx) {
-    ctx.fillStyle =
-      this.palette.backpackDark ||
-      this.palette.backpack;
-
-    ctx.fillStyle =
-      this.palette.backpack;
-
-    // Mochila atrás do corpo
-    ctx.fillRect(
-      -18,
-      -35,
-      12,
-      33
-    );
-
-    ctx.fillStyle =
-      this.palette.backpackLight;
-
-    ctx.fillRect(
-      -16,
-      -32,
-      8,
-      24
-    );
-
-    ctx.fillStyle =
-      this.palette.backpack;
-
-    ctx.fillRect(
-      -17,
-      -10,
-      10,
-      7
-    );
+    ctx.fillStyle = this.palette.backpack;
+    ctx.fillRect(-19, -34, 13, 36);
+    ctx.fillStyle = this.palette.backpackLight;
+    ctx.fillRect(-17, -31, 8, 25);
+    ctx.fillStyle = "#4e3529";
+    ctx.fillRect(-18, -10, 11, 7);
   }
-
-  // =========================================================
-  // PERNAS
-  // =========================================================
 
   drawLegs(ctx) {
-    const leftOffset =
-      this.getLegOffset("left");
+    const offset = this.isMoving
+      ? [0, 3, 0, -3][this.walkFrame]
+      : 0;
 
-    const rightOffset =
-      this.getLegOffset("right");
+    ctx.fillStyle = this.palette.pants;
+    ctx.fillRect(-13 + offset, 19, 11, 26);
+    ctx.fillRect(2 - offset, 19, 11, 26);
 
-    // Perna esquerda
-    ctx.fillStyle =
-      this.palette.pants;
+    ctx.fillStyle = this.palette.pantsLight;
+    ctx.fillRect(-12 + offset, 22, 4, 18);
+    ctx.fillRect(3 - offset, 22, 4, 18);
 
-    ctx.fillRect(
-      -13 + leftOffset,
-      20,
-      11,
-      25
-    );
+    ctx.fillStyle = this.palette.shoe;
+    ctx.fillRect(-16 + offset, 42, 15, 8);
+    ctx.fillRect(0 - offset, 42, 15, 8);
 
-    // Perna direita
-    ctx.fillRect(
-      2 + rightOffset,
-      20,
-      11,
-      25
-    );
-
-    // Luz da calça
-    ctx.fillStyle =
-      this.palette.pantsLight;
-
-    ctx.fillRect(
-      -12 + leftOffset,
-      22,
-      4,
-      18
-    );
-
-    ctx.fillRect(
-      3 + rightOffset,
-      22,
-      4,
-      18
-    );
-
-    // Sapatos
-    ctx.fillStyle =
-      this.palette.shoe;
-
-    ctx.fillRect(
-      -16 + leftOffset,
-      42,
-      15,
-      7
-    );
-
-    ctx.fillRect(
-      0 + rightOffset,
-      42,
-      15,
-      7
-    );
-
-    ctx.fillStyle =
-      this.palette.shoeLight;
-
-    ctx.fillRect(
-      -13 + leftOffset,
-      43,
-      8,
-      2
-    );
-
-    ctx.fillRect(
-      3 + rightOffset,
-      43,
-      8,
-      2
-    );
+    ctx.fillStyle = this.palette.shoeLight;
+    ctx.fillRect(-13 + offset, 43, 8, 2);
+    ctx.fillRect(3 - offset, 43, 8, 2);
   }
-
-  // =========================================================
-  // CORPO
-  // =========================================================
 
   drawBody(ctx) {
-    // Pescoço
-    ctx.fillStyle =
-      this.palette.skin;
+    ctx.fillStyle = this.palette.skin;
+    ctx.fillRect(-7, -13, 14, 12);
 
-    ctx.fillRect(
-      -7,
-      -12,
-      14,
-      12
-    );
+    ctx.fillStyle = this.palette.shirtDark;
+    ctx.fillRect(-18, -6, 36, 31);
 
-    // Camisa principal
-    ctx.fillStyle =
-      this.palette.shirtDark;
+    ctx.fillStyle = this.palette.shirt;
+    ctx.fillRect(-14, -5, 28, 28);
 
-    ctx.fillRect(
-      -18,
-      -5,
-      36,
-      31
-    );
+    ctx.fillStyle = this.palette.shirtLight;
+    ctx.fillRect(-10, -3, 7, 23);
 
-    ctx.fillStyle =
-      this.palette.shirt;
+    ctx.fillStyle = "rgba(255,255,255,0.13)";
+    ctx.fillRect(-5, 2, 10, 3);
 
-    ctx.fillRect(
-      -14,
-      -5,
-      28,
-      28
-    );
-
-    // Parte iluminada
-    ctx.fillStyle =
-      this.palette.shirtLight;
-
-    ctx.fillRect(
-      -10,
-      -3,
-      7,
-      23
-    );
-
-    // Barra inferior
-    ctx.fillStyle =
-      this.palette.shirtDark;
-
-    ctx.fillRect(
-      -14,
-      20,
-      28,
-      6
-    );
-
-    // Pequeno detalhe da camisa
-    ctx.fillStyle =
-      "rgba(255,255,255,0.12)";
-
-    ctx.fillRect(
-      -5,
-      2,
-      10,
-      3
-    );
+    ctx.fillStyle = this.palette.shirtDark;
+    ctx.fillRect(-14, 19, 28, 6);
   }
-
-  // =========================================================
-  // BRAÇOS
-  // =========================================================
 
   drawArms(ctx) {
-    let leftOffset = 0;
-    let rightOffset = 0;
+    const swing = this.isMoving ? Math.sin(this.bobTime) * 3 : 0;
 
-    if (this.isMoving) {
-      const swing =
-        Math.sin(this.bobTime) * 3;
+    ctx.fillStyle = this.palette.shirtDark;
+    ctx.fillRect(-22, -2 + swing, 8, 25);
+    ctx.fillRect(14, -2 - swing, 8, 25);
 
-      leftOffset = swing;
-      rightOffset = -swing;
-    }
+    ctx.fillStyle = this.palette.skin;
+    ctx.fillRect(-21, 20 + swing, 8, 9);
+    ctx.fillRect(14, 20 - swing, 8, 9);
 
-    // Braço esquerdo
-    ctx.fillStyle =
-      this.palette.shirtDark;
-
-    ctx.fillRect(
-      -22,
-      -2 + leftOffset,
-      8,
-      25
-    );
-
-    // Braço direito
-    ctx.fillRect(
-      14,
-      -2 + rightOffset,
-      8,
-      25
-    );
-
-    // Mãos
-    ctx.fillStyle =
-      this.palette.skin;
-
-    ctx.fillRect(
-      -21,
-      20 + leftOffset,
-      8,
-      9
-    );
-
-    ctx.fillRect(
-      14,
-      20 + rightOffset,
-      8,
-      9
-    );
-
-    // Luz nas mãos
-    ctx.fillStyle =
-      this.palette.skinLight;
-
-    ctx.fillRect(
-      -20,
-      21 + leftOffset,
-      4,
-      4
-    );
-
-    ctx.fillRect(
-      15,
-      21 + rightOffset,
-      4,
-      4
-    );
+    ctx.fillStyle = this.palette.skinLight;
+    ctx.fillRect(-20, 21 + swing, 4, 4);
+    ctx.fillRect(15, 21 - swing, 4, 4);
   }
-
-  // =========================================================
-  // CABEÇA
-  // =========================================================
 
   drawHead(ctx) {
-    // Orelhas
-    ctx.fillStyle =
-      this.palette.skin;
+    ctx.fillStyle = this.palette.skin;
+    ctx.fillRect(-22, -32, 7, 12);
+    ctx.fillRect(15, -32, 7, 12);
 
-    ctx.fillRect(
-      -22,
-      -32,
-      7,
-      12
-    );
+    ctx.fillStyle = this.palette.skinShadow;
+    ctx.fillRect(-7, -15, 14, 8);
 
-    ctx.fillRect(
-      15,
-      -32,
-      7,
-      12
-    );
+    ctx.fillStyle = this.palette.skin;
+    ctx.fillRect(-19, -53, 38, 39);
 
-    // Pescoço/sombra
-    ctx.fillStyle =
-      this.palette.skinShadow;
+    ctx.fillStyle = this.palette.skinLight;
+    ctx.fillRect(-15, -49, 8, 25);
 
-    ctx.fillRect(
-      -7,
-      -15,
-      14,
-      8
-    );
-
-    // Cabeça
-    ctx.fillStyle =
-      this.palette.skin;
-
-    ctx.fillRect(
-      -19,
-      -53,
-      38,
-      39
-    );
-
-    // Luz
-    ctx.fillStyle =
-      this.palette.skinLight;
-
-    ctx.fillRect(
-      -15,
-      -49,
-      8,
-      25
-    );
-
-    // Sombra lateral
-    ctx.fillStyle =
-      this.palette.skinShadow;
-
-    ctx.fillRect(
-      12,
-      -46,
-      6,
-      28
-    );
+    ctx.fillStyle = this.palette.skinShadow;
+    ctx.fillRect(12, -46, 6, 28);
   }
-
-  // =========================================================
-  // CABELO
-  // =========================================================
 
   drawHair(ctx) {
-    ctx.fillStyle =
-      this.palette.hair;
+    ctx.fillStyle = this.palette.hair;
+    ctx.fillRect(-20, -56, 40, 17);
+    ctx.fillRect(-17, -61, 34, 8);
+    ctx.fillRect(-13, -64, 25, 6);
+    ctx.fillRect(-20, -51, 8, 21);
+    ctx.fillRect(13, -52, 8, 22);
+    ctx.fillRect(-13, -45, 26, 8);
+    ctx.fillRect(-9, -42, 9, 6);
 
-    // Topo
-    ctx.fillRect(
-      -20,
-      -56,
-      40,
-      17
-    );
-
-    ctx.fillRect(
-      -17,
-      -61,
-      34,
-      8
-    );
-
-    ctx.fillRect(
-      -13,
-      -64,
-      25,
-      6
-    );
-
-    // Laterais
-    ctx.fillRect(
-      -20,
-      -51,
-      8,
-      21
-    );
-
-    ctx.fillRect(
-      13,
-      -52,
-      8,
-      22
-    );
-
-    // Franja
-    ctx.fillRect(
-      -13,
-      -45,
-      26,
-      8
-    );
-
-    ctx.fillRect(
-      -9,
-      -42,
-      9,
-      6
-    );
-
-    // Brilho do cabelo
-    ctx.fillStyle =
-      this.palette.hairLight;
-
-    ctx.fillRect(
-      -11,
-      -57,
-      5,
-      7
-    );
-
-    ctx.fillRect(
-      -5,
-      -59,
-      4,
-      5
-    );
+    ctx.fillStyle = this.palette.hairLight;
+    ctx.fillRect(-11, -57, 5, 7);
+    ctx.fillRect(-5, -59, 4, 5);
   }
-
-  // =========================================================
-  // ROSTO
-  // =========================================================
 
   drawFace(ctx) {
-    // Olhos
-    ctx.fillStyle =
-      this.palette.eye;
+    ctx.fillStyle = this.palette.eye;
+    ctx.fillRect(-12, -31, 5, 6);
+    ctx.fillRect(7, -31, 5, 6);
 
-    ctx.fillRect(
-      -12,
-      -31,
-      5,
-      6
-    );
+    ctx.fillStyle = "#f2eee2";
+    ctx.fillRect(-11, -30, 2, 2);
+    ctx.fillRect(8, -30, 2, 2);
 
-    ctx.fillRect(
-      7,
-      -31,
-      5,
-      6
-    );
+    ctx.fillStyle = this.palette.skinShadow;
+    ctx.fillRect(-2, -27, 5, 5);
 
-    // Brilho dos olhos
-    ctx.fillStyle =
-      "#f2eee2";
-
-    ctx.fillRect(
-      -11,
-      -30,
-      2,
-      2
-    );
-
-    ctx.fillRect(
-      8,
-      -30,
-      2,
-      2
-    );
-
-    // Nariz
-    ctx.fillStyle =
-      this.palette.skinShadow;
-
-    ctx.fillRect(
-      -2,
-      -27,
-      5,
-      5
-    );
-
-    // Boca
-    ctx.fillStyle =
-      "#703f3c";
-
-    ctx.fillRect(
-      -5,
-      -19,
-      10,
-      3
-    );
-
-    ctx.fillStyle =
-      "rgba(255,255,255,0.22)";
-
-    ctx.fillRect(
-      -3,
-      -19,
-      6,
-      1
-    );
+    ctx.fillStyle = "#703f3c";
+    ctx.fillRect(-5, -19, 10, 3);
   }
-
-  // =========================================================
-  // BENGALA
-  // =========================================================
 
   drawCane(ctx) {
-    const wave =
-      Math.sin(this.caneWave) * 4;
+    const wave = Math.sin(this.caneWave) * 4;
+    const x = 23;
+    const top = 2 + (this.isMoving ? wave * 0.35 : 0);
+    const bottom = 58;
 
-    const moving =
-      this.isMoving;
-
-    const caneX =
-      23;
-
-    const topY =
-      2 + wave * (moving ? 0.35 : 0);
-
-    const bottomY =
-      58;
-
-    ctx.strokeStyle =
-      this.palette.caneDark;
-
+    ctx.strokeStyle = this.palette.caneDark;
     ctx.lineWidth = 5;
-
     ctx.beginPath();
-
-    ctx.moveTo(
-      caneX,
-      topY
-    );
-
-    ctx.lineTo(
-      caneX + wave * 0.18,
-      bottomY
-    );
-
+    ctx.moveTo(x, top);
+    ctx.lineTo(x + wave * 0.18, bottom);
     ctx.stroke();
 
-    ctx.strokeStyle =
-      this.palette.cane;
-
+    ctx.strokeStyle = this.palette.cane;
     ctx.lineWidth = 3;
-
     ctx.beginPath();
-
-    ctx.moveTo(
-      caneX - 1,
-      topY
-    );
-
-    ctx.lineTo(
-      caneX - 1 + wave * 0.18,
-      bottomY
-    );
-
+    ctx.moveTo(x - 1, top);
+    ctx.lineTo(x - 1 + wave * 0.18, bottom);
     ctx.stroke();
 
-    // Empunhadura
-    ctx.fillStyle =
-      this.palette.caneDark;
+    ctx.fillStyle = this.palette.caneDark;
+    ctx.fillRect(x - 4, top - 5, 10, 4);
 
-    ctx.fillRect(
-      caneX - 4,
-      topY - 5,
-      10,
-      4
-    );
-
-    // Ponta
-    ctx.fillStyle =
-      this.palette.cane;
-
-    ctx.fillRect(
-      caneX - 4,
-      bottomY,
-      8,
-      5
-    );
+    ctx.fillStyle = this.palette.cane;
+    ctx.fillRect(x - 4, bottom, 8, 5);
   }
-
-  // =========================================================
-  // POSIÇÃO
-  // =========================================================
 
   setPosition(x, y) {
     this.x = x;
     this.y = y;
-
     this.velocityX = 0;
     this.velocityY = 0;
   }
 
   getPosition() {
-    return {
-      x: this.x,
-      y: this.y
-    };
+    return { x: this.x, y: this.y };
   }
-
-  // =========================================================
-  // LIMITES
-  // =========================================================
 
   getBounds() {
     return {
-      x:
-        this.x -
-        this.hitboxWidth / 2,
-
-      y:
-        this.y -
-        this.hitboxHeight / 2,
-
-      width:
-        this.hitboxWidth,
-
-      height:
-        this.hitboxHeight
+      x: this.x - this.hitboxWidth / 2,
+      y: this.y - this.hitboxHeight / 2,
+      width: this.hitboxWidth,
+      height: this.hitboxHeight
     };
   }
 
-  // =========================================================
-  // VELOCIDADE
-  // =========================================================
-
   getSpeed() {
-    return Math.hypot(
-      this.velocityX,
-      this.velocityY
-    );
+    return Math.hypot(this.velocityX, this.velocityY);
   }
-
-  // =========================================================
-  // ESTADO
-  // =========================================================
-
-  getIsMoving() {
-    return this.isMoving;
-  }
-
-  isWalking() {
-    return this.isMoving;
-  }
-
-  // =========================================================
-  // DESTRUIR
-  // =========================================================
 
   destroy() {
     this.world = null;
     this.visible = false;
-
     this.velocityX = 0;
     this.velocityY = 0;
   }

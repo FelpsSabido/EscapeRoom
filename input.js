@@ -1,311 +1,111 @@
-// input.js
-// Escape Room — Sistema de entrada
-// WASD / Setas / E / ESC / ENTER / ESPAÇO / R
-
 export class Input {
-  constructor(game = null) {
-    this.game = game;
+  constructor() {
+    this.down = new Set();
+    this.pressed = new Set();
 
-    this.keys = new Set();
-    this.justPressed = new Set();
+    this.onKeyDown = this.handleKeyDown.bind(this);
+    this.onKeyUp = this.handleKeyUp.bind(this);
+    this.onBlur = this.reset.bind(this);
 
-    this.boundKeyDown =
-      this.handleKeyDown.bind(this);
-
-    this.boundKeyUp =
-      this.handleKeyUp.bind(this);
-
-    this.boundBlur =
-      this.handleBlur.bind(this);
-
-    this.boundVisibilityChange =
-      this.handleVisibilityChange.bind(this);
-
-    window.addEventListener(
-      "keydown",
-      this.boundKeyDown,
-      {
-        passive: false
-      }
-    );
-
-    window.addEventListener(
-      "keyup",
-      this.boundKeyUp,
-      {
-        passive: false
-      }
-    );
-
-    window.addEventListener(
-      "blur",
-      this.boundBlur
-    );
-
-    document.addEventListener(
-      "visibilitychange",
-      this.boundVisibilityChange
-    );
+    window.addEventListener("keydown", this.onKeyDown, { passive: false });
+    window.addEventListener("keyup", this.onKeyUp);
+    window.addEventListener("blur", this.onBlur);
   }
 
-  // =========================================================
-  // NORMALIZAÇÃO
-  // =========================================================
-
-  normalizeKey(key) {
-    if (typeof key !== "string") {
-      return "";
-    }
-
-    if (key.length === 1) {
-      return key.toLowerCase();
-    }
-
-    return key;
+  normalize(key) {
+    if (typeof key !== "string") return "";
+    return key.length === 1 ? key.toLowerCase() : key;
   }
-
-  // =========================================================
-  // KEY DOWN
-  // =========================================================
 
   handleKeyDown(event) {
-    if (!event) {
-      return;
-    }
+    const key = this.normalize(event.key);
+    if (!key) return;
 
-    const key =
-      this.normalizeKey(event.key);
-
-    if (!key) {
-      return;
-    }
-
-    // Evita que as setas e espaço movimentem
-    // a página enquanto o jogo está aberto.
-    const blockedKeys = [
-      "ArrowUp",
-      "ArrowDown",
-      "ArrowLeft",
-      "ArrowRight",
-      " "
+    const blocked = [
+      "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+      " ", "w", "a", "s", "d"
     ];
 
-    if (
-      blockedKeys.includes(key)
-    ) {
-      event.preventDefault();
+    if (blocked.includes(key)) event.preventDefault();
+
+    if (!this.down.has(key)) {
+      this.pressed.add(key);
     }
 
-    // Só registra como "just pressed"
-    // na primeira vez que a tecla é pressionada.
-    if (!this.keys.has(key)) {
-      this.justPressed.add(key);
-    }
-
-    this.keys.add(key);
-
-    // Permite que o Game trate teclas especiais.
-    if (
-      this.game &&
-      typeof this.game.handleKeyDown ===
-        "function"
-    ) {
-      this.game.handleKeyDown(event);
-    }
+    this.down.add(key);
   }
-
-  // =========================================================
-  // KEY UP
-  // =========================================================
 
   handleKeyUp(event) {
-    if (!event) {
-      return;
-    }
-
-    const key =
-      this.normalizeKey(event.key);
-
-    if (!key) {
-      return;
-    }
-
-    this.keys.delete(key);
+    const key = this.normalize(event.key);
+    if (key) this.down.delete(key);
   }
-
-  // =========================================================
-  // BLUR
-  // =========================================================
-
-  handleBlur() {
-    this.reset();
-  }
-
-  // =========================================================
-  // VISIBILIDADE
-  // =========================================================
-
-  handleVisibilityChange() {
-    if (document.hidden) {
-      this.reset();
-    }
-  }
-
-  // =========================================================
-  // ESTADO DAS TECLAS
-  // =========================================================
 
   isDown(key) {
-    return this.keys.has(
-      this.normalizeKey(key)
-    );
+    return this.down.has(this.normalize(key));
   }
 
   wasPressed(key) {
-    return this.justPressed.has(
-      this.normalizeKey(key)
-    );
+    return this.pressed.has(this.normalize(key));
   }
 
-  // =========================================================
-  // MOVIMENTO
-  // =========================================================
+  consume(key) {
+    const normalized = this.normalize(key);
+    if (!this.pressed.has(normalized)) return false;
+    this.pressed.delete(normalized);
+    return true;
+  }
 
   getMovementVector() {
     let x = 0;
     let y = 0;
 
-    // Esquerda
-    if (
-      this.isDown("a") ||
-      this.isDown("ArrowLeft")
-    ) {
-      x -= 1;
-    }
+    if (this.isDown("a") || this.isDown("ArrowLeft")) x -= 1;
+    if (this.isDown("d") || this.isDown("ArrowRight")) x += 1;
+    if (this.isDown("w") || this.isDown("ArrowUp")) y -= 1;
+    if (this.isDown("s") || this.isDown("ArrowDown")) y += 1;
 
-    // Direita
-    if (
-      this.isDown("d") ||
-      this.isDown("ArrowRight")
-    ) {
-      x += 1;
-    }
-
-    // Cima
-    if (
-      this.isDown("w") ||
-      this.isDown("ArrowUp")
-    ) {
-      y -= 1;
-    }
-
-    // Baixo
-    if (
-      this.isDown("s") ||
-      this.isDown("ArrowDown")
-    ) {
-      y += 1;
-    }
-
-    // Normaliza a diagonal.
-    // Assim o personagem não fica mais rápido
-    // quando anda na diagonal.
-    const length =
-      Math.hypot(x, y);
+    const length = Math.hypot(x, y);
 
     if (length > 0) {
       x /= length;
       y /= length;
     }
 
-    return {
-      x,
-      y
-    };
+    return { x, y };
   }
-
-  // =========================================================
-  // PAUSA
-  // =========================================================
-
-  wantsPause() {
-    return (
-      this.wasPressed("Escape") ||
-      this.wasPressed("p")
-    );
-  }
-
-  // =========================================================
-  // INTERAÇÃO
-  // =========================================================
 
   wantsInteract() {
-    return this.wasPressed("e");
+    return this.consume("e");
   }
-
-  // =========================================================
-  // CONFIRMAR
-  // =========================================================
 
   wantsConfirm() {
-    return (
-      this.wasPressed("Enter") ||
-      this.wasPressed(" ")
-    );
+    return this.consume("Enter") || this.consume(" ");
   }
 
-  // =========================================================
-  // REINICIAR
-  // =========================================================
-
-  wantsRestart() {
-    return this.wasPressed("r");
+  wantsPause() {
+    return this.consume("Escape") || this.consume("p");
   }
 
-  // =========================================================
-  // FINAL DO FRAME
-  // =========================================================
+  getPressedDigit() {
+    for (let digit = 0; digit <= 9; digit += 1) {
+      if (this.consume(String(digit))) return String(digit);
+    }
+    return null;
+  }
 
   endFrame() {
-    this.justPressed.clear();
+    this.pressed.clear();
   }
-
-  // =========================================================
-  // RESET
-  // =========================================================
 
   reset() {
-    this.keys.clear();
-    this.justPressed.clear();
+    this.down.clear();
+    this.pressed.clear();
   }
 
-  // =========================================================
-  // DESTRUIR
-  // =========================================================
-
   destroy() {
-    window.removeEventListener(
-      "keydown",
-      this.boundKeyDown
-    );
-
-    window.removeEventListener(
-      "keyup",
-      this.boundKeyUp
-    );
-
-    window.removeEventListener(
-      "blur",
-      this.boundBlur
-    );
-
-    document.removeEventListener(
-      "visibilitychange",
-      this.boundVisibilityChange
-    );
-
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("blur", this.onBlur);
     this.reset();
-
-    this.game = null;
   }
 }
