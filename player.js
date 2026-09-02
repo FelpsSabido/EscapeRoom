@@ -1,1125 +1,1105 @@
+// player.js
+// Escape Room — Personagem
+// Personagem frontal em pixel art, com movimentação suave,
+// animação de caminhada, sombra e bengala.
+
 export class Player {
-    constructor(options = {}) {
-        this.input = options.input;
-        this.world = options.world;
+  constructor(options = {}) {
+    this.world = options.world || null;
 
-        this.x = options.x ?? 760;
-        this.y = options.y ?? 430;
+    this.width = 42;
+    this.height = 64;
 
-        this.startX = this.x;
-        this.startY = this.y;
+    this.hitboxWidth = 20;
+    this.hitboxHeight = 18;
 
-        this.width = options.width ?? 30;
-        this.height = options.height ?? 42;
+    this.speed = 185;
 
-        this.speed = options.speed ?? 180;
-        this.maxSpeed = options.maxSpeed ?? 180;
+    this.acceleration = 1050;
+    this.deceleration = 1350;
 
-        this.acceleration =
-            options.acceleration ?? 1250;
+    this.x = 800;
+    this.y = 800;
 
-        this.deceleration =
-            options.deceleration ?? 1500;
+    this.velocityX = 0;
+    this.velocityY = 0;
 
-        this.vx = 0;
-        this.vy = 0;
+    this.direction = "down";
 
-        this.direction = "down";
+    this.walkTime = 0;
+    this.walkFrame = 0;
 
-        this.animation = {
-            frame: 0,
-            timer: 0,
-            speed: 0.12,
-            moving: false
-        };
+    this.isMoving = false;
 
-        this.walkCycle = 0;
+    this.caneWave = 0;
 
-        this.shadow = {
-            width: 25,
-            height: 9,
-            alpha: 0.25
-        };
+    this.bobTime = 0;
 
-        this.cane = {
-            length: 28,
-            swing: 0
-        };
+    this.visible = true;
 
-        this.initialized = false;
+    this.palette = {
+      skin: "#d49a76",
+      skinLight: "#e4ad86",
+      skinShadow: "#a86d55",
+
+      hair: "#17181c",
+      hairLight: "#292a2f",
+
+      shirt: "#3f6687",
+      shirtLight: "#557f9f",
+      shirtDark: "#2d4b65",
+
+      pants: "#28333d",
+      pantsLight: "#34434f",
+
+      shoe: "#17191c",
+      shoeLight: "#2a2e32",
+
+      cane: "#ded6c2",
+      caneDark: "#8f8879",
+
+      backpack: "#704b39",
+      backpackLight: "#8a5c45",
+
+      eye: "#161616",
+
+      shadow: "rgba(0,0,0,0.45)"
+    };
+
+    this.reset();
+  }
+
+  // =========================================================
+  // RESET
+  // =========================================================
+
+  reset() {
+    if (this.world && typeof this.world.getSpawnPoint === "function") {
+      const spawn = this.world.getSpawnPoint();
+
+      this.x = spawn.x;
+      this.y = spawn.y;
+    } else {
+      this.x = 800;
+      this.y = 800;
     }
 
-    initialize() {
-        this.initialized = true;
+    this.velocityX = 0;
+    this.velocityY = 0;
+
+    this.direction = "down";
+
+    this.walkTime = 0;
+    this.walkFrame = 0;
+
+    this.isMoving = false;
+
+    this.caneWave = 0;
+    this.bobTime = 0;
+  }
+
+  // =========================================================
+  // UPDATE
+  // =========================================================
+
+  update(deltaTime, input) {
+    if (!input) {
+      this.stopMovement(deltaTime);
+      this.updateAnimation(deltaTime);
+      return;
     }
 
-    update(deltaTime) {
-        if (!this.input) {
-            return;
-        }
-
-        const movement =
-            this.input.getMovementVector();
-
-        const moving =
-            Math.abs(movement.x) > 0 ||
-            Math.abs(movement.y) > 0;
-
-        this.animation.moving = moving;
-
-        if (moving) {
-            this.vx +=
-                movement.x *
-                this.acceleration *
-                deltaTime;
-
-            this.vy +=
-                movement.y *
-                this.acceleration *
-                deltaTime;
-
-            this.updateDirection(
-                movement.x,
-                movement.y
-            );
-        } else {
-            this.applyDeceleration(
-                deltaTime
-            );
-        }
-
-        this.limitVelocity();
-
-        const nextX =
-            this.x +
-            this.vx *
-            deltaTime;
-
-        const nextY =
-            this.y +
-            this.vy *
-            deltaTime;
-
-        if (
-            this.canMoveTo(
-                nextX,
-                this.y
-            )
-        ) {
-            this.x = nextX;
-        } else {
-            this.vx = 0;
-        }
-
-        if (
-            this.canMoveTo(
-                this.x,
-                nextY
-            )
-        ) {
-            this.y = nextY;
-        } else {
-            this.vy = 0;
-        }
-
-        this.keepInsideWorld();
-
-        this.updateAnimation(
-            deltaTime,
-            moving
-        );
-    }
-
-    updateDirection(horizontal, vertical) {
-        if (
-            Math.abs(horizontal) >
-            Math.abs(vertical)
-        ) {
-            if (horizontal > 0) {
-                this.direction = "right";
-            } else if (horizontal < 0) {
-                this.direction = "left";
-            }
-        } else {
-            if (vertical > 0) {
-                this.direction = "down";
-            } else if (vertical < 0) {
-                this.direction = "up";
-            }
-        }
-    }
-
-    applyDeceleration(deltaTime) {
-        const amount =
-            this.deceleration *
-            deltaTime;
-
-        if (Math.abs(this.vx) <= amount) {
-            this.vx = 0;
-        } else {
-            this.vx -=
-                Math.sign(this.vx) *
-                amount;
-        }
-
-        if (Math.abs(this.vy) <= amount) {
-            this.vy = 0;
-        } else {
-            this.vy -=
-                Math.sign(this.vy) *
-                amount;
-        }
-    }
-
-    limitVelocity() {
-        const magnitude =
-            Math.hypot(
-                this.vx,
-                this.vy
-            );
-
-        if (
-            magnitude <=
-            this.maxSpeed
-        ) {
-            return;
-        }
-
-        const scale =
-            this.maxSpeed /
-            magnitude;
-
-        this.vx *= scale;
-        this.vy *= scale;
-    }
-
-    updateAnimation(
-        deltaTime,
-        moving
-    ) {
-        if (!moving) {
-            this.animation.frame = 0;
-            this.animation.timer = 0;
-            this.walkCycle = 0;
-            this.cane.swing = 0;
-            return;
-        }
-
-        this.animation.timer +=
-            deltaTime;
-
-        this.walkCycle +=
-            deltaTime * 8;
-
-        this.cane.swing =
-            Math.sin(
-                this.walkCycle
-            ) * 0.15;
-
-        if (
-            this.animation.timer >=
-            this.animation.speed
-        ) {
-            this.animation.timer = 0;
-
-            this.animation.frame =
-                (this.animation.frame + 1) %
-                4;
-        }
-    }
-
-    render(ctx) {
-        ctx.save();
-
-        ctx.imageSmoothingEnabled =
-            false;
-
-        this.renderShadow(ctx);
-
-        this.renderCharacter(ctx);
-
-        ctx.restore();
-    }
-
-    renderShadow(ctx) {
-        const shadowX =
-            Math.floor(
-                this.x -
-                this.shadow.width / 2
-            );
-
-        const shadowY =
-            Math.floor(
-                this.y +
-                this.height / 2 -
-                2
-            );
-
-        ctx.save();
-
-        ctx.globalAlpha =
-            this.shadow.alpha;
-
-        ctx.fillStyle =
-            "#392b22";
-
-        ctx.beginPath();
-
-        ctx.ellipse(
-            shadowX +
-                this.shadow.width / 2,
-            shadowY,
-            this.shadow.width / 2,
-            this.shadow.height / 2,
-            0,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fill();
-
-        ctx.restore();
-    }
-
-    renderCharacter(ctx) {
-        const px =
-            Math.floor(
-                this.x -
-                this.width / 2
-            );
-
-        const py =
-            Math.floor(
-                this.y -
-                this.height / 2
-            );
-
-        const walkOffset =
-            this.animation.moving
-                ? Math.sin(
-                      this.walkCycle
-                  ) * 2
-                : 0;
-
-        ctx.save();
-
-        ctx.translate(
-            0,
-            walkOffset
-        );
-
-        switch (this.direction) {
-            case "up":
-                this.renderBack(
-                    ctx,
-                    px,
-                    py
-                );
-                break;
-
-            case "left":
-                this.renderSide(
-                    ctx,
-                    px,
-                    py,
-                    true
-                );
-                break;
-
-            case "right":
-                this.renderSide(
-                    ctx,
-                    px,
-                    py,
-                    false
-                );
-                break;
-
-            default:
-                this.renderFront(
-                    ctx,
-                    px,
-                    py
-                );
-                break;
-        }
-
-        ctx.restore();
-    }
-
-    renderFront(ctx, px, py) {
-        const centerX =
-            px +
-            this.width / 2;
-
-        // Pernas
-        this.renderLegs(
-            ctx,
-            centerX,
-            py + 31
-        );
-
-        // Corpo / camiseta
-        ctx.fillStyle =
-            "#477fa5";
-
-        ctx.fillRect(
-            centerX - 10,
-            py + 17,
-            20,
-            17
-        );
-
-        // Detalhe da camiseta
-        ctx.fillStyle =
-            "#365f7b";
-
-        ctx.fillRect(
-            centerX - 10,
-            py + 27,
-            20,
-            7
-        );
-
-        // Braço esquerdo
-        ctx.fillStyle =
-            "#e7b88d";
-
-        ctx.fillRect(
-            centerX - 14,
-            py + 20,
-            5,
-            13
-        );
-
-        // Braço direito
-        ctx.fillRect(
-            centerX + 9,
-            py + 20,
-            5,
-            13
-        );
-
-        // Mãos
-        ctx.fillStyle =
-            "#e3aa7e";
-
-        ctx.fillRect(
-            centerX - 14,
-            py + 31,
-            5,
-            5
-        );
-
-        ctx.fillRect(
-            centerX + 9,
-            py + 31,
-            5,
-            5
-        );
-
-        // Pescoço
-        ctx.fillStyle =
-            "#d99e75";
-
-        ctx.fillRect(
-            centerX - 4,
-            py + 13,
-            8,
-            6
-        );
-
-        // Rosto
-        ctx.fillStyle =
-            "#e8b88c";
-
-        ctx.fillRect(
-            centerX - 10,
-            py + 3,
-            20,
-            15
-        );
-
-        // Orelhas
-        ctx.fillRect(
-            centerX - 12,
-            py + 8,
-            3,
-            7
-        );
-
-        ctx.fillRect(
-            centerX + 9,
-            py + 8,
-            3,
-            7
-        );
-
-        // Cabelo
-        ctx.fillStyle =
-            "#3a2925";
-
-        ctx.fillRect(
-            centerX - 10,
-            py + 1,
-            20,
-            7
-        );
-
-        ctx.fillRect(
-            centerX - 8,
-            py - 2,
-            16,
-            5
-        );
-
-        ctx.fillRect(
-            centerX - 12,
-            py + 5,
-            4,
-            8
-        );
-
-        ctx.fillRect(
-            centerX + 8,
-            py + 5,
-            4,
-            8
-        );
-
-        // Franja
-        ctx.fillRect(
-            centerX - 7,
-            py + 3,
-            5,
-            5
-        );
-
-        ctx.fillRect(
-            centerX + 2,
-            py + 3,
-            5,
-            5
-        );
-
-        // Olhos
-        ctx.fillStyle =
-            "#252020";
-
-        ctx.fillRect(
-            centerX - 6,
-            py + 9,
-            3,
-            3
-        );
-
-        ctx.fillRect(
-            centerX + 3,
-            py + 9,
-            3,
-            3
-        );
-
-        // Sorriso
-        ctx.fillStyle =
-            "#a45d59";
-
-        ctx.fillRect(
-            centerX - 3,
-            py + 14,
-            6,
-            2
-        );
-
-        // Mochila
-        this.renderBackpack(
-            ctx,
-            centerX,
-            py + 19,
-            true
-        );
-
-        // Bengala
-        this.renderCane(
-            ctx,
-            centerX + 13,
-            py + 25,
-            0.12
-        );
-    }
-
-    renderBack(ctx, px, py) {
-        const centerX =
-            px +
-            this.width / 2;
-
-        this.renderLegs(
-            ctx,
-            centerX,
-            py + 31
-        );
-
-        // Mochila
-        this.renderBackpack(
-            ctx,
-            centerX,
-            py + 16,
-            false
-        );
-
-        // Corpo
-        ctx.fillStyle =
-            "#477fa5";
-
-        ctx.fillRect(
-            centerX - 10,
-            py + 16,
-            20,
-            18
-        );
-
-        // Mochila principal
-        ctx.fillStyle =
-            "#8d5145";
-
-        ctx.fillRect(
-            centerX - 13,
-            py + 14,
-            26,
-            19
-        );
-
-        ctx.fillStyle =
-            "#633a35";
-
-        ctx.fillRect(
-            centerX - 9,
-            py + 19,
-            18,
-            3
-        );
-
-        // Pescoço
-        ctx.fillStyle =
-            "#d99e75";
-
-        ctx.fillRect(
-            centerX - 4,
-            py + 11,
-            8,
-            7
-        );
-
-        // Cabeça
-        ctx.fillStyle =
-            "#e3ad82";
-
-        ctx.fillRect(
-            centerX - 10,
-            py + 2,
-            20,
-            16
-        );
-
-        // Cabelo
-        ctx.fillStyle =
-            "#3a2925";
-
-        ctx.fillRect(
-            centerX - 11,
-            py,
-            22,
-            12
-        );
-
-        ctx.fillRect(
-            centerX - 8,
-            py - 3,
-            16,
-            5
-        );
-
-        // Orelhas
-        ctx.fillStyle =
-            "#d69f78";
-
-        ctx.fillRect(
-            centerX - 12,
-            py + 8,
-            3,
-            7
-        );
-
-        ctx.fillRect(
-            centerX + 9,
-            py + 8,
-            3,
-            7
-        );
-
-        this.renderCane(
-            ctx,
-            centerX + 13,
-            py + 25,
-            -0.12
-        );
-    }
-
-    renderSide(
-        ctx,
-        px,
-        py,
-        facingLeft
-    ) {
-        const centerX =
-            px +
-            this.width / 2;
-
-        const direction =
-            facingLeft ? -1 : 1;
-
-        this.renderLegs(
-            ctx,
-            centerX,
-            py + 31
-        );
-
-        // Mochila
-        ctx.fillStyle =
-            "#8d5145";
-
-        ctx.fillRect(
-            centerX -
-                direction * 11 -
-                8,
-            py + 17,
-            13,
-            18
-        );
-
-        // Corpo
-        ctx.fillStyle =
-            "#477fa5";
-
-        ctx.fillRect(
-            centerX - 9,
-            py + 17,
-            18,
-            18
-        );
-
-        // Braço
-        ctx.fillStyle =
-            "#e5b084";
-
-        ctx.fillRect(
-            centerX +
-                direction * 7,
-            py + 20,
-            6,
-            13
-        );
-
-        // Mão
-        ctx.fillRect(
-            centerX +
-                direction * 8,
-            py + 31,
-            6,
-            5
-        );
-
-        // Pescoço
-        ctx.fillStyle =
-            "#d59d75";
-
-        ctx.fillRect(
-            centerX +
-                direction * 3 -
-                4,
-            py + 12,
-            8,
-            7
-        );
-
-        // Rosto
-        ctx.fillStyle =
-            "#e7b589";
-
-        ctx.fillRect(
-            centerX - 9,
-            py + 3,
-            18,
-            16
-        );
-
-        // Nariz
-        ctx.fillRect(
-            centerX +
-                direction * 9,
-            py + 10,
-            4,
-            4
-        );
-
-        // Cabelo
-        ctx.fillStyle =
-            "#3a2925";
-
-        ctx.fillRect(
-            centerX - 10,
-            py + 1,
-            20,
-            8
-        );
-
-        ctx.fillRect(
-            centerX -
-                direction * 8,
-            py + 5,
-            5,
-            8
-        );
-
-        // Olho
-        ctx.fillStyle =
-            "#252020";
-
-        ctx.fillRect(
-            centerX +
-                direction * 4,
-            py + 9,
-            3,
-            3
-        );
-
-        // Sobrancelha
-        ctx.fillRect(
-            centerX +
-                direction * 3,
-            py + 7,
-            5,
-            2
-        );
-
-        this.renderCane(
-            ctx,
-            centerX +
-                direction * 13,
-            py + 25,
-            direction * 0.15
-        );
-    }
-
-    renderLegs(
-        ctx,
-        centerX,
-        y
-    ) {
-        const walking =
-            this.animation.moving;
-
-        let offset = 0;
-
-        if (walking) {
-            offset =
-                Math.sin(
-                    this.walkCycle
-                ) * 3;
-        }
-
-        // Perna esquerda
-        ctx.fillStyle =
-            "#30475a";
-
-        ctx.fillRect(
-            centerX - 8,
-            y,
-            7,
-            11 + offset
-        );
-
-        // Perna direita
-        ctx.fillRect(
-            centerX + 1,
-            y,
-            7,
-            11 - offset
-        );
-
-        // Sapatos
-        ctx.fillStyle =
-            "#342b29";
-
-        ctx.fillRect(
-            centerX - 10,
-            y + 9 + offset,
-            9,
-            5
-        );
-
-        ctx.fillRect(
-            centerX,
-            y + 9 - offset,
-            9,
-            5
-        );
-    }
-
-    renderBackpack(
-        ctx,
-        centerX,
-        y,
-        visible
-    ) {
-        if (!visible) {
-            return;
-        }
-
-        ctx.fillStyle =
-            "#8d5145";
-
-        ctx.fillRect(
-            centerX - 13,
-            y,
-            7,
-            17
-        );
-
-        ctx.fillRect(
-            centerX + 6,
-            y,
-            7,
-            17
-        );
-    }
-
-    renderCane(
-        ctx,
-        x,
-        y,
-        angle
-    ) {
-        ctx.save();
-
-        ctx.translate(
-            x,
-            y
-        );
-
-        ctx.rotate(angle);
-
-        // Cabo
-        ctx.strokeStyle =
-            "#f0eee4";
-
-        ctx.lineWidth = 3;
-
-        ctx.beginPath();
-
-        ctx.moveTo(0, 0);
-
-        ctx.lineTo(
-            0,
-            this.cane.length
-        );
-
-        ctx.stroke();
-
-        // Empunhadura
-        ctx.lineWidth = 4;
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            0,
-            0
-        );
-
-        ctx.lineTo(
-            6,
-            -5
-        );
-
-        ctx.stroke();
-
-        // Ponteira
-        ctx.strokeStyle =
-            "#c9c5b9";
-
-        ctx.lineWidth = 2;
-
-        ctx.beginPath();
-
-        ctx.arc(
-            0,
-            this.cane.length,
-            4,
-            0,
-            Math.PI
-        );
-
-        ctx.stroke();
-
-        ctx.restore();
-    }
-
-    canMoveTo(
+    const movement = input.getMovementVector();
+
+    let targetX = movement.x * this.speed;
+    let targetY = movement.y * this.speed;
+
+    // Aceleração horizontal
+    if (Math.abs(targetX) > 0.001) {
+      this.velocityX = this.moveTowards(
+        this.velocityX,
         targetX,
-        targetY
+        this.acceleration * deltaTime
+      );
+    } else {
+      this.velocityX = this.moveTowards(
+        this.velocityX,
+        0,
+        this.deceleration * deltaTime
+      );
+    }
+
+    // Aceleração vertical
+    if (Math.abs(targetY) > 0.001) {
+      this.velocityY = this.moveTowards(
+        this.velocityY,
+        targetY,
+        this.acceleration * deltaTime
+      );
+    } else {
+      this.velocityY = this.moveTowards(
+        this.velocityY,
+        0,
+        this.deceleration * deltaTime
+      );
+    }
+
+    const moving =
+      Math.abs(movement.x) > 0 ||
+      Math.abs(movement.y) > 0;
+
+    this.isMoving = moving;
+
+    if (moving) {
+      this.updateDirection(movement);
+
+      this.walkTime += deltaTime;
+
+      const frameDuration = 0.11;
+
+      if (this.walkTime >= frameDuration) {
+        this.walkTime -= frameDuration;
+        this.walkFrame =
+          (this.walkFrame + 1) % 4;
+      }
+
+      this.bobTime += deltaTime * 10;
+    } else {
+      this.walkFrame = 0;
+
+      this.bobTime += deltaTime * 2;
+    }
+
+    this.caneWave += deltaTime * 5;
+
+    this.moveWithCollision(
+      this.velocityX * deltaTime,
+      this.velocityY * deltaTime
+    );
+  }
+
+  // =========================================================
+  // DIREÇÃO
+  // =========================================================
+
+  updateDirection(movement) {
+    if (
+      Math.abs(movement.x) >
+      Math.abs(movement.y)
     ) {
-        if (
-            this.world &&
-            typeof this.world.canPlayerMoveTo ===
-                "function"
-        ) {
-            return this.world.canPlayerMoveTo(
-                this,
-                targetX,
-                targetY
-            );
-        }
-
-        return true;
-    }
-
-    getCollisionRect(
-        targetX = this.x,
-        targetY = this.y
-    ) {
-        const collisionWidth = 18;
-        const collisionHeight = 18;
-
-        return {
-            x:
-                targetX -
-                collisionWidth / 2,
-
-            y:
-                targetY -
-                collisionHeight / 2 +
-                8,
-
-            width: collisionWidth,
-            height: collisionHeight
-        };
-    }
-
-    getBounds() {
-        return {
-            x:
-                this.x -
-                this.width / 2,
-
-            y:
-                this.y -
-                this.height / 2,
-
-            width: this.width,
-            height: this.height
-        };
-    }
-
-    keepInsideWorld() {
-        if (!this.world) {
-            return;
-        }
-
-        const bounds =
-            this.world.getBounds();
-
-        const halfWidth =
-            this.width / 2;
-
-        const halfHeight =
-            this.height / 2;
-
-        this.x =
-            Math.max(
-                halfWidth,
-                Math.min(
-                    bounds.width -
-                        halfWidth,
-                    this.x
-                )
-            );
-
-        this.y =
-            Math.max(
-                halfHeight,
-                Math.min(
-                    bounds.height -
-                        halfHeight,
-                    this.y
-                )
-            );
-    }
-
-    reset(
-        x = this.startX,
-        y = this.startY
-    ) {
-        this.x = x;
-        this.y = y;
-
-        this.vx = 0;
-        this.vy = 0;
-
+      if (movement.x > 0) {
+        this.direction = "right";
+      } else if (movement.x < 0) {
+        this.direction = "left";
+      }
+    } else {
+      if (movement.y > 0) {
         this.direction = "down";
+      } else if (movement.y < 0) {
+        this.direction = "up";
+      }
+    }
+  }
 
-        this.animation.frame = 0;
-        this.animation.timer = 0;
-        this.animation.moving = false;
+  // =========================================================
+  // MOVIMENTO
+  // =========================================================
 
-        this.walkCycle = 0;
-
-        this.cane.swing = 0;
+  moveWithCollision(dx, dy) {
+    if (!this.world) {
+      this.x += dx;
+      this.y += dy;
+      return;
     }
 
-    setPosition(
-        x,
-        y
+    if (dx !== 0) {
+      const nextX = this.x + dx;
+
+      if (
+        this.canMoveTo(
+          nextX,
+          this.y
+        )
+      ) {
+        this.x = nextX;
+      } else {
+        this.velocityX = 0;
+      }
+    }
+
+    if (dy !== 0) {
+      const nextY = this.y + dy;
+
+      if (
+        this.canMoveTo(
+          this.x,
+          nextY
+        )
+      ) {
+        this.y = nextY;
+      } else {
+        this.velocityY = 0;
+      }
+    }
+  }
+
+  canMoveTo(x, y) {
+    if (!this.world) {
+      return true;
+    }
+
+    if (
+      typeof this.world.canPlayerMoveTo !==
+      "function"
     ) {
-        this.x = x;
-        this.y = y;
-
-        this.keepInsideWorld();
+      return true;
     }
 
-    getSpeed() {
-        return Math.hypot(
-            this.vx,
-            this.vy
-        );
+    return this.world.canPlayerMoveTo(
+      this,
+      x,
+      y
+    );
+  }
+
+  // =========================================================
+  // DESACELERAÇÃO
+  // =========================================================
+
+  stopMovement(deltaTime) {
+    this.velocityX = this.moveTowards(
+      this.velocityX,
+      0,
+      this.deceleration * deltaTime
+    );
+
+    this.velocityY = this.moveTowards(
+      this.velocityY,
+      0,
+      this.deceleration * deltaTime
+    );
+
+    this.isMoving =
+      Math.abs(this.velocityX) > 1 ||
+      Math.abs(this.velocityY) > 1;
+  }
+
+  moveTowards(current, target, amount) {
+    if (current < target) {
+      return Math.min(
+        current + amount,
+        target
+      );
     }
 
-    isMoving() {
-        return (
-            Math.abs(this.vx) > 1 ||
-            Math.abs(this.vy) > 1
-        );
+    if (current > target) {
+      return Math.max(
+        current - amount,
+        target
+      );
     }
 
-    setDirection(direction) {
-        const validDirections = [
-            "up",
-            "down",
-            "left",
-            "right"
-        ];
+    return target;
+  }
 
-        if (
-            validDirections.includes(
-                direction
-            )
-        ) {
-            this.direction =
-                direction;
-        }
+  // =========================================================
+  // ANIMAÇÃO
+  // =========================================================
+
+  updateAnimation(deltaTime) {
+    if (this.isMoving) {
+      this.walkTime += deltaTime;
+
+      if (this.walkTime >= 0.11) {
+        this.walkTime -= 0.11;
+
+        this.walkFrame =
+          (this.walkFrame + 1) % 4;
+      }
+    }
+  }
+
+  getWalkOffset() {
+    if (!this.isMoving) {
+      return 0;
     }
 
-    destroy() {
-        this.input = null;
-        this.world = null;
+    const animation =
+      Math.sin(this.bobTime);
+
+    return animation * 2;
+  }
+
+  getLegOffset(side) {
+    if (!this.isMoving) {
+      return 0;
     }
+
+    const frameOffsets = [
+      0,
+      3,
+      0,
+      -3
+    ];
+
+    const value =
+      frameOffsets[this.walkFrame] || 0;
+
+    return side === "left"
+      ? value
+      : -value;
+  }
+
+  // =========================================================
+  // RENDER
+  // =========================================================
+
+  render(ctx, camera = { x: 0, y: 0 }) {
+    if (!this.visible) {
+      return;
+    }
+
+    const screenX =
+      this.x - camera.x;
+
+    const screenY =
+      this.y - camera.y;
+
+    ctx.save();
+
+    // Sombra fica fixa no chão
+    this.drawShadow(
+      ctx,
+      screenX,
+      screenY
+    );
+
+    // Pequeno movimento vertical
+    const bob =
+      this.getWalkOffset();
+
+    ctx.translate(
+      Math.round(screenX),
+      Math.round(screenY + bob)
+    );
+
+    this.drawCharacter(ctx);
+
+    ctx.restore();
+  }
+
+  // =========================================================
+  // SOMBRA
+  // =========================================================
+
+  drawShadow(ctx, x, y) {
+    ctx.save();
+
+    const movingScale =
+      this.isMoving
+        ? 1 + Math.sin(this.bobTime) * 0.05
+        : 1;
+
+    ctx.fillStyle =
+      this.palette.shadow;
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+      x,
+      y + 4,
+      25 * movingScale,
+      8 * movingScale,
+      0,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // =========================================================
+  // PERSONAGEM
+  // =========================================================
+
+  drawCharacter(ctx) {
+    const flip =
+      this.direction === "left"
+        ? -1
+        : 1;
+
+    ctx.save();
+
+    ctx.scale(flip, 1);
+
+    // Ordem:
+    // mochila -> pernas -> corpo -> braços ->
+    // cabeça -> cabelo -> rosto -> bengala.
+
+    this.drawBackpack(ctx);
+
+    this.drawLegs(ctx);
+
+    this.drawBody(ctx);
+
+    this.drawArms(ctx);
+
+    this.drawHead(ctx);
+
+    this.drawHair(ctx);
+
+    this.drawFace(ctx);
+
+    this.drawCane(ctx);
+
+    ctx.restore();
+  }
+
+  // =========================================================
+  // MOCHILA
+  // =========================================================
+
+  drawBackpack(ctx) {
+    ctx.fillStyle =
+      this.palette.backpackDark ||
+      this.palette.backpack;
+
+    ctx.fillStyle =
+      this.palette.backpack;
+
+    // Mochila atrás do corpo
+    ctx.fillRect(
+      -18,
+      -35,
+      12,
+      33
+    );
+
+    ctx.fillStyle =
+      this.palette.backpackLight;
+
+    ctx.fillRect(
+      -16,
+      -32,
+      8,
+      24
+    );
+
+    ctx.fillStyle =
+      this.palette.backpack;
+
+    ctx.fillRect(
+      -17,
+      -10,
+      10,
+      7
+    );
+  }
+
+  // =========================================================
+  // PERNAS
+  // =========================================================
+
+  drawLegs(ctx) {
+    const leftOffset =
+      this.getLegOffset("left");
+
+    const rightOffset =
+      this.getLegOffset("right");
+
+    // Perna esquerda
+    ctx.fillStyle =
+      this.palette.pants;
+
+    ctx.fillRect(
+      -13 + leftOffset,
+      20,
+      11,
+      25
+    );
+
+    // Perna direita
+    ctx.fillRect(
+      2 + rightOffset,
+      20,
+      11,
+      25
+    );
+
+    // Luz da calça
+    ctx.fillStyle =
+      this.palette.pantsLight;
+
+    ctx.fillRect(
+      -12 + leftOffset,
+      22,
+      4,
+      18
+    );
+
+    ctx.fillRect(
+      3 + rightOffset,
+      22,
+      4,
+      18
+    );
+
+    // Sapatos
+    ctx.fillStyle =
+      this.palette.shoe;
+
+    ctx.fillRect(
+      -16 + leftOffset,
+      42,
+      15,
+      7
+    );
+
+    ctx.fillRect(
+      0 + rightOffset,
+      42,
+      15,
+      7
+    );
+
+    ctx.fillStyle =
+      this.palette.shoeLight;
+
+    ctx.fillRect(
+      -13 + leftOffset,
+      43,
+      8,
+      2
+    );
+
+    ctx.fillRect(
+      3 + rightOffset,
+      43,
+      8,
+      2
+    );
+  }
+
+  // =========================================================
+  // CORPO
+  // =========================================================
+
+  drawBody(ctx) {
+    // Pescoço
+    ctx.fillStyle =
+      this.palette.skin;
+
+    ctx.fillRect(
+      -7,
+      -12,
+      14,
+      12
+    );
+
+    // Camisa principal
+    ctx.fillStyle =
+      this.palette.shirtDark;
+
+    ctx.fillRect(
+      -18,
+      -5,
+      36,
+      31
+    );
+
+    ctx.fillStyle =
+      this.palette.shirt;
+
+    ctx.fillRect(
+      -14,
+      -5,
+      28,
+      28
+    );
+
+    // Parte iluminada
+    ctx.fillStyle =
+      this.palette.shirtLight;
+
+    ctx.fillRect(
+      -10,
+      -3,
+      7,
+      23
+    );
+
+    // Barra inferior
+    ctx.fillStyle =
+      this.palette.shirtDark;
+
+    ctx.fillRect(
+      -14,
+      20,
+      28,
+      6
+    );
+
+    // Pequeno detalhe da camisa
+    ctx.fillStyle =
+      "rgba(255,255,255,0.12)";
+
+    ctx.fillRect(
+      -5,
+      2,
+      10,
+      3
+    );
+  }
+
+  // =========================================================
+  // BRAÇOS
+  // =========================================================
+
+  drawArms(ctx) {
+    let leftOffset = 0;
+    let rightOffset = 0;
+
+    if (this.isMoving) {
+      const swing =
+        Math.sin(this.bobTime) * 3;
+
+      leftOffset = swing;
+      rightOffset = -swing;
+    }
+
+    // Braço esquerdo
+    ctx.fillStyle =
+      this.palette.shirtDark;
+
+    ctx.fillRect(
+      -22,
+      -2 + leftOffset,
+      8,
+      25
+    );
+
+    // Braço direito
+    ctx.fillRect(
+      14,
+      -2 + rightOffset,
+      8,
+      25
+    );
+
+    // Mãos
+    ctx.fillStyle =
+      this.palette.skin;
+
+    ctx.fillRect(
+      -21,
+      20 + leftOffset,
+      8,
+      9
+    );
+
+    ctx.fillRect(
+      14,
+      20 + rightOffset,
+      8,
+      9
+    );
+
+    // Luz nas mãos
+    ctx.fillStyle =
+      this.palette.skinLight;
+
+    ctx.fillRect(
+      -20,
+      21 + leftOffset,
+      4,
+      4
+    );
+
+    ctx.fillRect(
+      15,
+      21 + rightOffset,
+      4,
+      4
+    );
+  }
+
+  // =========================================================
+  // CABEÇA
+  // =========================================================
+
+  drawHead(ctx) {
+    // Orelhas
+    ctx.fillStyle =
+      this.palette.skin;
+
+    ctx.fillRect(
+      -22,
+      -32,
+      7,
+      12
+    );
+
+    ctx.fillRect(
+      15,
+      -32,
+      7,
+      12
+    );
+
+    // Pescoço/sombra
+    ctx.fillStyle =
+      this.palette.skinShadow;
+
+    ctx.fillRect(
+      -7,
+      -15,
+      14,
+      8
+    );
+
+    // Cabeça
+    ctx.fillStyle =
+      this.palette.skin;
+
+    ctx.fillRect(
+      -19,
+      -53,
+      38,
+      39
+    );
+
+    // Luz
+    ctx.fillStyle =
+      this.palette.skinLight;
+
+    ctx.fillRect(
+      -15,
+      -49,
+      8,
+      25
+    );
+
+    // Sombra lateral
+    ctx.fillStyle =
+      this.palette.skinShadow;
+
+    ctx.fillRect(
+      12,
+      -46,
+      6,
+      28
+    );
+  }
+
+  // =========================================================
+  // CABELO
+  // =========================================================
+
+  drawHair(ctx) {
+    ctx.fillStyle =
+      this.palette.hair;
+
+    // Topo
+    ctx.fillRect(
+      -20,
+      -56,
+      40,
+      17
+    );
+
+    ctx.fillRect(
+      -17,
+      -61,
+      34,
+      8
+    );
+
+    ctx.fillRect(
+      -13,
+      -64,
+      25,
+      6
+    );
+
+    // Laterais
+    ctx.fillRect(
+      -20,
+      -51,
+      8,
+      21
+    );
+
+    ctx.fillRect(
+      13,
+      -52,
+      8,
+      22
+    );
+
+    // Franja
+    ctx.fillRect(
+      -13,
+      -45,
+      26,
+      8
+    );
+
+    ctx.fillRect(
+      -9,
+      -42,
+      9,
+      6
+    );
+
+    // Brilho do cabelo
+    ctx.fillStyle =
+      this.palette.hairLight;
+
+    ctx.fillRect(
+      -11,
+      -57,
+      5,
+      7
+    );
+
+    ctx.fillRect(
+      -5,
+      -59,
+      4,
+      5
+    );
+  }
+
+  // =========================================================
+  // ROSTO
+  // =========================================================
+
+  drawFace(ctx) {
+    // Olhos
+    ctx.fillStyle =
+      this.palette.eye;
+
+    ctx.fillRect(
+      -12,
+      -31,
+      5,
+      6
+    );
+
+    ctx.fillRect(
+      7,
+      -31,
+      5,
+      6
+    );
+
+    // Brilho dos olhos
+    ctx.fillStyle =
+      "#f2eee2";
+
+    ctx.fillRect(
+      -11,
+      -30,
+      2,
+      2
+    );
+
+    ctx.fillRect(
+      8,
+      -30,
+      2,
+      2
+    );
+
+    // Nariz
+    ctx.fillStyle =
+      this.palette.skinShadow;
+
+    ctx.fillRect(
+      -2,
+      -27,
+      5,
+      5
+    );
+
+    // Boca
+    ctx.fillStyle =
+      "#703f3c";
+
+    ctx.fillRect(
+      -5,
+      -19,
+      10,
+      3
+    );
+
+    ctx.fillStyle =
+      "rgba(255,255,255,0.22)";
+
+    ctx.fillRect(
+      -3,
+      -19,
+      6,
+      1
+    );
+  }
+
+  // =========================================================
+  // BENGALA
+  // =========================================================
+
+  drawCane(ctx) {
+    const wave =
+      Math.sin(this.caneWave) * 4;
+
+    const moving =
+      this.isMoving;
+
+    const caneX =
+      23;
+
+    const topY =
+      2 + wave * (moving ? 0.35 : 0);
+
+    const bottomY =
+      58;
+
+    ctx.strokeStyle =
+      this.palette.caneDark;
+
+    ctx.lineWidth = 5;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      caneX,
+      topY
+    );
+
+    ctx.lineTo(
+      caneX + wave * 0.18,
+      bottomY
+    );
+
+    ctx.stroke();
+
+    ctx.strokeStyle =
+      this.palette.cane;
+
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      caneX - 1,
+      topY
+    );
+
+    ctx.lineTo(
+      caneX - 1 + wave * 0.18,
+      bottomY
+    );
+
+    ctx.stroke();
+
+    // Empunhadura
+    ctx.fillStyle =
+      this.palette.caneDark;
+
+    ctx.fillRect(
+      caneX - 4,
+      topY - 5,
+      10,
+      4
+    );
+
+    // Ponta
+    ctx.fillStyle =
+      this.palette.cane;
+
+    ctx.fillRect(
+      caneX - 4,
+      bottomY,
+      8,
+      5
+    );
+  }
+
+  // =========================================================
+  // POSIÇÃO
+  // =========================================================
+
+  setPosition(x, y) {
+    this.x = x;
+    this.y = y;
+
+    this.velocityX = 0;
+    this.velocityY = 0;
+  }
+
+  getPosition() {
+    return {
+      x: this.x,
+      y: this.y
+    };
+  }
+
+  // =========================================================
+  // LIMITES
+  // =========================================================
+
+  getBounds() {
+    return {
+      x:
+        this.x -
+        this.hitboxWidth / 2,
+
+      y:
+        this.y -
+        this.hitboxHeight / 2,
+
+      width:
+        this.hitboxWidth,
+
+      height:
+        this.hitboxHeight
+    };
+  }
+
+  // =========================================================
+  // VELOCIDADE
+  // =========================================================
+
+  getSpeed() {
+    return Math.hypot(
+      this.velocityX,
+      this.velocityY
+    );
+  }
+
+  // =========================================================
+  // ESTADO
+  // =========================================================
+
+  getIsMoving() {
+    return this.isMoving;
+  }
+
+  isWalking() {
+    return this.isMoving;
+  }
+
+  // =========================================================
+  // DESTRUIR
+  // =========================================================
+
+  destroy() {
+    this.world = null;
+    this.visible = false;
+
+    this.velocityX = 0;
+    this.velocityY = 0;
+  }
 }

@@ -1,23 +1,56 @@
+// input.js
+// Escape Room — Sistema de entrada
+// WASD / Setas / E / ESC / ENTER / ESPAÇO / R
+
 export class Input {
-  constructor(game) {
+  constructor(game = null) {
     this.game = game;
 
     this.keys = new Set();
     this.justPressed = new Set();
 
-    this.boundKeyDown = this.handleKeyDown.bind(this);
-    this.boundKeyUp = this.handleKeyUp.bind(this);
-    this.boundBlur = this.handleBlur.bind(this);
-    this.boundVisibilityChange = this.handleVisibilityChange.bind(this);
+    this.boundKeyDown =
+      this.handleKeyDown.bind(this);
 
-    window.addEventListener("keydown", this.boundKeyDown, { passive: false });
-    window.addEventListener("keyup", this.boundKeyUp, { passive: false });
-    window.addEventListener("blur", this.boundBlur);
+    this.boundKeyUp =
+      this.handleKeyUp.bind(this);
+
+    this.boundBlur =
+      this.handleBlur.bind(this);
+
+    this.boundVisibilityChange =
+      this.handleVisibilityChange.bind(this);
+
+    window.addEventListener(
+      "keydown",
+      this.boundKeyDown,
+      {
+        passive: false
+      }
+    );
+
+    window.addEventListener(
+      "keyup",
+      this.boundKeyUp,
+      {
+        passive: false
+      }
+    );
+
+    window.addEventListener(
+      "blur",
+      this.boundBlur
+    );
+
     document.addEventListener(
       "visibilitychange",
       this.boundVisibilityChange
     );
   }
+
+  // =========================================================
+  // NORMALIZAÇÃO
+  // =========================================================
 
   normalizeKey(key) {
     if (typeof key !== "string") {
@@ -31,61 +64,67 @@ export class Input {
     return key;
   }
 
+  // =========================================================
+  // KEY DOWN
+  // =========================================================
+
   handleKeyDown(event) {
-    const key = this.normalizeKey(event.key);
+    if (!event) {
+      return;
+    }
+
+    const key =
+      this.normalizeKey(event.key);
 
     if (!key) {
       return;
     }
 
-    /*
-     * Impede que as setas e espaço movimentem a página
-     * enquanto o jogador estiver dentro do jogo.
-     */
+    // Evita que as setas e espaço movimentem
+    // a página enquanto o jogo está aberto.
+    const blockedKeys = [
+      "ArrowUp",
+      "ArrowDown",
+      "ArrowLeft",
+      "ArrowRight",
+      " "
+    ];
+
     if (
-      [
-        "ArrowUp",
-        "ArrowDown",
-        "ArrowLeft",
-        "ArrowRight",
-        " ",
-      ].includes(key)
+      blockedKeys.includes(key)
     ) {
       event.preventDefault();
     }
 
-    /*
-     * Só adicionamos à lista de "justPressed" quando a tecla
-     * realmente acabou de ser pressionada.
-     *
-     * Isso evita que o navegador repita a ação enquanto
-     * a tecla permanece pressionada.
-     */
+    // Só registra como "just pressed"
+    // na primeira vez que a tecla é pressionada.
     if (!this.keys.has(key)) {
       this.justPressed.add(key);
     }
 
     this.keys.add(key);
 
-    /*
-     * O Enter é encaminhado ao Game para iniciar/reiniciar
-     * o jogo a partir das telas de menu/conclusão.
-     *
-     * Escape, P e E NÃO são encaminhados aqui porque o Game
-     * já consulta essas teclas através de wantsPause()
-     * e wantsInteract().
-     */
+    // Permite que o Game trate teclas especiais.
     if (
-      key === "Enter" &&
       this.game &&
-      typeof this.game.handleKeyDown === "function"
+      typeof this.game.handleKeyDown ===
+        "function"
     ) {
       this.game.handleKeyDown(event);
     }
   }
 
+  // =========================================================
+  // KEY UP
+  // =========================================================
+
   handleKeyUp(event) {
-    const key = this.normalizeKey(event.key);
+    if (!event) {
+      return;
+    }
+
+    const key =
+      this.normalizeKey(event.key);
 
     if (!key) {
       return;
@@ -94,9 +133,17 @@ export class Input {
     this.keys.delete(key);
   }
 
+  // =========================================================
+  // BLUR
+  // =========================================================
+
   handleBlur() {
     this.reset();
   }
+
+  // =========================================================
+  // VISIBILIDADE
+  // =========================================================
 
   handleVisibilityChange() {
     if (document.hidden) {
@@ -104,49 +151,67 @@ export class Input {
     }
   }
 
+  // =========================================================
+  // ESTADO DAS TECLAS
+  // =========================================================
+
   isDown(key) {
-    const normalizedKey = this.normalizeKey(key);
-    return this.keys.has(normalizedKey);
+    return this.keys.has(
+      this.normalizeKey(key)
+    );
   }
 
   wasPressed(key) {
-    const normalizedKey = this.normalizeKey(key);
-    return this.justPressed.has(normalizedKey);
+    return this.justPressed.has(
+      this.normalizeKey(key)
+    );
   }
+
+  // =========================================================
+  // MOVIMENTO
+  // =========================================================
 
   getMovementVector() {
     let x = 0;
     let y = 0;
 
-    /*
-     * Movimento horizontal
-     */
-    if (this.isDown("a") || this.isDown("ArrowLeft")) {
+    // Esquerda
+    if (
+      this.isDown("a") ||
+      this.isDown("ArrowLeft")
+    ) {
       x -= 1;
     }
 
-    if (this.isDown("d") || this.isDown("ArrowRight")) {
+    // Direita
+    if (
+      this.isDown("d") ||
+      this.isDown("ArrowRight")
+    ) {
       x += 1;
     }
 
-    /*
-     * Movimento vertical
-     */
-    if (this.isDown("w") || this.isDown("ArrowUp")) {
+    // Cima
+    if (
+      this.isDown("w") ||
+      this.isDown("ArrowUp")
+    ) {
       y -= 1;
     }
 
-    if (this.isDown("s") || this.isDown("ArrowDown")) {
+    // Baixo
+    if (
+      this.isDown("s") ||
+      this.isDown("ArrowDown")
+    ) {
       y += 1;
     }
 
-    /*
-     * Normaliza diagonais.
-     *
-     * Sem isso, andar na diagonal seria aproximadamente
-     * 41% mais rápido do que andar em linha reta.
-     */
-    const length = Math.hypot(x, y);
+    // Normaliza a diagonal.
+    // Assim o personagem não fica mais rápido
+    // quando anda na diagonal.
+    const length =
+      Math.hypot(x, y);
 
     if (length > 0) {
       x /= length;
@@ -155,17 +220,32 @@ export class Input {
 
     return {
       x,
-      y,
+      y
     };
   }
 
+  // =========================================================
+  // PAUSA
+  // =========================================================
+
   wantsPause() {
-    return this.wasPressed("Escape") || this.wasPressed("p");
+    return (
+      this.wasPressed("Escape") ||
+      this.wasPressed("p")
+    );
   }
+
+  // =========================================================
+  // INTERAÇÃO
+  // =========================================================
 
   wantsInteract() {
     return this.wasPressed("e");
   }
+
+  // =========================================================
+  // CONFIRMAR
+  // =========================================================
 
   wantsConfirm() {
     return (
@@ -174,23 +254,50 @@ export class Input {
     );
   }
 
+  // =========================================================
+  // REINICIAR
+  // =========================================================
+
   wantsRestart() {
     return this.wasPressed("r");
   }
 
+  // =========================================================
+  // FINAL DO FRAME
+  // =========================================================
+
   endFrame() {
     this.justPressed.clear();
   }
+
+  // =========================================================
+  // RESET
+  // =========================================================
 
   reset() {
     this.keys.clear();
     this.justPressed.clear();
   }
 
+  // =========================================================
+  // DESTRUIR
+  // =========================================================
+
   destroy() {
-    window.removeEventListener("keydown", this.boundKeyDown);
-    window.removeEventListener("keyup", this.boundKeyUp);
-    window.removeEventListener("blur", this.boundBlur);
+    window.removeEventListener(
+      "keydown",
+      this.boundKeyDown
+    );
+
+    window.removeEventListener(
+      "keyup",
+      this.boundKeyUp
+    );
+
+    window.removeEventListener(
+      "blur",
+      this.boundBlur
+    );
 
     document.removeEventListener(
       "visibilitychange",
@@ -198,5 +305,7 @@ export class Input {
     );
 
     this.reset();
+
+    this.game = null;
   }
 }

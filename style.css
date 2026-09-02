@@ -1,39 +1,57 @@
-/* =========================================================
-   ESCAPE ROOM — SALA DE AULA
-   Interface principal
-   ========================================================= */
+/* ============================================================
+   A SALA — ESCAPE ROOM
+   STYLE.CSS
+   Interface principal / atmosfera / HUD
+============================================================ */
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap");
+
+/* ============================================================
+   VARIÁVEIS
+============================================================ */
 
 :root {
-    --bg: #080b10;
-    --bg-soft: #10151d;
+    --bg: #07090d;
+    --bg-soft: #0b0f15;
 
-    --panel: rgba(15, 20, 28, 0.92);
-    --panel-light: rgba(28, 35, 45, 0.94);
+    --panel: rgba(10, 14, 20, 0.88);
+    --panel-solid: #0d1219;
 
-    --text: #f4f1e8;
-    --text-soft: #aeb5bf;
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.16);
 
-    --accent: #d9a85f;
-    --accent-light: #f0c984;
+    --text: #f0f2f4;
+    --text-soft: #a7afb9;
+    --text-muted: #69727d;
 
-    --danger: #c85d5d;
-    --success: #75b982;
+    --accent: #d8b36a;
+    --accent-light: #f0d89a;
+    --accent-dark: #806632;
 
-    --border: rgba(255, 255, 255, 0.12);
+    --danger: #b65d5d;
+    --success: #72a477;
+    --info: #7895b8;
 
     --shadow:
-        0 30px 80px rgba(0, 0, 0, 0.55);
+        0 24px 80px rgba(0, 0, 0, 0.55);
 
-    --transition:
-        180ms cubic-bezier(0.22, 1, 0.36, 1);
+    --pixel-font:
+        "Courier New",
+        "Lucida Console",
+        monospace;
+
+    --ui-font:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
 }
 
 
-/* =========================================================
+/* ============================================================
    RESET
-   ========================================================= */
+============================================================ */
 
 * {
     box-sizing: border-box;
@@ -47,1937 +65,1912 @@ body {
     height: 100%;
 }
 
+html {
+    background: var(--bg);
+    color-scheme: dark;
+}
+
 body {
+    min-height: 100vh;
+    overflow: hidden;
+
     background:
         radial-gradient(
-            circle at 50% 20%,
-            #20252d 0%,
-            #0c1016 45%,
-            #06080c 100%
-        );
+            circle at 50% 45%,
+            rgba(55, 67, 82, 0.10),
+            transparent 38%
+        ),
+        #07090d;
 
     color: var(--text);
 
-    font-family:
-        Inter,
-        Arial,
-        Helvetica,
-        sans-serif;
-
-    overflow: hidden;
-
-    user-select: none;
-
-    -webkit-user-select: none;
+    font-family: var(--ui-font);
 
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 
-/* =========================================================
-   CONTAINER
-   ========================================================= */
+/* ============================================================
+   APP
+============================================================ */
 
-#gameContainer {
-    position: relative;
-
-    width: 100vw;
-    height: 100vh;
+#app {
+    width: 100%;
+    height: 100%;
+    min-height: 100vh;
 
     display: flex;
-
     align-items: center;
     justify-content: center;
+
+    position: relative;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.015),
+            transparent 35%
+        );
+}
+
+
+/* ============================================================
+   CONTAINER DO JOGO
+============================================================ */
+
+.game-container {
+    width: min(100vw, 1440px);
+    height: min(100vh, 810px);
+
+    position: relative;
 
     overflow: hidden;
 
     background: #080b10;
+
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.025),
+        0 30px 100px rgba(0, 0, 0, 0.65);
+
+    isolation: isolate;
 }
 
 
-/* =========================================================
+/* ============================================================
    CANVAS
-   ========================================================= */
+============================================================ */
 
 #gameCanvas {
     display: block;
 
-    width: min(
-        100vw,
-        177.7777778vh
-    );
+    width: 100%;
+    height: 100%;
 
-    height: min(
-        100vh,
-        56.25vw
-    );
+    min-width: 0;
+    min-height: 0;
 
-    max-width: 100vw;
-    max-height: 100vh;
-
-    object-fit: contain;
+    background: #080b10;
 
     image-rendering: pixelated;
     image-rendering: crisp-edges;
 
     outline: none;
 
-    background: #17130f;
-
-    box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.05),
-        0 25px 80px rgba(0, 0, 0, 0.55);
-}
-
-
-/* =========================================================
-   CAMADAS DE INTERFACE
-   ========================================================= */
-
-.screen,
-.modal,
-.dialogue,
-.hud,
-.loadingScreen {
     position: absolute;
-
     inset: 0;
 
-    width: 100%;
-    height: 100%;
+    z-index: 1;
 }
 
 
-/* =========================================================
-   ESTADO HIDDEN
-   ========================================================= */
-
-.hidden {
-    display: none !important;
-}
-
-
-/* =========================================================
-   MENU PRINCIPAL
-   ========================================================= */
-
-.screen {
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    padding: 30px;
-
-    background:
-        linear-gradient(
-            90deg,
-            rgba(3, 6, 10, 0.92),
-            rgba(3, 6, 10, 0.62),
-            rgba(3, 6, 10, 0.88)
-        );
-
-    backdrop-filter: blur(3px);
-
-    -webkit-backdrop-filter: blur(3px);
-
-    z-index: 50;
-
-    opacity: 1;
-
-    transition:
-        opacity 300ms ease,
-        visibility 300ms ease;
-}
-
-.screen.hidden {
-    visibility: hidden;
-
-    opacity: 0;
-
-    pointer-events: none;
-}
-
-.screen.active {
-    visibility: visible;
-
-    opacity: 1;
-
-    pointer-events: auto;
-}
-
-
-/* =========================================================
-   ATMOSFERA DO MENU
-   ========================================================= */
-
-.menuAtmosphere {
-    position: absolute;
-
-    inset: 0;
-
-    pointer-events: none;
-
-    background:
-        radial-gradient(
-            circle at 18% 50%,
-            rgba(217, 168, 95, 0.09),
-            transparent 30%
-        ),
-        radial-gradient(
-            circle at 80% 30%,
-            rgba(120, 160, 190, 0.06),
-            transparent 35%
-        );
-
-    opacity: 1;
-}
-
-.menuAtmosphere::after {
-    content: "";
-
-    position: absolute;
-
-    inset: 0;
-
-    background:
-        repeating-linear-gradient(
-            0deg,
-            rgba(255, 255, 255, 0.015) 0px,
-            rgba(255, 255, 255, 0.015) 1px,
-            transparent 1px,
-            transparent 4px
-        );
-
-    pointer-events: none;
-}
-
-
-/* =========================================================
-   CONTEÚDO DO MENU
-   ========================================================= */
-
-.menuContent {
-    position: relative;
-
-    width: min(
-        600px,
-        90vw
-    );
-
-    padding: 48px 52px 42px;
-
-    text-align: center;
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(19, 25, 34, 0.96),
-            rgba(8, 12, 17, 0.96)
-        );
-
-    border: 1px solid var(--border);
-
-    border-radius: 4px;
-
-    box-shadow: var(--shadow);
-
-    animation:
-        menuEnter 700ms
-        cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.menuContent::before {
-    content: "";
-
-    position: absolute;
-
-    top: 0;
-    left: 14%;
-
-    width: 72%;
-    height: 1px;
-
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            var(--accent),
-            transparent
-        );
-
-    opacity: 0.8;
-}
-
-
-/* =========================================================
-   MENU TEXTOS
-   ========================================================= */
-
-.menuEyebrow {
-    margin-bottom: 16px;
-
-    color: var(--accent-light);
-
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 10px;
-
-    font-weight: 700;
-
-    letter-spacing: 0.28em;
-
-    text-transform: uppercase;
-}
-
-.menuContent h1 {
-    color: var(--text);
-
-    font-size:
-        clamp(52px, 8vw, 88px);
-
-    line-height: 0.86;
-
-    font-weight: 800;
-
-    letter-spacing: -0.07em;
-}
-
-.menuContent h1 span {
-    display: block;
-
-    color: var(--accent);
-
-    font-weight: 500;
-
-    letter-spacing: 0.02em;
-}
-
-.menuDivider {
-    width: 90px;
-    height: 2px;
-
-    margin: 28px auto 24px;
-
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            var(--accent),
-            transparent
-        );
-}
-
-.menuSubtitle {
-    color: var(--text-soft);
-
-    font-size: 14px;
-
-    line-height: 1.8;
-
-    font-weight: 400;
-}
-
-
-/* =========================================================
-   BOTÕES
-   ========================================================= */
-
-button {
-    font-family: inherit;
-
-    border: 0;
-
-    cursor: pointer;
-
-    outline: none;
-}
-
-.primaryButton {
-    position: relative;
-
-    display: inline-flex;
-
-    align-items: center;
-    justify-content: space-between;
-
-    gap: 30px;
-
-    min-width: 230px;
-
-    margin-top: 30px;
-
-    padding: 15px 19px;
-
-    color: #17120c;
-
-    background:
-        linear-gradient(
-            135deg,
-            var(--accent-light),
-            var(--accent)
-        );
-
-    border: 1px solid
-        rgba(255, 255, 255, 0.18);
-
-    border-radius: 3px;
-
-    font-size: 12px;
-
-    font-weight: 800;
-
-    letter-spacing: 0.1em;
-
-    box-shadow:
-        0 10px 25px
-        rgba(0, 0, 0, 0.25);
-
-    transition:
-        transform var(--transition),
-        box-shadow var(--transition),
-        filter var(--transition);
-}
-
-.primaryButton strong {
-    font-size: 20px;
-
-    line-height: 0;
-
-    transition:
-        transform var(--transition);
-}
-
-.primaryButton:hover {
-    transform:
-        translateY(-2px);
-
-    filter:
-        brightness(1.08);
-
-    box-shadow:
-        0 15px 35px
-        rgba(0, 0, 0, 0.38);
-}
-
-.primaryButton:hover strong {
-    transform:
-        translateX(5px);
-}
-
-.primaryButton:active {
-    transform:
-        translateY(0);
-}
-
-.secondaryButton {
-    display: block;
-
-    width: 230px;
-
-    margin: 12px auto 0;
-
-    padding: 13px;
-
-    color: var(--text-soft);
-
-    background:
-        rgba(255, 255, 255, 0.04);
-
-    border: 1px solid var(--border);
-
-    border-radius: 3px;
-
-    font-size: 11px;
-
-    font-weight: 700;
-
-    letter-spacing: 0.1em;
-
-    transition:
-        background var(--transition),
-        color var(--transition),
-        border-color var(--transition);
-}
-
-.secondaryButton:hover {
-    color: var(--text);
-
-    background:
-        rgba(255, 255, 255, 0.08);
-
-    border-color:
-        rgba(255, 255, 255, 0.2);
-}
-
-
-/* =========================================================
-   CONTROLES
-   ========================================================= */
-
-.controlsPreview {
-    display: flex;
-
-    justify-content: center;
-
-    gap: 25px;
-
-    margin-top: 35px;
-
-    color: var(--text-soft);
-}
-
-.controlsPreview div {
-    display: flex;
-
-    flex-direction: column;
-
-    align-items: center;
-
-    gap: 7px;
-}
-
-.controlsPreview kbd {
-    display: inline-flex;
-
-    align-items: center;
-    justify-content: center;
-
-    min-width: 42px;
-
-    height: 28px;
-
-    padding: 0 7px;
-
-    color: var(--text);
-
-    background:
-        rgba(255, 255, 255, 0.055);
-
-    border:
-        1px solid
-        rgba(255, 255, 255, 0.13);
-
-    border-bottom:
-        2px solid
-        rgba(255, 255, 255, 0.22);
-
-    border-radius: 3px;
-
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 9px;
-
-    font-weight: 700;
-}
-
-.controlsPreview span {
-    font-size: 9px;
-
-    text-transform: uppercase;
-
-    letter-spacing: 0.08em;
-}
-
-
-/* =========================================================
-   AVISO
-   ========================================================= */
-
-.menuWarning {
-    margin-top: 30px;
-
-    color:
-        rgba(255, 255, 255, 0.32);
-
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 8px;
-
-    letter-spacing: 0.14em;
-}
-
-
-/* =========================================================
+/* ============================================================
    HUD
-   ========================================================= */
+============================================================ */
 
 .hud {
+    position: absolute;
+    inset: 0;
+
     z-index: 20;
 
     pointer-events: none;
+
+    opacity: 1;
 }
 
-.hudPanel {
-    pointer-events: auto;
-}
 
-.objectivePanel {
+/* ============================================================
+   OBJETIVO
+============================================================ */
+
+.hud-objective {
     position: absolute;
 
-    top: 24px;
+    top: 22px;
     left: 24px;
 
-    width: min(
-        360px,
-        42vw
-    );
+    width: 300px;
 
-    padding: 15px 18px;
+    padding:
+        11px
+        15px
+        13px
+        15px;
 
     background:
         linear-gradient(
             135deg,
-            rgba(9, 13, 18, 0.88),
-            rgba(18, 23, 31, 0.74)
+            rgba(9, 13, 18, 0.91),
+            rgba(9, 13, 18, 0.65)
         );
-
-    border:
-        1px solid
-        rgba(255, 255, 255, 0.1);
 
     border-left:
         2px solid
-        var(--accent);
+        rgba(216, 179, 106, 0.75);
+
+    border-top:
+        1px solid
+        rgba(255, 255, 255, 0.07);
+
+    border-right:
+        1px solid
+        rgba(255, 255, 255, 0.04);
+
+    border-bottom:
+        1px solid
+        rgba(255, 255, 255, 0.04);
 
     box-shadow:
-        0 12px 30px
-        rgba(0, 0, 0, 0.28);
+        0 12px 35px rgba(0, 0, 0, 0.28);
 
     backdrop-filter: blur(8px);
-
     -webkit-backdrop-filter: blur(8px);
 }
 
-.hudLabel {
-    margin-bottom: 7px;
+.hud-objective-label {
+    margin-bottom: 5px;
 
-    color: var(--accent-light);
+    color: var(--accent);
 
-    font-family:
-        "Space Mono",
-        monospace;
+    font-family: var(--pixel-font);
 
-    font-size: 8px;
-
+    font-size: 9px;
     font-weight: 700;
 
     letter-spacing: 0.18em;
+
+    opacity: 0.9;
 }
 
-.objectiveText {
-    color: #ece8de;
+.hud-objective-text {
+    color: #dce1e5;
 
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 1.45;
 
-    line-height: 1.5;
+    letter-spacing: 0.01em;
 }
 
 
-/* =========================================================
-   HUD DIREITA
-   ========================================================= */
+/* ============================================================
+   STATUS
+============================================================ */
 
-.hudRight {
+.hud-status {
     position: absolute;
 
     top: 24px;
-    right: 24px;
+    right: 78px;
 
-    display: flex;
+    min-width: 130px;
 
-    align-items: center;
+    padding: 8px 12px;
 
-    gap: 10px;
+    text-align: right;
 
-    pointer-events: auto;
-}
+    background: rgba(7, 10, 14, 0.58);
 
-.timer {
-    min-width: 72px;
-
-    padding: 9px 11px;
-
-    color: var(--text);
-
-    background:
-        rgba(9, 13, 18, 0.82);
-
-    border:
+    border-right:
         1px solid
-        rgba(255, 255, 255, 0.1);
+        rgba(255, 255, 255, 0.08);
 
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 12px;
-
-    text-align: center;
-
-    letter-spacing: 0.08em;
-
-    backdrop-filter: blur(8px);
-}
-
-.pauseButton {
-    width: 36px;
-    height: 36px;
-
-    color: var(--text);
-
-    background:
-        rgba(9, 13, 18, 0.82);
-
-    border:
-        1px solid
-        rgba(255, 255, 255, 0.12);
-
-    border-radius: 3px;
-
-    font-size: 11px;
-
-    font-weight: 800;
-
-    transition:
-        background var(--transition),
-        transform var(--transition);
-}
-
-.pauseButton:hover {
-    background:
-        rgba(255, 255, 255, 0.1);
-
-    transform:
-        translateY(-1px);
-}
-
-
-/* =========================================================
-   INTERAÇÃO
-   ========================================================= */
-
-.interactionHint {
-    position: absolute;
-
-    left: 50%;
-    bottom: 34px;
-
-    transform:
-        translateX(-50%);
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 10px;
-
-    padding: 9px 14px;
-
-    color: var(--text);
-
-    background:
-        rgba(8, 12, 17, 0.88);
-
-    border:
-        1px solid
-        rgba(255, 255, 255, 0.12);
-
-    box-shadow:
-        0 10px 30px
-        rgba(0, 0, 0, 0.35);
-
-    backdrop-filter: blur(8px);
-
-    -webkit-backdrop-filter: blur(8px);
-
-    font-size: 11px;
-
-    white-space: nowrap;
-
-    pointer-events: none;
-
-    transition:
-        opacity 180ms ease,
-        transform 180ms ease;
-}
-
-.interactionKey {
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    width: 26px;
-    height: 26px;
-
-    color: #18120b;
-
-    background:
-        var(--accent);
-
-    border-radius: 2px;
-
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 10px;
-
-    font-weight: 700;
-}
-
-
-/* =========================================================
-   DIÁLOGO
-   ========================================================= */
-
-.dialogue {
-    z-index: 60;
-
-    display: flex;
-
-    align-items: flex-end;
-    justify-content: center;
-
-    padding:
-        0 30px
-        30px;
-}
-
-.dialogueBox {
-    position: relative;
-
-    width: min(
-        820px,
-        90vw
-    );
-
-    padding: 22px 25px;
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(12, 17, 23, 0.97),
-            rgba(22, 27, 34, 0.96)
-        );
-
-    border:
-        1px solid
-        rgba(255, 255, 255, 0.12);
-
-    border-top:
-        2px solid
-        var(--accent);
-
-    box-shadow:
-        0 20px 60px
-        rgba(0, 0, 0, 0.55);
-
-    animation:
-        dialogueEnter
-        260ms
-        cubic-bezier(
-            0.22,
-            1,
-            0.36,
-            1
-        );
-}
-
-.dialogueTitle {
-    margin-bottom: 8px;
-
-    color: var(--accent-light);
-
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 9px;
-
-    font-weight: 700;
-
-    letter-spacing: 0.16em;
-}
-
-.dialogueText {
-    max-width: 680px;
-
-    color: var(--text);
-
-    font-size: 14px;
-
-    line-height: 1.7;
-}
-
-.dialogueButton {
-    position: absolute;
-
-    right: 20px;
-    bottom: 18px;
-
-    padding: 7px 11px;
-
-    color: var(--accent-light);
-
-    background:
-        transparent;
-
-    border:
-        1px solid
-        rgba(217, 168, 95, 0.35);
-
-    border-radius: 2px;
-
-    font-size: 8px;
-
-    font-weight: 700;
-
-    letter-spacing: 0.12em;
-}
-
-.dialogueButton:hover {
-    background:
-        rgba(217, 168, 95, 0.1);
-}
-
-
-/* =========================================================
-   MODAL DOS ENIGMAS
-   ========================================================= */
-
-.modal {
-    z-index: 70;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    padding: 25px;
-
-    background:
-        rgba(2, 5, 8, 0.7);
+    opacity: 0.8;
 
     backdrop-filter: blur(5px);
-
     -webkit-backdrop-filter: blur(5px);
 }
 
-.puzzleBox {
-    position: relative;
+.hud-status-text {
+    color: #7f8994;
 
-    width: min(
-        560px,
-        92vw
-    );
-
-    max-height: 90vh;
-
-    overflow-y: auto;
-
-    padding: 34px;
-
-    background:
-        linear-gradient(
-            145deg,
-            #171d25,
-            #0c1117
-        );
-
-    border:
-        1px solid
-        rgba(255, 255, 255, 0.13);
-
-    border-top:
-        2px solid
-        var(--accent);
-
-    box-shadow:
-        0 30px 100px
-        rgba(0, 0, 0, 0.65);
-
-    animation:
-        puzzleEnter
-        280ms
-        cubic-bezier(
-            0.22,
-            1,
-            0.36,
-            1
-        );
-}
-
-.modalClose {
-    position: absolute;
-
-    top: 13px;
-    right: 15px;
-
-    width: 30px;
-    height: 30px;
-
-    color: var(--text-soft);
-
-    background:
-        transparent;
-
-    border:
-        1px solid
-        rgba(255, 255, 255, 0.08);
-
-    font-size: 20px;
-
-    line-height: 1;
-
-    transition:
-        color var(--transition),
-        background var(--transition);
-}
-
-.modalClose:hover {
-    color: var(--text);
-
-    background:
-        rgba(255, 255, 255, 0.08);
-}
-
-.puzzleCategory {
-    margin-bottom: 9px;
-
-    color: var(--accent-light);
-
-    font-family:
-        "Space Mono",
-        monospace;
+    font-family: var(--pixel-font);
 
     font-size: 8px;
 
-    font-weight: 700;
-
-    letter-spacing: 0.18em;
-}
-
-.puzzleTitle {
-    color: var(--text);
-
-    font-size: 27px;
-
-    line-height: 1.2;
-
-    margin-bottom: 12px;
-}
-
-.puzzleDescription {
-    color: var(--text-soft);
-
-    font-size: 13px;
-
-    line-height: 1.7;
-}
-
-.puzzleContent {
-    margin-top: 24px;
-}
-
-
-/* =========================================================
-   INPUTS DOS ENIGMAS
-   ========================================================= */
-
-.puzzleContent input {
-    width: 100%;
-
-    padding: 13px 14px;
-
-    color: var(--text);
-
-    background:
-        rgba(0, 0, 0, 0.28);
-
-    border:
-        1px solid
-        rgba(255, 255, 255, 0.14);
-
-    border-radius: 3px;
-
-    outline: none;
-
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 16px;
-
     letter-spacing: 0.15em;
-
-    transition:
-        border-color var(--transition),
-        background var(--transition);
-}
-
-.puzzleContent input:focus {
-    border-color:
-        var(--accent);
-
-    background:
-        rgba(0, 0, 0, 0.4);
-}
-
-.puzzleContent button {
-    margin-top: 13px;
-
-    padding: 12px 18px;
-
-    color: #17120c;
-
-    background:
-        var(--accent);
-
-    border-radius: 3px;
-
-    font-size: 10px;
-
-    font-weight: 800;
-
-    letter-spacing: 0.1em;
-
-    transition:
-        filter var(--transition),
-        transform var(--transition);
-}
-
-.puzzleContent button:hover {
-    filter:
-        brightness(1.08);
-
-    transform:
-        translateY(-1px);
 }
 
 
-/* =========================================================
-   PAUSA
-   ========================================================= */
+/* ============================================================
+   BOTÃO DE PAUSA
+============================================================ */
 
-#pauseScreen {
-    background:
-        rgba(3, 6, 9, 0.72);
+.hud-pause-button {
+    pointer-events: auto;
 
-    backdrop-filter:
-        blur(6px);
+    position: absolute;
 
-    -webkit-backdrop-filter:
-        blur(6px);
-}
+    top: 18px;
+    right: 20px;
 
-.pauseCard,
-.completeCard {
-    width: min(
-        480px,
-        90vw
-    );
+    width: 40px;
+    height: 40px;
 
-    padding: 42px;
-
-    text-align: center;
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(22, 28, 37, 0.98),
-            rgba(10, 14, 20, 0.98)
-        );
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     border:
         1px solid
-        rgba(255, 255, 255, 0.12);
+        rgba(255, 255, 255, 0.11);
 
-    box-shadow:
-        var(--shadow);
+    background:
+        rgba(8, 12, 17, 0.74);
 
-    animation:
-        cardEnter
-        400ms
-        cubic-bezier(
-            0.22,
-            1,
-            0.36,
-            1
-        );
+    color: rgba(255, 255, 255, 0.68);
+
+    font-family: var(--pixel-font);
+
+    font-size: 12px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s ease;
+
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
 }
 
-.smallTitle {
-    margin-bottom: 13px;
+.hud-pause-button:hover {
+    background: rgba(216, 179, 106, 0.12);
+
+    border-color:
+        rgba(216, 179, 106, 0.42);
 
     color: var(--accent-light);
 
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 9px;
-
-    font-weight: 700;
-
-    letter-spacing: 0.2em;
+    transform: translateY(-1px);
 }
 
-.pauseCard h2,
-.completeCard h2 {
-    color: var(--text);
-
-    font-size: 34px;
-
-    line-height: 1.1;
-
-    letter-spacing: -0.03em;
+.hud-pause-button:active {
+    transform: translateY(0);
 }
 
-.pauseCard h2 span {
-    color: var(--accent);
-}
-
-.pauseCard p,
-.completeCard p {
-    margin-top: 14px;
-
-    color: var(--text-soft);
-
-    font-size: 13px;
-
-    line-height: 1.7;
-}
-
-
-/* =========================================================
-   VITÓRIA
-   ========================================================= */
-
-#completeScreen {
-    background:
-        radial-gradient(
-            circle at center,
-            rgba(96, 151, 104, 0.13),
-            rgba(3, 6, 9, 0.85) 60%
-        );
-}
-
-.completeIcon {
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    width: 62px;
-    height: 62px;
-
-    margin: 0 auto 22px;
-
-    color: #0d1710;
-
-    background:
-        var(--success);
-
-    border-radius: 50%;
-
-    font-size: 30px;
-
-    font-weight: 800;
-
-    box-shadow:
-        0 0 40px
-        rgba(117, 185, 130, 0.22);
-}
-
-.completeCard h2 {
-    font-size: 40px;
-}
-
-.finalStats {
-    display: grid;
-
-    grid-template-columns:
-        repeat(2, 1fr);
-
-    gap: 1px;
-
-    margin:
-        27px 0 5px;
-
-    background:
-        rgba(255, 255, 255, 0.08);
-
-    border:
-        1px solid
-        rgba(255, 255, 255, 0.08);
-}
-
-.finalStats div {
-    padding: 15px;
-
-    background:
-        rgba(10, 14, 20, 0.85);
-}
-
-.finalStats span {
-    display: block;
-
-    margin-bottom: 6px;
-
-    color:
-        rgba(255, 255, 255, 0.4);
-
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 7px;
-
-    letter-spacing: 0.16em;
-}
-
-.finalStats strong {
-    color: var(--text);
-
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 13px;
-}
-
-
-/* =========================================================
-   SOM
-   ========================================================= */
-
-.soundIndicator {
-    position: absolute;
-
-    right: 22px;
-    bottom: 20px;
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 7px;
-
-    color:
-        rgba(255, 255, 255, 0.38);
-
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 7px;
-
-    letter-spacing: 0.1em;
-
-    z-index: 15;
-
-    pointer-events: none;
-
-    transition:
-        opacity 300ms ease;
-}
-
-.soundIcon {
-    color: var(--accent);
-
-    font-size: 14px;
-}
-
-
-/* =========================================================
-   LOADING
-   ========================================================= */
-
-.loadingScreen {
-    position: absolute;
-
-    z-index: 100;
-
-    display: flex;
-
-    flex-direction: column;
-
-    align-items: center;
-    justify-content: center;
-
-    background:
-        #080b10;
-
-    transition:
-        opacity 500ms ease,
-        visibility 500ms ease;
-}
-
-.loadingScreen.loaded {
-    opacity: 0;
-
-    visibility: hidden;
-
-    pointer-events: none;
-}
-
-.loadingLogo {
-    margin-bottom: 22px;
-
-    color: var(--text);
-
-    font-size: 18px;
-
-    font-weight: 800;
-
-    letter-spacing: 0.15em;
-}
-
-.loadingBar {
-    width: min(
-        260px,
-        65vw
-    );
-
-    height: 2px;
-
-    overflow: hidden;
-
-    background:
-        rgba(255, 255, 255, 0.1);
-}
-
-.loadingProgress {
-    width: 0%;
-
-    height: 100%;
-
-    background:
-        var(--accent);
-
-    transition:
-        width 250ms ease;
-}
-
-.loadingText {
-    margin-top: 12px;
-
-    color:
-        rgba(255, 255, 255, 0.35);
-
-    font-family:
-        "Space Mono",
-        monospace;
-
-    font-size: 7px;
-
-    letter-spacing: 0.14em;
-}
-
-
-/* =========================================================
-   SCROLLBAR
-   ========================================================= */
-
-.puzzleBox::-webkit-scrollbar {
-    width: 5px;
-}
-
-.puzzleBox::-webkit-scrollbar-track {
-    background:
-        rgba(255, 255, 255, 0.03);
-}
-
-.puzzleBox::-webkit-scrollbar-thumb {
-    background:
-        rgba(217, 168, 95, 0.5);
-
-    border-radius: 10px;
-}
-
-
-/* =========================================================
-   FOCUS
-   ========================================================= */
-
-button:focus-visible,
-input:focus-visible {
+.hud-pause-button:focus-visible {
     outline:
         2px solid
-        var(--accent-light);
+        var(--accent);
 
     outline-offset: 3px;
 }
 
 
-/* =========================================================
-   ANIMAÇÕES
-   ========================================================= */
+/* ============================================================
+   INTERAÇÃO
+============================================================ */
 
-@keyframes menuEnter {
-    from {
-        opacity: 0;
+.interaction-hint {
+    position: absolute;
 
-        transform:
-            translateY(18px)
-            scale(0.98);
-    }
+    left: 50%;
+    bottom: 36px;
 
-    to {
-        opacity: 1;
+    transform: translateX(-50%);
 
-        transform:
-            translateY(0)
-            scale(1);
-    }
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 9px 13px;
+
+    background:
+        rgba(8, 11, 15, 0.82);
+
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.10);
+
+    box-shadow:
+        0 10px 35px rgba(0, 0, 0, 0.35);
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
-@keyframes cardEnter {
-    from {
-        opacity: 0;
+.interaction-hint.visible,
+.interaction-hint.active {
+    opacity: 1;
 
-        transform:
-            translateY(15px)
-            scale(0.98);
-    }
-
-    to {
-        opacity: 1;
-
-        transform:
-            translateY(0)
-            scale(1);
-    }
+    transform:
+        translateX(-50%)
+        translateY(-2px);
 }
 
-@keyframes dialogueEnter {
-    from {
-        opacity: 0;
+.interaction-key {
+    min-width: 27px;
+    height: 27px;
 
-        transform:
-            translateY(18px);
-    }
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    to {
-        opacity: 1;
+    border:
+        1px solid
+        rgba(216, 179, 106, 0.55);
 
-        transform:
-            translateY(0);
-    }
+    background:
+        rgba(216, 179, 106, 0.08);
+
+    color: var(--accent-light);
+
+    font-family: var(--pixel-font);
+
+    font-size: 11px;
+    font-weight: bold;
 }
 
-@keyframes puzzleEnter {
-    from {
-        opacity: 0;
+.interaction-text {
+    color: #c9ced4;
 
-        transform:
-            scale(0.96)
-            translateY(10px);
-    }
+    font-size: 12px;
 
-    to {
-        opacity: 1;
-
-        transform:
-            scale(1)
-            translateY(0);
-    }
-}
-
-
-/* =========================================================
-   DESKTOP GRANDE
-   ========================================================= */
-
-@media (min-width: 1600px) {
-
-    .objectivePanel {
-        top: 32px;
-        left: 32px;
-
-        width: 390px;
-    }
-
-    .hudRight {
-        top: 32px;
-        right: 32px;
-    }
-
-    .interactionHint {
-        bottom: 40px;
-    }
+    letter-spacing: 0.02em;
 }
 
 
-/* =========================================================
-   TABLETS
-   ========================================================= */
+/* ============================================================
+   VINHETA
+============================================================ */
 
-@media (max-width: 900px) {
+.screen-vignette {
+    position: absolute;
+    inset: 0;
 
-    .menuContent {
-        padding:
-            38px 34px 32px;
-    }
+    z-index: 12;
 
-    .menuContent h1 {
-        font-size:
-            clamp(48px, 10vw, 72px);
-    }
+    pointer-events: none;
 
-    .objectivePanel {
-        width: 310px;
+    background:
+        radial-gradient(
+            ellipse at center,
+            transparent 42%,
+            rgba(0, 0, 0, 0.18) 65%,
+            rgba(0, 0, 0, 0.72) 100%
+        );
 
-        top: 15px;
-        left: 15px;
+    opacity: 0.72;
 
-        padding:
-            12px 14px;
-    }
-
-    .hudRight {
-        top: 15px;
-        right: 15px;
-    }
-
-    .interactionHint {
-        bottom: 20px;
-    }
-
-    .soundIndicator {
-        display: none;
-    }
+    mix-blend-mode: multiply;
 }
 
 
-/* =========================================================
-   MOBILE
-   ========================================================= */
+/* ============================================================
+   TRANSIÇÃO
+============================================================ */
 
-@media (max-width: 600px) {
+.scene-transition {
+    position: absolute;
+    inset: 0;
 
-    .screen {
-        padding: 15px;
-    }
+    z-index: 90;
 
-    .menuContent {
-        width: 100%;
+    pointer-events: none;
 
-        padding:
-            34px 24px 28px;
-    }
+    background: #05070a;
 
-    .menuEyebrow {
-        font-size: 8px;
-    }
+    opacity: 0;
 
-    .menuContent h1 {
-        font-size: 54px;
-    }
+    transition: opacity 0.45s ease;
+}
 
-    .menuSubtitle {
-        font-size: 12px;
-    }
-
-    .controlsPreview {
-        gap: 12px;
-    }
-
-    .controlsPreview span {
-        font-size: 7px;
-    }
-
-    .primaryButton {
-        width: 100%;
-
-        min-width: 0;
-    }
-
-    .secondaryButton {
-        width: 100%;
-    }
-
-    .objectivePanel {
-        top: 10px;
-        left: 10px;
-
-        width:
-            calc(100vw - 115px);
-
-        padding:
-            9px 11px;
-    }
-
-    .hudLabel {
-        font-size: 7px;
-    }
-
-    .objectiveText {
-        font-size: 9px;
-
-        line-height: 1.35;
-    }
-
-    .hudRight {
-        top: 10px;
-        right: 10px;
-    }
-
-    .timer {
-        min-width: 60px;
-
-        padding:
-            8px 7px;
-
-        font-size: 9px;
-    }
-
-    .pauseButton {
-        width: 31px;
-        height: 31px;
-    }
-
-    .interactionHint {
-        bottom: 12px;
-
-        padding:
-            7px 10px;
-
-        font-size: 9px;
-    }
-
-    .interactionKey {
-        width: 22px;
-        height: 22px;
-
-        font-size: 8px;
-    }
-
-    .dialogue {
-        padding:
-            0 10px
-            10px;
-    }
-
-    .dialogueBox {
-        width: 100%;
-
-        padding:
-            17px;
-    }
-
-    .dialogueText {
-        font-size: 11px;
-    }
-
-    .dialogueButton {
-        position: static;
-
-        display: block;
-
-        margin:
-            15px 0 0 auto;
-    }
-
-    .puzzleBox {
-        padding:
-            27px 20px 22px;
-    }
-
-    .puzzleTitle {
-        font-size: 22px;
-    }
-
-    .puzzleDescription {
-        font-size: 11px;
-    }
-
-    .pauseCard,
-    .completeCard {
-        width: 100%;
-
-        padding: 30px 22px;
-    }
-
-    .pauseCard h2,
-    .completeCard h2 {
-        font-size: 28px;
-    }
-
-    .completeIcon {
-        width: 52px;
-        height: 52px;
-
-        font-size: 24px;
-    }
+.scene-transition.active {
+    opacity: 1;
 }
 
 
-/* =========================================================
-   MOBILE PEQUENO
-   ========================================================= */
+/* ============================================================
+   TELAS GERAIS
+============================================================ */
 
-@media (max-width: 380px) {
+.game-screen {
+    position: absolute;
+    inset: 0;
 
-    .menuContent {
-        padding:
-            27px 18px 22px;
-    }
+    z-index: 50;
 
-    .menuContent h1 {
-        font-size: 45px;
-    }
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    .controlsPreview {
-        gap: 8px;
-    }
+    opacity: 0;
+    visibility: hidden;
 
-    .controlsPreview kbd {
-        min-width: 35px;
+    pointer-events: none;
 
-        height: 24px;
+    transition:
+        opacity 0.35s ease,
+        visibility 0.35s ease;
+}
 
-        font-size: 7px;
-    }
+.game-screen.active,
+.game-screen.visible {
+    opacity: 1;
+    visibility: visible;
 
-    .menuWarning {
-        font-size: 6px;
-    }
+    pointer-events: auto;
 }
 
 
-/* =========================================================
-   ALTURA MUITO PEQUENA
-   ========================================================= */
+/* ============================================================
+   MENU INICIAL
+============================================================ */
 
-@media (max-height: 600px) {
+.menu-screen {
+    overflow: hidden;
 
-    .menuContent {
-        padding:
-            24px 35px;
-    }
-
-    .menuContent h1 {
-        font-size: 48px;
-    }
-
-    .menuDivider {
-        margin:
-            15px auto;
-    }
-
-    .menuSubtitle {
-        font-size: 11px;
-    }
-
-    .primaryButton {
-        margin-top: 18px;
-    }
-
-    .controlsPreview {
-        margin-top: 18px;
-    }
-
-    .menuWarning {
-        margin-top: 16px;
-    }
+    background:
+        radial-gradient(
+            circle at 50% 48%,
+            rgba(60, 71, 84, 0.15),
+            transparent 34%
+        ),
+        linear-gradient(
+            180deg,
+            rgba(3, 5, 8, 0.76),
+            rgba(3, 5, 8, 0.94)
+        );
 }
 
 
-/* =========================================================
-   TOUCH
-   ========================================================= */
+/* atmosfera do menu */
 
-@media (hover: none) {
+.menu-atmosphere {
+    position: absolute;
+    inset: 0;
 
-    .primaryButton:hover {
-        transform: none;
+    pointer-events: none;
 
-        filter: none;
+    background:
+        radial-gradient(
+            circle at 50% 45%,
+            rgba(216, 179, 106, 0.045),
+            transparent 28%
+        );
 
-        box-shadow:
-            0 10px 25px
-            rgba(0, 0, 0, 0.25);
-    }
-
-    .primaryButton:hover strong {
-        transform: none;
-    }
-
-    .pauseButton:hover {
-        transform: none;
-
-        background:
-            rgba(9, 13, 18, 0.82);
-    }
+    opacity: 0.9;
 }
 
 
-/* =========================================================
+/* conteúdo */
+
+.menu-content {
+    position: relative;
+
+    width: min(90%, 530px);
+
+    padding: 42px 46px 38px;
+
+    text-align: center;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(12, 16, 22, 0.94),
+            rgba(7, 10, 14, 0.91)
+        );
+
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.075);
+
+    box-shadow:
+        0 35px 90px rgba(0, 0, 0, 0.55);
+
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+
+/* pequena linha superior */
+
+.menu-content::before {
+    content: "";
+
+    position: absolute;
+
+    top: -1px;
+    left: 50%;
+
+    width: 100px;
+    height: 2px;
+
+    transform: translateX(-50%);
+
+    background:
+        var(--accent);
+
+    opacity: 0.75;
+}
+
+
+/* título pequeno */
+
+.menu-eyebrow {
+    margin-bottom: 13px;
+
+    color: #78818c;
+
+    font-family: var(--pixel-font);
+
+    font-size: 8px;
+    font-weight: bold;
+
+    letter-spacing: 0.24em;
+}
+
+
+/* título */
+
+.game-title {
+    color: #f2f0e9;
+
+    font-family: var(--pixel-font);
+
+    font-size: clamp(42px, 7vw, 68px);
+
+    font-weight: 900;
+
+    line-height: 0.9;
+
+    letter-spacing: 0.08em;
+
+    text-shadow:
+        0 5px 0 rgba(0, 0, 0, 0.35),
+        0 12px 35px rgba(0, 0, 0, 0.55);
+}
+
+
+/* subtítulo */
+
+.game-subtitle {
+    margin-top: 13px;
+
+    color: var(--accent);
+
+    font-family: var(--pixel-font);
+
+    font-size: 11px;
+
+    letter-spacing: 0.08em;
+
+    opacity: 0.92;
+}
+
+
+/* divisor */
+
+.menu-divider {
+    width: 80px;
+    height: 1px;
+
+    margin: 27px auto 22px;
+
+    background:
+        rgba(216, 179, 106, 0.52);
+}
+
+
+/* descrição */
+
+.menu-description {
+    max-width: 380px;
+
+    margin: 0 auto 28px;
+
+    color: #aab1b8;
+
+    font-size: 13px;
+
+    line-height: 1.75;
+
+    letter-spacing: 0.015em;
+}
+
+
+/* ============================================================
+   BOTÕES
+============================================================ */
+
+.game-button {
+    min-width: 190px;
+
+    min-height: 46px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 9px;
+
+    padding: 12px 22px;
+
+    border: 1px solid transparent;
+
+    font-family: var(--pixel-font);
+
+    font-size: 10px;
+    font-weight: bold;
+
+    letter-spacing: 0.13em;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        color 0.18s ease;
+}
+
+.game-button:hover {
+    transform: translateY(-2px);
+}
+
+.game-button:active {
+    transform: translateY(0);
+}
+
+.game-button:focus-visible {
+    outline:
+        2px solid
+        var(--accent);
+
+    outline-offset: 3px;
+}
+
+
+.game-button-primary {
+    background:
+        linear-gradient(
+            180deg,
+            #d9b66e,
+            #b28c4d
+        );
+
+    border-color:
+        rgba(240, 216, 154, 0.55);
+
+    color: #16130e;
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.28);
+}
+
+.game-button-primary:hover {
+    background:
+        linear-gradient(
+            180deg,
+            #e8cb8a,
+            #c39b58
+        );
+
+    box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.38);
+}
+
+
+.game-button-secondary {
+    background:
+        rgba(255, 255, 255, 0.035);
+
+    border-color:
+        rgba(255, 255, 255, 0.12);
+
+    color: #c7ccd1;
+}
+
+.game-button-secondary:hover {
+    background:
+        rgba(255, 255, 255, 0.07);
+
+    border-color:
+        rgba(255, 255, 255, 0.2);
+
+    color: #ffffff;
+}
+
+.button-icon {
+    font-size: 9px;
+}
+
+
+/* ============================================================
+   CONTROLES
+============================================================ */
+
+.controls-preview {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    gap: 18px;
+
+    margin-top: 27px;
+}
+
+.control-item {
+    display: flex;
+    align-items: center;
+
+    gap: 6px;
+
+    color: #6f7882;
+
+    font-size: 9px;
+}
+
+.control-key {
+    padding: 4px 6px;
+
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.10);
+
+    background:
+        rgba(255, 255, 255, 0.035);
+
+    color: #9fa7b0;
+
+    font-family: var(--pixel-font);
+
+    font-size: 8px;
+
+    letter-spacing: 0.05em;
+}
+
+
+/* aviso */
+
+.menu-warning {
+    margin-top: 25px;
+
+    color: #555e68;
+
+    font-size: 8px;
+
+    letter-spacing: 0.04em;
+}
+
+
+/* ============================================================
+   PAUSA
+============================================================ */
+
+.pause-screen,
+.completion-screen {
+    background:
+        rgba(3, 5, 8, 0.72);
+
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.pause-content,
+.completion-content {
+    width: min(90%, 430px);
+
+    padding: 38px 40px;
+
+    text-align: center;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(13, 18, 24, 0.97),
+            rgba(7, 10, 14, 0.97)
+        );
+
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.08);
+
+    box-shadow:
+        0 35px 90px rgba(0, 0, 0, 0.65);
+}
+
+.pause-eyebrow,
+.completion-eyebrow {
+    color: var(--accent);
+
+    font-family: var(--pixel-font);
+
+    font-size: 8px;
+
+    font-weight: bold;
+
+    letter-spacing: 0.19em;
+}
+
+.screen-title {
+    margin-top: 13px;
+
+    color: #f1f1ed;
+
+    font-family: var(--pixel-font);
+
+    font-size: clamp(28px, 5vw, 42px);
+
+    line-height: 1;
+
+    letter-spacing: 0.08em;
+}
+
+.screen-description {
+    margin: 16px auto 26px;
+
+    color: #8e97a0;
+
+    font-size: 12px;
+
+    line-height: 1.6;
+}
+
+.screen-actions {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 9px;
+}
+
+
+/* ============================================================
+   CONCLUSÃO
+============================================================ */
+
+.completion-screen {
+    overflow: hidden;
+}
+
+.completion-glow {
+    position: absolute;
+    inset: 0;
+
+    pointer-events: none;
+
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(114, 164, 119, 0.08),
+            transparent 34%
+        );
+}
+
+.completion-symbol {
+    width: 58px;
+    height: 58px;
+
+    margin: 0 auto 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border:
+        1px solid
+        rgba(114, 164, 119, 0.45);
+
+    border-radius: 50%;
+
+    color: #a4c5a8;
+
+    font-size: 24px;
+
+    box-shadow:
+        0 0 35px rgba(114, 164, 119, 0.10);
+}
+
+.completion-time-wrapper {
+    margin:
+        24px
+        auto
+        27px;
+
+    padding:
+        13px
+        20px;
+
+    border-top:
+        1px solid
+        rgba(255, 255, 255, 0.07);
+
+    border-bottom:
+        1px solid
+        rgba(255, 255, 255, 0.07);
+}
+
+.completion-time-label {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: #646d77;
+
+    font-family: var(--pixel-font);
+
+    font-size: 7px;
+
+    letter-spacing: 0.18em;
+}
+
+.completion-time {
+    color: #e4d3a8;
+
+    font-family: var(--pixel-font);
+
+    font-size: 24px;
+
+    letter-spacing: 0.08em;
+}
+
+
+/* ============================================================
+   MENSAGENS
+============================================================ */
+
+.message-container {
+    position: absolute;
+    inset: 0;
+
+    z-index: 70;
+
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+
+    padding:
+        25px
+        25px
+        42px;
+
+    background:
+        linear-gradient(
+            180deg,
+            transparent 55%,
+            rgba(0, 0, 0, 0.42)
+        );
+
+    opacity: 0;
+    visibility: hidden;
+
+    pointer-events: none;
+
+    transition:
+        opacity 0.22s ease,
+        visibility 0.22s ease;
+}
+
+.message-container.active,
+.message-container.visible {
+    opacity: 1;
+    visibility: visible;
+
+    pointer-events: auto;
+}
+
+.message-box {
+    position: relative;
+
+    width: min(760px, 94%);
+
+    padding: 18px 22px 17px 25px;
+
+    background:
+        rgba(9, 13, 18, 0.94);
+
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.09);
+
+    box-shadow:
+        0 18px 55px rgba(0, 0, 0, 0.52);
+
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+}
+
+.message-accent {
+    position: absolute;
+
+    left: 0;
+    top: 0;
+    bottom: 0;
+
+    width: 2px;
+
+    background:
+        var(--accent);
+}
+
+.message-title {
+    margin-bottom: 7px;
+
+    color: var(--accent-light);
+
+    font-family: var(--pixel-font);
+
+    font-size: 9px;
+    font-weight: bold;
+
+    letter-spacing: 0.13em;
+}
+
+.message-text {
+    color: #d0d5da;
+
+    font-size: 13px;
+
+    line-height: 1.65;
+
+    max-width: 650px;
+}
+
+.message-continue {
+    margin-top: 12px;
+
+    padding: 5px 0;
+
+    border: 0;
+
+    background: transparent;
+
+    color: #747e88;
+
+    font-family: var(--pixel-font);
+
+    font-size: 8px;
+
+    letter-spacing: 0.12em;
+
+    cursor: pointer;
+}
+
+.message-continue:hover {
+    color: var(--accent);
+}
+
+
+/* ============================================================
+   TERMINAL
+============================================================ */
+
+.terminal-overlay,
+.puzzle-overlay {
+    position: absolute;
+    inset: 0;
+
+    z-index: 80;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background:
+        rgba(2, 4, 7, 0.78);
+
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+
+    opacity: 0;
+    visibility: hidden;
+
+    pointer-events: none;
+
+    transition:
+        opacity 0.25s ease,
+        visibility 0.25s ease;
+}
+
+.terminal-overlay.active,
+.terminal-overlay.visible,
+.puzzle-overlay.active,
+.puzzle-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+
+    pointer-events: auto;
+}
+
+
+/* janela */
+
+.terminal-window,
+.puzzle-window {
+    width: min(92%, 560px);
+
+    background:
+        #0a0f14;
+
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.10);
+
+    box-shadow:
+        0 35px 100px rgba(0, 0, 0, 0.72);
+}
+
+
+/* cabeçalho */
+
+.terminal-header,
+.puzzle-header {
+    min-height: 52px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 17px;
+
+    border-bottom:
+        1px solid
+        rgba(255, 255, 255, 0.07);
+
+    background:
+        rgba(255, 255, 255, 0.025);
+}
+
+.terminal-status {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    color: #8d969f;
+
+    font-family: var(--pixel-font);
+
+    font-size: 8px;
+
+    letter-spacing: 0.12em;
+}
+
+.terminal-status-light {
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+
+    background: #79a77e;
+
+    box-shadow:
+        0 0 9px rgba(121, 167, 126, 0.65);
+}
+
+.terminal-close,
+.puzzle-close {
+    width: 30px;
+    height: 30px;
+
+    border: 0;
+
+    background: transparent;
+
+    color: #68717b;
+
+    font-size: 22px;
+
+    cursor: pointer;
+}
+
+.terminal-close:hover,
+.puzzle-close:hover {
+    color: #ffffff;
+}
+
+
+/* ============================================================
+   TERMINAL BODY
+============================================================ */
+
+.terminal-body {
+    padding: 27px;
+}
+
+.terminal-label {
+    color: #59636d;
+
+    font-family: var(--pixel-font);
+
+    font-size: 8px;
+
+    letter-spacing: 0.12em;
+}
+
+.terminal-prompt {
+    margin-top: 23px;
+
+    color: #c5ccd2;
+
+    font-family: var(--pixel-font);
+
+    font-size: 11px;
+
+    letter-spacing: 0.08em;
+}
+
+.terminal-display {
+    min-height: 52px;
+
+    margin:
+        12px
+        0
+        17px;
+
+    display: flex;
+    align-items: center;
+
+    padding: 0 15px;
+
+    background:
+        #05090d;
+
+    border:
+        1px solid
+        rgba(120, 149, 184, 0.18);
+
+    color: #a5c4df;
+
+    font-family: var(--pixel-font);
+
+    font-size: 21px;
+
+    letter-spacing: 0.28em;
+
+    box-shadow:
+        inset 0 0 25px rgba(0, 0, 0, 0.42);
+}
+
+.terminal-feedback {
+    min-height: 18px;
+
+    margin-bottom: 14px;
+
+    color: #b66c6c;
+
+    font-family: var(--pixel-font);
+
+    font-size: 8px;
+
+    letter-spacing: 0.06em;
+}
+
+
+/* teclado */
+
+.terminal-keypad {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 7px;
+}
+
+.terminal-key {
+    min-height: 42px;
+
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.08);
+
+    background:
+        rgba(255, 255, 255, 0.035);
+
+    color: #b8c0c7;
+
+    font-family: var(--pixel-font);
+
+    font-size: 10px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.terminal-key:hover {
+    background:
+        rgba(216, 179, 106, 0.08);
+
+    border-color:
+        rgba(216, 179, 106, 0.35);
+
+    color: var(--accent-light);
+}
+
+.terminal-key:active {
+    transform: scale(0.98);
+}
+
+.terminal-key-clear {
+    color: #a26d6d;
+}
+
+.terminal-key-enter {
+    color: #88aa8c;
+}
+
+
+/* ============================================================
+   PUZZLE
+============================================================ */
+
+.puzzle-header {
+    align-items: center;
+}
+
+.puzzle-eyebrow {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: var(--accent);
+
+    font-family: var(--pixel-font);
+
+    font-size: 7px;
+
+    letter-spacing: 0.15em;
+}
+
+.puzzle-title {
+    color: #e6e8e9;
+
+    font-family: var(--pixel-font);
+
+    font-size: 16px;
+
+    letter-spacing: 0.06em;
+}
+
+.puzzle-body {
+    padding: 27px;
+}
+
+.puzzle-question {
+    color: #cdd2d6;
+
+    font-size: 14px;
+
+    line-height: 1.7;
+}
+
+.puzzle-options {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+
+    margin-top: 22px;
+}
+
+.puzzle-option {
+    width: 100%;
+
+    padding: 12px 14px;
+
+    text-align: left;
+
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.08);
+
+    background:
+        rgba(255, 255, 255, 0.025);
+
+    color: #b9c0c6;
+
+    font-family: var(--ui-font);
+
+    font-size: 12px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease,
+        transform 0.15s ease;
+}
+
+.puzzle-option:hover {
+    background:
+        rgba(216, 179, 106, 0.065);
+
+    border-color:
+        rgba(216, 179, 106, 0.32);
+
+    color: #e5e7e8;
+
+    transform: translateX(3px);
+}
+
+.puzzle-option.correct {
+    border-color:
+        rgba(114, 164, 119, 0.55);
+
+    background:
+        rgba(114, 164, 119, 0.10);
+
+    color: #afd0b2;
+}
+
+.puzzle-option.wrong {
+    border-color:
+        rgba(182, 93, 93, 0.55);
+
+    background:
+        rgba(182, 93, 93, 0.08);
+
+    color: #d59b9b;
+}
+
+.puzzle-feedback {
+    min-height: 20px;
+
+    margin-top: 16px;
+
+    color: #818a94;
+
+    font-size: 11px;
+
+    line-height: 1.5;
+}
+
+
+/* ============================================================
+   LOADING
+============================================================ */
+
+.loading-screen {
+    position: absolute;
+    inset: 0;
+
+    z-index: 200;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #07090d;
+
+    transition:
+        opacity 0.5s ease,
+        visibility 0.5s ease;
+}
+
+.loading-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+
+    pointer-events: none;
+}
+
+.loading-content {
+    width: min(80%, 300px);
+
+    text-align: center;
+}
+
+.loading-mark {
+    width: 45px;
+    height: 45px;
+
+    margin: 0 auto 17px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border:
+        1px solid
+        rgba(216, 179, 106, 0.38);
+
+    color: var(--accent);
+
+    font-family: var(--pixel-font);
+
+    font-size: 18px;
+}
+
+.loading-title {
+    margin-bottom: 22px;
+
+    color: #c9cdd0;
+
+    font-family: var(--pixel-font);
+
+    font-size: 11px;
+
+    letter-spacing: 0.18em;
+}
+
+.loading-bar {
+    width: 100%;
+    height: 2px;
+
+    overflow: hidden;
+
+    background:
+        rgba(255, 255, 255, 0.08);
+}
+
+.loading-progress {
+    width: 0%;
+    height: 100%;
+
+    background:
+        var(--accent);
+
+    transition:
+        width 0.25s ease;
+}
+
+.loading-text {
+    margin-top: 12px;
+
+    color: #58616b;
+
+    font-family: var(--pixel-font);
+
+    font-size: 7px;
+
+    letter-spacing: 0.08em;
+}
+
+
+/* ============================================================
+   ERRO
+============================================================ */
+
+.game-error {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    transform:
+        translate(-50%, -50%);
+
+    z-index: 300;
+
+    width: min(90%, 500px);
+
+    padding: 28px;
+
+    text-align: center;
+
+    background:
+        #0d1117;
+
+    border:
+        1px solid
+        rgba(182, 93, 93, 0.35);
+
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.65);
+}
+
+.game-error[hidden] {
+    display: none;
+}
+
+.game-error-title {
+    margin-bottom: 10px;
+
+    color: #d59494;
+
+    font-family: var(--pixel-font);
+
+    font-size: 12px;
+
+    letter-spacing: 0.12em;
+}
+
+.game-error-message {
+    margin-bottom: 20px;
+
+    color: #939ca5;
+
+    font-size: 12px;
+
+    line-height: 1.6;
+}
+
+
+/* ============================================================
+   NOSCRIPT
+============================================================ */
+
+.noscript-message {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 9999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 30px;
+
+    background: #07090d;
+
+    color: #ffffff;
+
+    font-family: var(--ui-font);
+
+    text-align: center;
+}
+
+
+/* ============================================================
+   SELEÇÃO / FOCUS
+============================================================ */
+
+button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button:focus {
+    outline: none;
+}
+
+
+/* ============================================================
    REDUÇÃO DE MOVIMENTO
-   ========================================================= */
+============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
 
     *,
     *::before,
     *::after {
-        animation-duration: 0.01ms !important;
-
-        animation-iteration-count: 1 !important;
-
         scroll-behavior: auto !important;
 
-        transition-duration: 0.01ms !important;
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+
+        transition-duration: 0.001ms !important;
     }
 }
 
 
-/* =========================================================
-   SAFE AREA
-   ========================================================= */
+/* ============================================================
+   TELAS MENORES
+============================================================ */
 
-@supports (
-    padding:
-        env(safe-area-inset-top)
-) {
+@media (max-width: 700px) {
 
-    .objectivePanel {
-        margin-top:
-            env(safe-area-inset-top);
+    .hud-objective {
+        top: 12px;
+        left: 12px;
+
+        width: 230px;
+
+        padding: 9px 11px;
     }
 
-    .hudRight {
-        margin-top:
-            env(safe-area-inset-top);
+    .hud-objective-label {
+        font-size: 7px;
     }
 
-    .interactionHint {
-        margin-bottom:
-            env(safe-area-inset-bottom);
-    }
-}
-
-
-/* =========================================================
-   IMPRESSÃO
-   ========================================================= */
-
-@media print {
-
-    body {
-        background: #ffffff;
+    .hud-objective-text {
+        font-size: 10px;
     }
 
-    #gameContainer {
+    .hud-status {
         display: none;
+    }
+
+    .hud-pause-button {
+        top: 12px;
+        right: 12px;
+
+        width: 34px;
+        height: 34px;
+    }
+
+    .interaction-hint {
+        bottom: 18px;
+    }
+
+    .menu-content {
+        padding:
+            32px
+            24px
+            28px;
+    }
+
+    .menu-description {
+        font-size: 11px;
+    }
+
+    .controls-preview {
+        gap: 9px;
+    }
+
+    .control-item {
+        font-size: 8px;
+    }
+
+    .message-container {
+        padding:
+            15px
+            12px
+            20px;
+    }
+
+    .message-box {
+        padding:
+            15px
+            17px
+            14px
+            20px;
+    }
+
+    .message-text {
+        font-size: 11px;
+    }
+
+    .terminal-body,
+    .puzzle-body {
+        padding: 20px;
+    }
+}
+
+
+/* ============================================================
+   CELULAR
+============================================================ */
+
+@media (max-width: 480px) {
+
+    .hud-objective {
+        width: 195px;
+    }
+
+    .interaction-hint {
+        bottom: 13px;
+    }
+
+    .game-title {
+        font-size: 40px;
+    }
+
+    .game-subtitle {
+        font-size: 8px;
+    }
+
+    .menu-divider {
+        margin:
+            20px
+            auto
+            16px;
+    }
+
+    .menu-description {
+        margin-bottom: 20px;
+    }
+
+    .controls-preview {
+        display: none;
+    }
+
+    .menu-warning {
+        margin-top: 18px;
+    }
+
+    .pause-content,
+    .completion-content {
+        padding:
+            30px
+            23px;
+    }
+
+    .terminal-key {
+        min-height: 38px;
+    }
+}
+
+
+/* ============================================================
+   ALTURA PEQUENA
+============================================================ */
+
+@media (max-height: 600px) {
+
+    .menu-content {
+        padding:
+            24px
+            30px;
+    }
+
+    .game-title {
+        font-size: 42px;
+    }
+
+    .menu-divider {
+        margin:
+            16px
+            auto;
+    }
+
+    .menu-description {
+        margin-bottom: 18px;
+    }
+
+    .controls-preview {
+        margin-top: 17px;
+    }
+
+    .menu-warning {
+        margin-top: 14px;
+    }
+}
+
+
+/* ============================================================
+   TOUCH
+============================================================ */
+
+@media (hover: none) {
+
+    .game-button:hover {
+        transform: none;
+    }
+
+    .terminal-key:hover,
+    .puzzle-option:hover,
+    .hud-pause-button:hover {
+        transform: none;
     }
 }

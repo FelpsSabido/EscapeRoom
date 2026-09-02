@@ -9,143 +9,142 @@
     >
 
     <meta
-        name="theme-color"
-        content="#10151c"
-    >
-
-    <meta
         name="description"
-        content="Escape Room - Sala de Aula"
+        content="Escape Room — uma aventura escolar em pixel art."
     >
 
-    <title>ESCAPE ROOM — Sala de Aula</title>
+    <meta name="theme-color" content="#080b10">
 
-    <link
-        rel="stylesheet"
-        href="./style.css"
-    >
+    <title>ESCAPE ROOM — A Sala</title>
+
+    <!-- =========================================================
+         CSS
+    ========================================================== -->
+
+    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./animations.css">
+    <link rel="stylesheet" href="./responsive.css">
+
 </head>
 
 <body>
 
-    <main id="gameContainer">
+    <!-- =========================================================
+         APLICAÇÃO
+    ========================================================== -->
 
-        <canvas
-            id="gameCanvas"
-            width="1280"
-            height="720"
-            tabindex="0"
-            aria-label="Escape Room interativo"
-        ></canvas>
+    <main id="app">
 
-
-        <!-- ============================= -->
-        <!-- MENU PRINCIPAL -->
-        <!-- ============================= -->
+        <!-- =====================================================
+             ÁREA DO JOGO
+        ====================================================== -->
 
         <section
-            id="menuScreen"
-            class="screen active"
+            id="gameContainer"
+            class="game-container"
+            aria-label="Área principal do jogo"
         >
 
-            <div class="menuAtmosphere"></div>
+            <!-- =================================================
+                 CANVAS PRINCIPAL
 
-            <div class="menuContent">
+                 O mundo inteiro será desenhado aqui:
+                 cenário
+                 personagem
+                 sombras
+                 iluminação
+                 partículas
+                 objetos
+                 enigmas
+                 efeitos
+                 câmera
+            ================================================== -->
 
-                <div class="menuEyebrow">
-                    EXPERIÊNCIA INTERATIVA
-                </div>
-
-                <h1>
-                    ESCAPE
-                    <span>ROOM</span>
-                </h1>
-
-                <div class="menuDivider"></div>
-
-                <p class="menuSubtitle">
-                    A sala está trancada.
-                    <br>
-                    Você precisa descobrir como sair.
-                </p>
-
-                <button
-                    id="startButton"
-                    class="primaryButton"
-                    type="button"
-                >
-                    <span>ENTRAR NA SALA</span>
-                    <strong>→</strong>
-                </button>
-
-                <div class="controlsPreview">
-
-                    <div>
-                        <kbd>W A S D</kbd>
-                        <span>Mover</span>
-                    </div>
-
-                    <div>
-                        <kbd>E</kbd>
-                        <span>Interagir</span>
-                    </div>
-
-                    <div>
-                        <kbd>ESC</kbd>
-                        <span>Pausar</span>
-                    </div>
-
-                </div>
-
-                <div class="menuWarning">
-                    USE FONES DE OUVIDO PARA UMA EXPERIÊNCIA MELHOR
-                </div>
-
-            </div>
-
-        </section>
+            <canvas
+                id="gameCanvas"
+                width="960"
+                height="540"
+                tabindex="0"
+                role="application"
+                aria-label="Escape Room"
+            ></canvas>
 
 
-        <!-- ============================= -->
-        <!-- HUD -->
-        <!-- ============================= -->
+            <!-- =================================================
+                 HUD
+            ================================================== -->
 
-        <section
-            id="hud"
-            class="hud hidden"
-        >
+            <div id="hud" class="hud">
 
-            <div
-                id="objectivePanel"
-                class="hudPanel objectivePanel"
-            >
-
-                <div class="hudLabel">
-                    OBJETIVO
-                </div>
+                <!-- Objetivo -->
 
                 <div
-                    id="objectiveText"
-                    class="objectiveText"
+                    id="objectivePanel"
+                    class="hud-objective"
+                    aria-live="polite"
                 >
-                    Investigue a sala.
+
+                    <div class="hud-objective-label">
+                        OBJETIVO
+                    </div>
+
+                    <div
+                        id="objectiveText"
+                        class="hud-objective-text"
+                    >
+                        Explore a sala.
+                    </div>
+
                 </div>
 
-            </div>
 
-
-            <div class="hudRight">
+                <!-- Indicador de interação -->
 
                 <div
-                    id="timer"
-                    class="timer"
+                    id="interactionHint"
+                    class="interaction-hint"
+                    aria-live="polite"
                 >
-                    00:00
+
+                    <span
+                        id="interactionKey"
+                        class="interaction-key"
+                    >
+                        E
+                    </span>
+
+                    <span
+                        id="interactionText"
+                        class="interaction-text"
+                    >
+                        Interagir
+                    </span>
+
                 </div>
+
+
+                <!-- Indicador de estado -->
+
+                <div
+                    id="statusPanel"
+                    class="hud-status"
+                >
+
+                    <div
+                        id="statusText"
+                        class="hud-status-text"
+                    >
+                        SISTEMA ONLINE
+                    </div>
+
+                </div>
+
+
+                <!-- Botão de pausa -->
 
                 <button
                     id="pauseButton"
-                    class="pauseButton"
+                    class="hud-pause-button"
                     type="button"
                     aria-label="Pausar jogo"
                 >
@@ -155,272 +154,591 @@
             </div>
 
 
+            <!-- =================================================
+                 VINHETA / EFEITO DE ESCURIDÃO
+
+                 O jogo poderá utilizar este elemento apenas
+                 para efeitos cinematográficos.
+            ================================================== -->
+
             <div
-                id="interactionHint"
-                class="interactionHint hidden"
+                id="screenVignette"
+                class="screen-vignette"
+                aria-hidden="true"
+            ></div>
+
+
+            <!-- =================================================
+                 TRANSIÇÃO DE CENA
+            ================================================== -->
+
+            <div
+                id="sceneTransition"
+                class="scene-transition"
+                aria-hidden="true"
+            ></div>
+
+
+            <!-- =================================================
+                 MENU INICIAL
+            ================================================== -->
+
+            <section
+                id="menuScreen"
+                class="game-screen menu-screen"
+                aria-label="Menu inicial"
             >
 
-                <span class="interactionKey">
-                    E
-                </span>
+                <div class="menu-atmosphere"></div>
 
-                <span id="interactionText">
-                    Interagir
-                </span>
+                <div class="menu-content">
 
-            </div>
+                    <div class="menu-eyebrow">
+                        PROJETO ESCOLAR • ESCAPE ROOM
+                    </div>
 
-        </section>
+                    <h1 class="game-title">
+                        A SALA
+                    </h1>
 
+                    <div class="game-subtitle">
+                        Você deveria estar em casa.
+                    </div>
 
-        <!-- ============================= -->
-        <!-- CAIXA DE DIÁLOGO -->
-        <!-- ============================= -->
+                    <div class="menu-divider"></div>
 
-        <section
-            id="dialogue"
-            class="dialogue hidden"
-        >
+                    <p class="menu-description">
+                        As luzes se apagaram.
+                        A porta está trancada.
+                        E alguma coisa parece estar errada.
+                    </p>
 
-            <div class="dialogueBox">
+                    <button
+                        id="startButton"
+                        class="game-button game-button-primary"
+                        type="button"
+                    >
+                        <span class="button-icon">▶</span>
+                        <span>COMEÇAR</span>
+                    </button>
 
-                <div
-                    id="dialogueTitle"
-                    class="dialogueTitle"
-                >
-                    INVESTIGAÇÃO
+                    <div class="controls-preview">
+
+                        <div class="control-item">
+                            <span class="control-key">W A S D</span>
+                            <span>Movimentar</span>
+                        </div>
+
+                        <div class="control-item">
+                            <span class="control-key">E</span>
+                            <span>Interagir</span>
+                        </div>
+
+                        <div class="control-item">
+                            <span class="control-key">ESC</span>
+                            <span>Pausar</span>
+                        </div>
+
+                    </div>
+
+                    <div class="menu-warning">
+                        Use fones de ouvido para uma experiência melhor.
+                    </div>
+
                 </div>
 
-                <div
-                    id="dialogueText"
-                    class="dialogueText"
-                >
+            </section>
+
+
+            <!-- =================================================
+                 PAUSA
+            ================================================== -->
+
+            <section
+                id="pauseScreen"
+                class="game-screen pause-screen"
+                aria-label="Jogo pausado"
+                aria-hidden="true"
+            >
+
+                <div class="pause-content">
+
+                    <div class="pause-eyebrow">
+                        SISTEMA INTERROMPIDO
+                    </div>
+
+                    <h2 class="screen-title">
+                        PAUSADO
+                    </h2>
+
+                    <p class="screen-description">
+                        A sala continua esperando.
+                    </p>
+
+                    <div class="screen-actions">
+
+                        <button
+                            id="resumeButton"
+                            class="game-button game-button-primary"
+                            type="button"
+                        >
+                            CONTINUAR
+                        </button>
+
+                        <button
+                            id="pauseRestartButton"
+                            class="game-button game-button-secondary"
+                            type="button"
+                        >
+                            REINICIAR
+                        </button>
+
+                    </div>
+
                 </div>
 
-                <button
-                    id="dialogueContinue"
-                    class="dialogueButton"
-                    type="button"
-                >
-                    CONTINUAR
-                </button>
-
-            </div>
-
-        </section>
+            </section>
 
 
-        <!-- ============================= -->
-        <!-- PAINEL DO ENIGMA -->
-        <!-- ============================= -->
+            <!-- =================================================
+                 TELA DE CONCLUSÃO
+            ================================================== -->
 
-        <section
-            id="puzzleModal"
-            class="modal hidden"
-        >
+            <section
+                id="completionScreen"
+                class="game-screen completion-screen"
+                aria-label="Fase concluída"
+                aria-hidden="true"
+            >
 
-            <div class="puzzleBox">
+                <div class="completion-glow"></div>
 
-                <button
-                    id="puzzleClose"
-                    class="modalClose"
-                    type="button"
-                    aria-label="Fechar"
-                >
-                    ×
-                </button>
+                <div class="completion-content">
 
-                <div
-                    id="puzzleCategory"
-                    class="puzzleCategory"
-                >
-                    ENIGMA
-                </div>
+                    <div class="completion-symbol">
+                        ✓
+                    </div>
 
-                <h2
-                    id="puzzleTitle"
-                    class="puzzleTitle"
-                >
-                    Código
-                </h2>
+                    <div class="completion-eyebrow">
+                        SISTEMA DESBLOQUEADO
+                    </div>
 
-                <p
-                    id="puzzleDescription"
-                    class="puzzleDescription"
-                >
-                </p>
+                    <h2 class="screen-title">
+                        VOCÊ ESCAPOU
+                    </h2>
 
-                <div
-                    id="puzzleContent"
-                    class="puzzleContent"
-                >
-                </div>
+                    <p class="screen-description">
+                        A porta finalmente se abriu.
+                    </p>
 
-            </div>
+                    <div class="completion-time-wrapper">
 
-        </section>
-
-
-        <!-- ============================= -->
-        <!-- PAUSA -->
-        <!-- ============================= -->
-
-        <section
-            id="pauseScreen"
-            class="screen hidden"
-        >
-
-            <div class="pauseCard">
-
-                <div class="smallTitle">
-                    JOGO PAUSADO
-                </div>
-
-                <h2>
-                    Você ainda está
-                    <span>preso.</span>
-                </h2>
-
-                <p>
-                    As pistas continuam esperando por você.
-                </p>
-
-                <button
-                    id="resumeButton"
-                    class="primaryButton"
-                    type="button"
-                >
-                    CONTINUAR
-                </button>
-
-                <button
-                    id="restartButton"
-                    class="secondaryButton"
-                    type="button"
-                >
-                    RECOMEÇAR
-                </button>
-
-            </div>
-
-        </section>
-
-
-        <!-- ============================= -->
-        <!-- VITÓRIA -->
-        <!-- ============================= -->
-
-        <section
-            id="completeScreen"
-            class="screen hidden"
-        >
-
-            <div class="completeCard">
-
-                <div class="completeIcon">
-                    ✓
-                </div>
-
-                <div class="smallTitle">
-                    ESCAPE ROOM CONCLUÍDO
-                </div>
-
-                <h2>
-                    Você conseguiu.
-                </h2>
-
-                <p>
-                    A porta está aberta.
-                    <br>
-                    Você encontrou a saída.
-                </p>
-
-                <div class="finalStats">
-
-                    <div>
-                        <span>TEMPO</span>
+                        <span class="completion-time-label">
+                            TEMPO
+                        </span>
 
                         <strong
-                            id="finalTime"
+                            id="completionTime"
+                            class="completion-time"
                         >
                             00:00
                         </strong>
+
                     </div>
 
-                    <div>
-                        <span>STATUS</span>
+                    <button
+                        id="restartButton"
+                        class="game-button game-button-primary"
+                        type="button"
+                    >
+                        JOGAR NOVAMENTE
+                    </button>
 
-                        <strong>
-                            ESCAPOU
-                        </strong>
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 MENSAGENS / DIÁLOGOS
+            ================================================== -->
+
+            <section
+                id="messageContainer"
+                class="message-container"
+                aria-live="assertive"
+                aria-hidden="true"
+            >
+
+                <div
+                    id="messageBox"
+                    class="message-box"
+                >
+
+                    <div
+                        id="messageAccent"
+                        class="message-accent"
+                    ></div>
+
+                    <div
+                        id="messageTitle"
+                        class="message-title"
+                    >
+                        SISTEMA
+                    </div>
+
+                    <div
+                        id="messageText"
+                        class="message-text"
+                    >
+                        ...
+                    </div>
+
+                    <button
+                        id="messageContinue"
+                        class="message-continue"
+                        type="button"
+                    >
+                        CONTINUAR
+                    </button>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 TERMINAL / SENHA
+
+                 Será controlado pelo JavaScript quando o jogador
+                 encontrar o computador/terminal.
+            ================================================== -->
+
+            <section
+                id="terminalOverlay"
+                class="terminal-overlay"
+                aria-hidden="true"
+            >
+
+                <div class="terminal-window">
+
+                    <div class="terminal-header">
+
+                        <div class="terminal-status">
+                            <span class="terminal-status-light"></span>
+                            TERMINAL DE SEGURANÇA
+                        </div>
+
+                        <button
+                            id="terminalCloseButton"
+                            class="terminal-close"
+                            type="button"
+                            aria-label="Fechar terminal"
+                        >
+                            ×
+                        </button>
+
+                    </div>
+
+                    <div class="terminal-body">
+
+                        <div class="terminal-label">
+                            SISTEMA DE CONTROLE DE ACESSO
+                        </div>
+
+                        <div
+                            id="terminalPrompt"
+                            class="terminal-prompt"
+                        >
+                            DIGITE A SENHA:
+                        </div>
+
+                        <div
+                            id="terminalDisplay"
+                            class="terminal-display"
+                        >
+                            _
+                        </div>
+
+                        <div
+                            id="terminalFeedback"
+                            class="terminal-feedback"
+                            aria-live="polite"
+                        ></div>
+
+                        <div
+                            id="terminalKeypad"
+                            class="terminal-keypad"
+                        >
+
+                            <button
+                                type="button"
+                                class="terminal-key"
+                                data-key="1"
+                            >
+                                1
+                            </button>
+
+                            <button
+                                type="button"
+                                class="terminal-key"
+                                data-key="2"
+                            >
+                                2
+                            </button>
+
+                            <button
+                                type="button"
+                                class="terminal-key"
+                                data-key="3"
+                            >
+                                3
+                            </button>
+
+                            <button
+                                type="button"
+                                class="terminal-key"
+                                data-key="4"
+                            >
+                                4
+                            </button>
+
+                            <button
+                                type="button"
+                                class="terminal-key"
+                                data-key="5"
+                            >
+                                5
+                            </button>
+
+                            <button
+                                type="button"
+                                class="terminal-key"
+                                data-key="6"
+                            >
+                                6
+                            </button>
+
+                            <button
+                                type="button"
+                                class="terminal-key"
+                                data-key="7"
+                            >
+                                7
+                            </button>
+
+                            <button
+                                type="button"
+                                class="terminal-key"
+                                data-key="8"
+                            >
+                                8
+                            </button>
+
+                            <button
+                                type="button"
+                                class="terminal-key"
+                                data-key="9"
+                            >
+                                9
+                            </button>
+
+                            <button
+                                type="button"
+                                class="terminal-key terminal-key-clear"
+                                data-key="clear"
+                            >
+                                C
+                            </button>
+
+                            <button
+                                type="button"
+                                class="terminal-key"
+                                data-key="0"
+                            >
+                                0
+                            </button>
+
+                            <button
+                                type="button"
+                                class="terminal-key terminal-key-enter"
+                                data-key="enter"
+                            >
+                                OK
+                            </button>
+
+                        </div>
+
                     </div>
 
                 </div>
 
+            </section>
+
+
+            <!-- =================================================
+                 PERGUNTA / ENIGMA
+            ================================================== -->
+
+            <section
+                id="puzzleOverlay"
+                class="puzzle-overlay"
+                aria-hidden="true"
+            >
+
+                <div class="puzzle-window">
+
+                    <div class="puzzle-header">
+
+                        <div>
+                            <span class="puzzle-eyebrow">
+                                DESAFIO
+                            </span>
+
+                            <h2
+                                id="puzzleTitle"
+                                class="puzzle-title"
+                            >
+                                ENIGMA
+                            </h2>
+                        </div>
+
+                        <button
+                            id="puzzleCloseButton"
+                            class="puzzle-close"
+                            type="button"
+                            aria-label="Fechar desafio"
+                        >
+                            ×
+                        </button>
+
+                    </div>
+
+
+                    <div class="puzzle-body">
+
+                        <p
+                            id="puzzleQuestion"
+                            class="puzzle-question"
+                        >
+                            ...
+                        </p>
+
+
+                        <div
+                            id="puzzleOptions"
+                            class="puzzle-options"
+                        >
+                            <!-- Opções inseridas pelo JavaScript -->
+                        </div>
+
+
+                        <div
+                            id="puzzleFeedback"
+                            class="puzzle-feedback"
+                            aria-live="polite"
+                        ></div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 LOADING
+            ================================================== -->
+
+            <section
+                id="loadingScreen"
+                class="loading-screen"
+                aria-label="Carregando jogo"
+            >
+
+                <div class="loading-content">
+
+                    <div class="loading-mark">
+                        A
+                    </div>
+
+                    <div class="loading-title">
+                        A SALA
+                    </div>
+
+                    <div class="loading-bar">
+                        <div
+                            id="loadingProgress"
+                            class="loading-progress"
+                        ></div>
+                    </div>
+
+                    <div
+                        id="loadingText"
+                        class="loading-text"
+                    >
+                        Inicializando sistema...
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 ERRO FATAL
+            ================================================== -->
+
+            <div
+                id="gameError"
+                class="game-error"
+                role="alert"
+                aria-live="assertive"
+                hidden
+            >
+
+                <div class="game-error-title">
+                    ERRO NO JOGO
+                </div>
+
+                <div
+                    id="gameErrorMessage"
+                    class="game-error-message"
+                >
+                    Não foi possível iniciar o jogo.
+                </div>
+
                 <button
-                    id="playAgainButton"
-                    class="primaryButton"
+                    id="gameErrorReload"
+                    class="game-button game-button-secondary"
                     type="button"
                 >
-                    JOGAR NOVAMENTE
+                    RECARREGAR
                 </button>
 
             </div>
 
         </section>
-
-
-        <!-- ============================= -->
-        <!-- INDICADOR DE SOM -->
-        <!-- ============================= -->
-
-        <div
-            id="soundIndicator"
-            class="soundIndicator"
-        >
-            <span class="soundIcon">
-                ♪
-            </span>
-
-            <span>
-                ÁUDIO ATIVO
-            </span>
-        </div>
-
-
-        <!-- ============================= -->
-        <!-- LOADING -->
-        <!-- ============================= -->
-
-        <div
-            id="loadingScreen"
-            class="loadingScreen"
-        >
-
-            <div class="loadingLogo">
-                ESCAPE ROOM
-            </div>
-
-            <div class="loadingBar">
-                <div
-                    id="loadingProgress"
-                    class="loadingProgress"
-                ></div>
-            </div>
-
-            <div class="loadingText">
-                PREPARANDO A SALA...
-            </div>
-
-        </div>
 
     </main>
 
 
-    <script
-        type="module"
-        src="./game.js"
-    ></script>
+    <!-- =========================================================
+         NOSCRIPT
+    ========================================================== -->
+
+    <noscript>
+        <div class="noscript-message">
+            Este jogo precisa de JavaScript ativado para funcionar.
+        </div>
+    </noscript>
+
+
+    <!-- =========================================================
+         JAVASCRIPT PRINCIPAL
+    ========================================================== -->
+
+    <script type="module" src="./main.js"></script>
 
 </body>
 </html>
