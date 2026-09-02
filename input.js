@@ -1,559 +1,202 @@
-/* ============================================================
-   ESCAPE ROOM — INPUT.JS
-   Sistema central de entrada do jogador
-   ============================================================ */
-
 export class Input {
+  constructor(game) {
+    this.game = game;
 
-    /* ========================================================
-       CONSTRUTOR
-       ======================================================== */
+    this.keys = new Set();
+    this.justPressed = new Set();
 
-    constructor() {
+    this.boundKeyDown = this.handleKeyDown.bind(this);
+    this.boundKeyUp = this.handleKeyUp.bind(this);
+    this.boundBlur = this.handleBlur.bind(this);
+    this.boundVisibilityChange = this.handleVisibilityChange.bind(this);
 
-        /*
-         * Todas as teclas atualmente pressionadas.
-         */
+    window.addEventListener("keydown", this.boundKeyDown, { passive: false });
+    window.addEventListener("keyup", this.boundKeyUp, { passive: false });
+    window.addEventListener("blur", this.boundBlur);
+    document.addEventListener(
+      "visibilitychange",
+      this.boundVisibilityChange
+    );
+  }
 
-        this.keys = new Set();
-
-
-        /*
-         * Teclas que foram pressionadas neste frame.
-         *
-         * Diferente de "keys", isso permite detectar
-         * uma ação apenas uma vez.
-         */
-
-        this.justPressed = new Set();
-
-
-        /*
-         * Teclas que foram liberadas neste frame.
-         */
-
-        this.justReleased = new Set();
-
-
-        /*
-         * Estado do sistema.
-         */
-
-        this.enabled = true;
-
-
-        /*
-         * Lista de teclas utilizadas pelo jogo.
-         */
-
-        this.allowedKeys = new Set([
-            "w",
-            "a",
-            "s",
-            "d",
-
-            "arrowup",
-            "arrowdown",
-            "arrowleft",
-            "arrowright",
-
-            "e",
-            "escape",
-
-            "shift",
-            "control",
-
-            "enter",
-            "space"
-        ]);
-
-
-        /*
-         * Eventos vinculados.
-         *
-         * Guardamos as referências para conseguir
-         * remover os eventos posteriormente.
-         */
-
-        this.boundKeyDown =
-            this.handleKeyDown.bind(this);
-
-        this.boundKeyUp =
-            this.handleKeyUp.bind(this);
-
-        this.boundBlur =
-            this.handleBlur.bind(this);
-
-
-        /*
-         * Inicializa os listeners.
-         */
-
-        this.initialize();
+  normalizeKey(key) {
+    if (typeof key !== "string") {
+      return "";
     }
 
-
-    /* ========================================================
-       INICIALIZAÇÃO
-       ======================================================== */
-
-    initialize() {
-
-        window.addEventListener(
-            "keydown",
-            this.boundKeyDown
-        );
-
-
-        window.addEventListener(
-            "keyup",
-            this.boundKeyUp
-        );
-
-
-        window.addEventListener(
-            "blur",
-            this.boundBlur
-        );
+    if (key.length === 1) {
+      return key.toLowerCase();
     }
 
+    return key;
+  }
 
-    /* ========================================================
-       KEY DOWN
-       ======================================================== */
+  handleKeyDown(event) {
+    const key = this.normalizeKey(event.key);
 
-    handleKeyDown(event) {
-
-        if (!this.enabled) {
-            return;
-        }
-
-
-        const key =
-            this.normalizeKey(event.key);
-
-
-        /*
-         * Ignora teclas que não fazem parte
-         * do sistema de controle.
-         */
-
-        if (
-            !this.allowedKeys.has(key)
-        ) {
-
-            return;
-        }
-
-
-        /*
-         * Evita comportamentos padrão do navegador
-         * para as teclas utilizadas pelo jogo.
-         */
-
-        if (
-            this.shouldPreventDefault(key)
-        ) {
-
-            event.preventDefault();
-        }
-
-
-        /*
-         * Se a tecla ainda não estava pressionada,
-         * registramos como "just pressed".
-         */
-
-        if (
-            !this.keys.has(key)
-        ) {
-
-            this.justPressed.add(key);
-        }
-
-
-        /*
-         * Marca como pressionada.
-         */
-
-        this.keys.add(key);
+    if (!key) {
+      return;
     }
 
-
-    /* ========================================================
-       KEY UP
-       ======================================================== */
-
-    handleKeyUp(event) {
-
-        if (!this.enabled) {
-            return;
-        }
-
-
-        const key =
-            this.normalizeKey(event.key);
-
-
-        if (
-            !this.allowedKeys.has(key)
-        ) {
-
-            return;
-        }
-
-
-        /*
-         * Remove da lista de teclas pressionadas.
-         */
-
-        this.keys.delete(key);
-
-
-        /*
-         * Registra que foi liberada neste frame.
-         */
-
-        this.justReleased.add(key);
+    /*
+     * Impede que as setas e espaço movimentem a página
+     * enquanto o jogador estiver dentro do jogo.
+     */
+    if (
+      [
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        " ",
+      ].includes(key)
+    ) {
+      event.preventDefault();
     }
 
-
-    /* ========================================================
-       NORMALIZAÇÃO
-       ======================================================== */
-
-    normalizeKey(key) {
-
-        return String(key)
-            .toLowerCase()
-            .trim();
+    /*
+     * Só adicionamos à lista de "justPressed" quando a tecla
+     * realmente acabou de ser pressionada.
+     *
+     * Isso evita que o navegador repita a ação enquanto
+     * a tecla permanece pressionada.
+     */
+    if (!this.keys.has(key)) {
+      this.justPressed.add(key);
     }
 
+    this.keys.add(key);
 
-    /* ========================================================
-       PREVENIR COMPORTAMENTO PADRÃO
-       ======================================================== */
+    /*
+     * O Enter é encaminhado ao Game para iniciar/reiniciar
+     * o jogo a partir das telas de menu/conclusão.
+     *
+     * Escape, P e E NÃO são encaminhados aqui porque o Game
+     * já consulta essas teclas através de wantsPause()
+     * e wantsInteract().
+     */
+    if (
+      key === "Enter" &&
+      this.game &&
+      typeof this.game.handleKeyDown === "function"
+    ) {
+      this.game.handleKeyDown(event);
+    }
+  }
 
-    shouldPreventDefault(key) {
+  handleKeyUp(event) {
+    const key = this.normalizeKey(event.key);
 
-        const preventKeys = [
-            "w",
-            "a",
-            "s",
-            "d",
-
-            "arrowup",
-            "arrowdown",
-            "arrowleft",
-            "arrowright",
-
-            "space"
-        ];
-
-
-        return preventKeys.includes(key);
+    if (!key) {
+      return;
     }
 
+    this.keys.delete(key);
+  }
 
-    /* ========================================================
-       VERIFICAR TECLA PRESSIONADA
-       ======================================================== */
+  handleBlur() {
+    this.reset();
+  }
 
-    isDown(key) {
+  handleVisibilityChange() {
+    if (document.hidden) {
+      this.reset();
+    }
+  }
 
-        const normalizedKey =
-            this.normalizeKey(key);
+  isDown(key) {
+    const normalizedKey = this.normalizeKey(key);
+    return this.keys.has(normalizedKey);
+  }
 
+  wasPressed(key) {
+    const normalizedKey = this.normalizeKey(key);
+    return this.justPressed.has(normalizedKey);
+  }
 
-        return this.keys.has(
-            normalizedKey
-        );
+  getMovementVector() {
+    let x = 0;
+    let y = 0;
+
+    /*
+     * Movimento horizontal
+     */
+    if (this.isDown("a") || this.isDown("ArrowLeft")) {
+      x -= 1;
     }
 
-
-    /* ========================================================
-       VERIFICAR TECLA PRESSIONADA NESTE FRAME
-       ======================================================== */
-
-    wasPressed(key) {
-
-        const normalizedKey =
-            this.normalizeKey(key);
-
-
-        return this.justPressed.has(
-            normalizedKey
-        );
+    if (this.isDown("d") || this.isDown("ArrowRight")) {
+      x += 1;
     }
 
-
-    /* ========================================================
-       VERIFICAR TECLA LIBERADA NESTE FRAME
-       ======================================================== */
-
-    wasReleased(key) {
-
-        const normalizedKey =
-            this.normalizeKey(key);
-
-
-        return this.justReleased.has(
-            normalizedKey
-        );
+    /*
+     * Movimento vertical
+     */
+    if (this.isDown("w") || this.isDown("ArrowUp")) {
+      y -= 1;
     }
 
-
-    /* ========================================================
-       MOVIMENTO HORIZONTAL
-       ======================================================== */
-
-    getHorizontalAxis() {
-
-        let value = 0;
-
-
-        if (
-            this.isDown("a") ||
-            this.isDown("arrowleft")
-        ) {
-
-            value -= 1;
-        }
-
-
-        if (
-            this.isDown("d") ||
-            this.isDown("arrowright")
-        ) {
-
-            value += 1;
-        }
-
-
-        return value;
+    if (this.isDown("s") || this.isDown("ArrowDown")) {
+      y += 1;
     }
 
+    /*
+     * Normaliza diagonais.
+     *
+     * Sem isso, andar na diagonal seria aproximadamente
+     * 41% mais rápido do que andar em linha reta.
+     */
+    const length = Math.hypot(x, y);
 
-    /* ========================================================
-       MOVIMENTO VERTICAL
-       ======================================================== */
-
-    getVerticalAxis() {
-
-        let value = 0;
-
-
-        if (
-            this.isDown("w") ||
-            this.isDown("arrowup")
-        ) {
-
-            value -= 1;
-        }
-
-
-        if (
-            this.isDown("s") ||
-            this.isDown("arrowdown")
-        ) {
-
-            value += 1;
-        }
-
-
-        return value;
+    if (length > 0) {
+      x /= length;
+      y /= length;
     }
 
-
-    /* ========================================================
-       VETOR DE MOVIMENTO
-       ======================================================== */
-
-    getMovementVector() {
-
-        let x =
-            this.getHorizontalAxis();
-
-        let y =
-            this.getVerticalAxis();
-
-
-        /*
-         * Normalização.
-         *
-         * Impede que o jogador se mova mais rápido
-         * quando estiver andando na diagonal.
-         */
-
-        const magnitude =
-            Math.sqrt(
-                x * x +
-                y * y
-            );
-
-
-        if (
-            magnitude > 1
-        ) {
-
-            x /=
-                magnitude;
-
-            y /=
-                magnitude;
-        }
-
-
-        return {
-            x,
-            y
-        };
-    }
-
-
-    /* ========================================================
-       AÇÕES DO JOGO
-       ======================================================== */
-
-    isMoving() {
-
-        return (
-            this.getHorizontalAxis() !== 0 ||
-            this.getVerticalAxis() !== 0
-        );
-    }
-
-
-    wantsInteract() {
-
-        return this.wasPressed("e");
-    }
-
-
-    wantsPause() {
-
-        return this.wasPressed("escape");
-    }
-
-
-    wantsConfirm() {
-
-        return (
-            this.wasPressed("enter") ||
-            this.wasPressed("space")
-        );
-    }
-
-
-    /* ========================================================
-       FIM DO FRAME
-       ======================================================== */
-
-    endFrame() {
-
-        /*
-         * As teclas "justPressed" e "justReleased"
-         * existem somente durante um frame.
-         *
-         * As teclas que continuam pressionadas
-         * permanecem em "keys".
-         */
-
-        this.justPressed.clear();
-
-        this.justReleased.clear();
-    }
-
-
-    /* ========================================================
-       ATIVAR SISTEMA
-       ======================================================== */
-
-    enable() {
-
-        this.enabled = true;
-    }
-
-
-    /* ========================================================
-       DESATIVAR SISTEMA
-       ======================================================== */
-
-    disable() {
-
-        this.enabled = false;
-
-        this.clear();
-    }
-
-
-    /* ========================================================
-       LIMPAR INPUT
-       ======================================================== */
-
-    clear() {
-
-        this.keys.clear();
-
-        this.justPressed.clear();
-
-        this.justReleased.clear();
-    }
-
-
-    /* ========================================================
-       RESETAR
-       ======================================================== */
-
-    reset() {
-
-        this.clear();
-
-        this.enabled = true;
-    }
-
-
-    /* ========================================================
-       BLUR
-       ======================================================== */
-
-    handleBlur() {
-
-        /*
-         * Se o usuário trocar de aba ou janela,
-         * nenhuma tecla deve continuar presa.
-         */
-
-        this.clear();
-    }
-
-
-    /* ========================================================
-       DESTRUIR
-       ======================================================== */
-
-    destroy() {
-
-        window.removeEventListener(
-            "keydown",
-            this.boundKeyDown
-        );
-
-
-        window.removeEventListener(
-            "keyup",
-            this.boundKeyUp
-        );
-
-
-        window.removeEventListener(
-            "blur",
-            this.boundBlur
-        );
-
-
-        this.clear();
-
-        this.enabled = false;
-    }
+    return {
+      x,
+      y,
+    };
+  }
+
+  wantsPause() {
+    return this.wasPressed("Escape") || this.wasPressed("p");
+  }
+
+  wantsInteract() {
+    return this.wasPressed("e");
+  }
+
+  wantsConfirm() {
+    return (
+      this.wasPressed("Enter") ||
+      this.wasPressed(" ")
+    );
+  }
+
+  wantsRestart() {
+    return this.wasPressed("r");
+  }
+
+  endFrame() {
+    this.justPressed.clear();
+  }
+
+  reset() {
+    this.keys.clear();
+    this.justPressed.clear();
+  }
+
+  destroy() {
+    window.removeEventListener("keydown", this.boundKeyDown);
+    window.removeEventListener("keyup", this.boundKeyUp);
+    window.removeEventListener("blur", this.boundBlur);
+
+    document.removeEventListener(
+      "visibilitychange",
+      this.boundVisibilityChange
+    );
+
+    this.reset();
+  }
 }

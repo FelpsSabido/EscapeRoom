@@ -1,475 +1,104 @@
-/* ============================================================
-   ESCAPE ROOM — PLAYER.JS
-   Sistema completo do jogador
-   ============================================================ */
-
 export class Player {
-
-    /* ========================================================
-       CONSTRUTOR
-       ======================================================== */
-
     constructor(options = {}) {
+        this.input = options.input;
+        this.world = options.world;
 
-        /* ====================================================
-           REFERÊNCIAS
-           ==================================================== */
+        this.x = options.x ?? 760;
+        this.y = options.y ?? 430;
 
-        this.input =
-            options.input || null;
+        this.startX = this.x;
+        this.startY = this.y;
 
-        this.world =
-            options.world || null;
+        this.width = options.width ?? 30;
+        this.height = options.height ?? 42;
 
-
-        /* ====================================================
-           POSIÇÃO
-           ==================================================== */
-
-        this.x =
-            options.x ?? 0;
-
-        this.y =
-            options.y ?? 0;
-
-
-        /* ====================================================
-           DIMENSÕES
-           ==================================================== */
-
-        this.width =
-            options.width ?? 28;
-
-        this.height =
-            options.height ?? 38;
-
-
-        /* ====================================================
-           MOVIMENTO
-           ==================================================== */
-
-        this.speed =
-            options.speed ?? 180;
-
-        this.maxSpeed =
-            options.maxSpeed ?? 180;
+        this.speed = options.speed ?? 180;
+        this.maxSpeed = options.maxSpeed ?? 180;
 
         this.acceleration =
-            options.acceleration ?? 1200;
+            options.acceleration ?? 1250;
 
         this.deceleration =
-            options.deceleration ?? 1400;
+            options.deceleration ?? 1500;
 
+        this.vx = 0;
+        this.vy = 0;
 
-        this.velocityX =
-            0;
-
-        this.velocityY =
-            0;
-
-
-        /* ====================================================
-           DIREÇÃO
-           ==================================================== */
-
-        this.direction =
-            "down";
-
-
-        /* ====================================================
-           ESTADO
-           ==================================================== */
-
-        this.moving =
-            false;
-
-        this.enabled =
-            true;
-
-        this.visible =
-            true;
-
-
-        /* ====================================================
-           ANIMAÇÃO
-           ==================================================== */
+        this.direction = "down";
 
         this.animation = {
-
             frame: 0,
-
             timer: 0,
-
             speed: 0.12,
-
-            maxFrames: 4
+            moving: false
         };
 
+        this.walkCycle = 0;
 
-        /* ====================================================
-           COLISÃO
-           ==================================================== */
-
-        this.collision = {
-
-            enabled: true,
-
-            offsetX: 4,
-
-            offsetY: 8,
-
-            width: 20,
-
-            height: 24
+        this.shadow = {
+            width: 25,
+            height: 9,
+            alpha: 0.25
         };
 
-
-        /* ====================================================
-           ESTADO ANTERIOR
-           ==================================================== */
-
-        this.previousPosition = {
-
-            x: this.x,
-
-            y: this.y
+        this.cane = {
+            length: 28,
+            swing: 0
         };
 
-
-        /* ====================================================
-           CONFIGURAÇÕES
-           ==================================================== */
-
-        this.config = {
-
-            debug: false,
-
-            shadow: true,
-
-            shadowWidth: 20,
-
-            shadowHeight: 7,
-
-            shadowOpacity: 0.35
-        };
-
-
-        /* ====================================================
-           CALLBACKS
-           ==================================================== */
-
-        this.callbacks = {
-
-            onMove: null,
-
-            onStop: null,
-
-            onDirectionChange: null
-        };
+        this.initialized = false;
     }
-
-
-    /* ========================================================
-       INICIALIZAÇÃO
-       ======================================================== */
 
     initialize() {
-
-        this.velocityX =
-            0;
-
-        this.velocityY =
-            0;
-
-        this.moving =
-            false;
-
-        this.animation.frame =
-            0;
-
-        this.animation.timer =
-            0;
-
-        this.previousPosition.x =
-            this.x;
-
-        this.previousPosition.y =
-            this.y;
+        this.initialized = true;
     }
 
-
-    /* ========================================================
-       ATUALIZAÇÃO
-       ======================================================== */
-
     update(deltaTime) {
-
-        if (!this.enabled) {
-
-            this.stop();
-
-            return;
-        }
-
-
-        this.previousPosition.x =
-            this.x;
-
-        this.previousPosition.y =
-            this.y;
-
-
         if (!this.input) {
-
-            this.applyDeceleration(
-                deltaTime
-            );
-
-            this.applyVelocity(
-                deltaTime
-            );
-
-            this.updateAnimation(
-                deltaTime
-            );
-
             return;
         }
-
 
         const movement =
             this.input.getMovementVector();
 
+        const moving =
+            Math.abs(movement.x) > 0 ||
+            Math.abs(movement.y) > 0;
 
-        const inputX =
-            movement.x;
+        this.animation.moving = moving;
 
-        const inputY =
-            movement.y;
+        if (moving) {
+            this.vx +=
+                movement.x *
+                this.acceleration *
+                deltaTime;
 
-
-        const hasInput =
-            inputX !== 0 ||
-            inputY !== 0;
-
-
-        if (hasInput) {
+            this.vy +=
+                movement.y *
+                this.acceleration *
+                deltaTime;
 
             this.updateDirection(
-                inputX,
-                inputY
+                movement.x,
+                movement.y
             );
-        }
-
-
-        if (hasInput) {
-
-            this.applyAcceleration(
-                inputX,
-                inputY,
-                deltaTime
-            );
-
         } else {
-
             this.applyDeceleration(
                 deltaTime
             );
         }
 
-
-        this.applyVelocity(
-            deltaTime
-        );
-
-
-        const wasMoving =
-            this.moving;
-
-
-        this.moving =
-            Math.abs(this.velocityX) > 1 ||
-            Math.abs(this.velocityY) > 1;
-
-
-        this.updateAnimation(
-            deltaTime
-        );
-
-
-        if (
-            this.moving &&
-            !wasMoving
-        ) {
-
-            if (
-                typeof this.callbacks.onMove ===
-                "function"
-            ) {
-
-                this.callbacks.onMove();
-            }
-        }
-
-
-        if (
-            !this.moving &&
-            wasMoving
-        ) {
-
-            if (
-                typeof this.callbacks.onStop ===
-                "function"
-            ) {
-
-                this.callbacks.onStop();
-            }
-        }
-    }
-
-
-    /* ========================================================
-       ACELERAÇÃO
-       ======================================================== */
-
-    applyAcceleration(
-        inputX,
-        inputY,
-        deltaTime
-    ) {
-
-        this.velocityX +=
-            inputX *
-            this.acceleration *
-            deltaTime;
-
-
-        this.velocityY +=
-            inputY *
-            this.acceleration *
-            deltaTime;
-
-
-        const velocityMagnitude =
-            Math.sqrt(
-                this.velocityX *
-                this.velocityX +
-                this.velocityY *
-                this.velocityY
-            );
-
-
-        if (
-            velocityMagnitude >
-            this.maxSpeed
-        ) {
-
-            const factor =
-                this.maxSpeed /
-                velocityMagnitude;
-
-
-            this.velocityX *=
-                factor;
-
-            this.velocityY *=
-                factor;
-        }
-    }
-
-
-    /* ========================================================
-       DESACELERAÇÃO
-       ======================================================== */
-
-    applyDeceleration(deltaTime) {
-
-        const amount =
-            this.deceleration *
-            deltaTime;
-
-
-        this.velocityX =
-            this.moveToward(
-                this.velocityX,
-                0,
-                amount
-            );
-
-
-        this.velocityY =
-            this.moveToward(
-                this.velocityY,
-                0,
-                amount
-            );
-    }
-
-
-    /* ========================================================
-       MOVE TOWARD
-       ======================================================== */
-
-    moveToward(
-        current,
-        target,
-        amount
-    ) {
-
-        if (
-            current < target
-        ) {
-
-            return Math.min(
-                current + amount,
-                target
-            );
-        }
-
-
-        if (
-            current > target
-        ) {
-
-            return Math.max(
-                current - amount,
-                target
-            );
-        }
-
-
-        return target;
-    }
-
-
-    /* ========================================================
-       APLICAR VELOCIDADE
-       ======================================================== */
-
-    applyVelocity(deltaTime) {
-
-        const oldX =
-            this.x;
-
-        const oldY =
-            this.y;
-
+        this.limitVelocity();
 
         const nextX =
             this.x +
-            this.velocityX *
+            this.vx *
             deltaTime;
-
 
         const nextY =
             this.y +
-            this.velocityY *
+            this.vy *
             deltaTime;
-
-
-        /* ====================================================
-           MOVIMENTO HORIZONTAL
-           ==================================================== */
 
         if (
             this.canMoveTo(
@@ -477,20 +106,10 @@ export class Player {
                 this.y
             )
         ) {
-
-            this.x =
-                nextX;
-
+            this.x = nextX;
         } else {
-
-            this.velocityX =
-                0;
+            this.vx = 0;
         }
-
-
-        /* ====================================================
-           MOVIMENTO VERTICAL
-           ==================================================== */
 
         if (
             this.canMoveTo(
@@ -498,115 +117,862 @@ export class Player {
                 nextY
             )
         ) {
-
-            this.y =
-                nextY;
-
+            this.y = nextY;
         } else {
-
-            this.velocityY =
-                0;
+            this.vy = 0;
         }
 
+        this.keepInsideWorld();
 
-        this.clampToWorld();
+        this.updateAnimation(
+            deltaTime,
+            moving
+        );
+    }
 
-
+    updateDirection(horizontal, vertical) {
         if (
-            Math.abs(
-                this.x - oldX
-            ) < 0.001
+            Math.abs(horizontal) >
+            Math.abs(vertical)
         ) {
-
-            if (
-                Math.abs(
-                    this.velocityX
-                ) < 1
-            ) {
-
-                this.velocityX =
-                    0;
+            if (horizontal > 0) {
+                this.direction = "right";
+            } else if (horizontal < 0) {
+                this.direction = "left";
             }
-        }
-
-
-        if (
-            Math.abs(
-                this.y - oldY
-            ) < 0.001
-        ) {
-
-            if (
-                Math.abs(
-                    this.velocityY
-                ) < 1
-            ) {
-
-                this.velocityY =
-                    0;
+        } else {
+            if (vertical > 0) {
+                this.direction = "down";
+            } else if (vertical < 0) {
+                this.direction = "up";
             }
         }
     }
 
+    applyDeceleration(deltaTime) {
+        const amount =
+            this.deceleration *
+            deltaTime;
 
-    /* ========================================================
-       COLISÃO COM O MUNDO
-       ======================================================== */
+        if (Math.abs(this.vx) <= amount) {
+            this.vx = 0;
+        } else {
+            this.vx -=
+                Math.sign(this.vx) *
+                amount;
+        }
+
+        if (Math.abs(this.vy) <= amount) {
+            this.vy = 0;
+        } else {
+            this.vy -=
+                Math.sign(this.vy) *
+                amount;
+        }
+    }
+
+    limitVelocity() {
+        const magnitude =
+            Math.hypot(
+                this.vx,
+                this.vy
+            );
+
+        if (
+            magnitude <=
+            this.maxSpeed
+        ) {
+            return;
+        }
+
+        const scale =
+            this.maxSpeed /
+            magnitude;
+
+        this.vx *= scale;
+        this.vy *= scale;
+    }
+
+    updateAnimation(
+        deltaTime,
+        moving
+    ) {
+        if (!moving) {
+            this.animation.frame = 0;
+            this.animation.timer = 0;
+            this.walkCycle = 0;
+            this.cane.swing = 0;
+            return;
+        }
+
+        this.animation.timer +=
+            deltaTime;
+
+        this.walkCycle +=
+            deltaTime * 8;
+
+        this.cane.swing =
+            Math.sin(
+                this.walkCycle
+            ) * 0.15;
+
+        if (
+            this.animation.timer >=
+            this.animation.speed
+        ) {
+            this.animation.timer = 0;
+
+            this.animation.frame =
+                (this.animation.frame + 1) %
+                4;
+        }
+    }
+
+    render(ctx) {
+        ctx.save();
+
+        ctx.imageSmoothingEnabled =
+            false;
+
+        this.renderShadow(ctx);
+
+        this.renderCharacter(ctx);
+
+        ctx.restore();
+    }
+
+    renderShadow(ctx) {
+        const shadowX =
+            Math.floor(
+                this.x -
+                this.shadow.width / 2
+            );
+
+        const shadowY =
+            Math.floor(
+                this.y +
+                this.height / 2 -
+                2
+            );
+
+        ctx.save();
+
+        ctx.globalAlpha =
+            this.shadow.alpha;
+
+        ctx.fillStyle =
+            "#392b22";
+
+        ctx.beginPath();
+
+        ctx.ellipse(
+            shadowX +
+                this.shadow.width / 2,
+            shadowY,
+            this.shadow.width / 2,
+            this.shadow.height / 2,
+            0,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    renderCharacter(ctx) {
+        const px =
+            Math.floor(
+                this.x -
+                this.width / 2
+            );
+
+        const py =
+            Math.floor(
+                this.y -
+                this.height / 2
+            );
+
+        const walkOffset =
+            this.animation.moving
+                ? Math.sin(
+                      this.walkCycle
+                  ) * 2
+                : 0;
+
+        ctx.save();
+
+        ctx.translate(
+            0,
+            walkOffset
+        );
+
+        switch (this.direction) {
+            case "up":
+                this.renderBack(
+                    ctx,
+                    px,
+                    py
+                );
+                break;
+
+            case "left":
+                this.renderSide(
+                    ctx,
+                    px,
+                    py,
+                    true
+                );
+                break;
+
+            case "right":
+                this.renderSide(
+                    ctx,
+                    px,
+                    py,
+                    false
+                );
+                break;
+
+            default:
+                this.renderFront(
+                    ctx,
+                    px,
+                    py
+                );
+                break;
+        }
+
+        ctx.restore();
+    }
+
+    renderFront(ctx, px, py) {
+        const centerX =
+            px +
+            this.width / 2;
+
+        // Pernas
+        this.renderLegs(
+            ctx,
+            centerX,
+            py + 31
+        );
+
+        // Corpo / camiseta
+        ctx.fillStyle =
+            "#477fa5";
+
+        ctx.fillRect(
+            centerX - 10,
+            py + 17,
+            20,
+            17
+        );
+
+        // Detalhe da camiseta
+        ctx.fillStyle =
+            "#365f7b";
+
+        ctx.fillRect(
+            centerX - 10,
+            py + 27,
+            20,
+            7
+        );
+
+        // Braço esquerdo
+        ctx.fillStyle =
+            "#e7b88d";
+
+        ctx.fillRect(
+            centerX - 14,
+            py + 20,
+            5,
+            13
+        );
+
+        // Braço direito
+        ctx.fillRect(
+            centerX + 9,
+            py + 20,
+            5,
+            13
+        );
+
+        // Mãos
+        ctx.fillStyle =
+            "#e3aa7e";
+
+        ctx.fillRect(
+            centerX - 14,
+            py + 31,
+            5,
+            5
+        );
+
+        ctx.fillRect(
+            centerX + 9,
+            py + 31,
+            5,
+            5
+        );
+
+        // Pescoço
+        ctx.fillStyle =
+            "#d99e75";
+
+        ctx.fillRect(
+            centerX - 4,
+            py + 13,
+            8,
+            6
+        );
+
+        // Rosto
+        ctx.fillStyle =
+            "#e8b88c";
+
+        ctx.fillRect(
+            centerX - 10,
+            py + 3,
+            20,
+            15
+        );
+
+        // Orelhas
+        ctx.fillRect(
+            centerX - 12,
+            py + 8,
+            3,
+            7
+        );
+
+        ctx.fillRect(
+            centerX + 9,
+            py + 8,
+            3,
+            7
+        );
+
+        // Cabelo
+        ctx.fillStyle =
+            "#3a2925";
+
+        ctx.fillRect(
+            centerX - 10,
+            py + 1,
+            20,
+            7
+        );
+
+        ctx.fillRect(
+            centerX - 8,
+            py - 2,
+            16,
+            5
+        );
+
+        ctx.fillRect(
+            centerX - 12,
+            py + 5,
+            4,
+            8
+        );
+
+        ctx.fillRect(
+            centerX + 8,
+            py + 5,
+            4,
+            8
+        );
+
+        // Franja
+        ctx.fillRect(
+            centerX - 7,
+            py + 3,
+            5,
+            5
+        );
+
+        ctx.fillRect(
+            centerX + 2,
+            py + 3,
+            5,
+            5
+        );
+
+        // Olhos
+        ctx.fillStyle =
+            "#252020";
+
+        ctx.fillRect(
+            centerX - 6,
+            py + 9,
+            3,
+            3
+        );
+
+        ctx.fillRect(
+            centerX + 3,
+            py + 9,
+            3,
+            3
+        );
+
+        // Sorriso
+        ctx.fillStyle =
+            "#a45d59";
+
+        ctx.fillRect(
+            centerX - 3,
+            py + 14,
+            6,
+            2
+        );
+
+        // Mochila
+        this.renderBackpack(
+            ctx,
+            centerX,
+            py + 19,
+            true
+        );
+
+        // Bengala
+        this.renderCane(
+            ctx,
+            centerX + 13,
+            py + 25,
+            0.12
+        );
+    }
+
+    renderBack(ctx, px, py) {
+        const centerX =
+            px +
+            this.width / 2;
+
+        this.renderLegs(
+            ctx,
+            centerX,
+            py + 31
+        );
+
+        // Mochila
+        this.renderBackpack(
+            ctx,
+            centerX,
+            py + 16,
+            false
+        );
+
+        // Corpo
+        ctx.fillStyle =
+            "#477fa5";
+
+        ctx.fillRect(
+            centerX - 10,
+            py + 16,
+            20,
+            18
+        );
+
+        // Mochila principal
+        ctx.fillStyle =
+            "#8d5145";
+
+        ctx.fillRect(
+            centerX - 13,
+            py + 14,
+            26,
+            19
+        );
+
+        ctx.fillStyle =
+            "#633a35";
+
+        ctx.fillRect(
+            centerX - 9,
+            py + 19,
+            18,
+            3
+        );
+
+        // Pescoço
+        ctx.fillStyle =
+            "#d99e75";
+
+        ctx.fillRect(
+            centerX - 4,
+            py + 11,
+            8,
+            7
+        );
+
+        // Cabeça
+        ctx.fillStyle =
+            "#e3ad82";
+
+        ctx.fillRect(
+            centerX - 10,
+            py + 2,
+            20,
+            16
+        );
+
+        // Cabelo
+        ctx.fillStyle =
+            "#3a2925";
+
+        ctx.fillRect(
+            centerX - 11,
+            py,
+            22,
+            12
+        );
+
+        ctx.fillRect(
+            centerX - 8,
+            py - 3,
+            16,
+            5
+        );
+
+        // Orelhas
+        ctx.fillStyle =
+            "#d69f78";
+
+        ctx.fillRect(
+            centerX - 12,
+            py + 8,
+            3,
+            7
+        );
+
+        ctx.fillRect(
+            centerX + 9,
+            py + 8,
+            3,
+            7
+        );
+
+        this.renderCane(
+            ctx,
+            centerX + 13,
+            py + 25,
+            -0.12
+        );
+    }
+
+    renderSide(
+        ctx,
+        px,
+        py,
+        facingLeft
+    ) {
+        const centerX =
+            px +
+            this.width / 2;
+
+        const direction =
+            facingLeft ? -1 : 1;
+
+        this.renderLegs(
+            ctx,
+            centerX,
+            py + 31
+        );
+
+        // Mochila
+        ctx.fillStyle =
+            "#8d5145";
+
+        ctx.fillRect(
+            centerX -
+                direction * 11 -
+                8,
+            py + 17,
+            13,
+            18
+        );
+
+        // Corpo
+        ctx.fillStyle =
+            "#477fa5";
+
+        ctx.fillRect(
+            centerX - 9,
+            py + 17,
+            18,
+            18
+        );
+
+        // Braço
+        ctx.fillStyle =
+            "#e5b084";
+
+        ctx.fillRect(
+            centerX +
+                direction * 7,
+            py + 20,
+            6,
+            13
+        );
+
+        // Mão
+        ctx.fillRect(
+            centerX +
+                direction * 8,
+            py + 31,
+            6,
+            5
+        );
+
+        // Pescoço
+        ctx.fillStyle =
+            "#d59d75";
+
+        ctx.fillRect(
+            centerX +
+                direction * 3 -
+                4,
+            py + 12,
+            8,
+            7
+        );
+
+        // Rosto
+        ctx.fillStyle =
+            "#e7b589";
+
+        ctx.fillRect(
+            centerX - 9,
+            py + 3,
+            18,
+            16
+        );
+
+        // Nariz
+        ctx.fillRect(
+            centerX +
+                direction * 9,
+            py + 10,
+            4,
+            4
+        );
+
+        // Cabelo
+        ctx.fillStyle =
+            "#3a2925";
+
+        ctx.fillRect(
+            centerX - 10,
+            py + 1,
+            20,
+            8
+        );
+
+        ctx.fillRect(
+            centerX -
+                direction * 8,
+            py + 5,
+            5,
+            8
+        );
+
+        // Olho
+        ctx.fillStyle =
+            "#252020";
+
+        ctx.fillRect(
+            centerX +
+                direction * 4,
+            py + 9,
+            3,
+            3
+        );
+
+        // Sobrancelha
+        ctx.fillRect(
+            centerX +
+                direction * 3,
+            py + 7,
+            5,
+            2
+        );
+
+        this.renderCane(
+            ctx,
+            centerX +
+                direction * 13,
+            py + 25,
+            direction * 0.15
+        );
+    }
+
+    renderLegs(
+        ctx,
+        centerX,
+        y
+    ) {
+        const walking =
+            this.animation.moving;
+
+        let offset = 0;
+
+        if (walking) {
+            offset =
+                Math.sin(
+                    this.walkCycle
+                ) * 3;
+        }
+
+        // Perna esquerda
+        ctx.fillStyle =
+            "#30475a";
+
+        ctx.fillRect(
+            centerX - 8,
+            y,
+            7,
+            11 + offset
+        );
+
+        // Perna direita
+        ctx.fillRect(
+            centerX + 1,
+            y,
+            7,
+            11 - offset
+        );
+
+        // Sapatos
+        ctx.fillStyle =
+            "#342b29";
+
+        ctx.fillRect(
+            centerX - 10,
+            y + 9 + offset,
+            9,
+            5
+        );
+
+        ctx.fillRect(
+            centerX,
+            y + 9 - offset,
+            9,
+            5
+        );
+    }
+
+    renderBackpack(
+        ctx,
+        centerX,
+        y,
+        visible
+    ) {
+        if (!visible) {
+            return;
+        }
+
+        ctx.fillStyle =
+            "#8d5145";
+
+        ctx.fillRect(
+            centerX - 13,
+            y,
+            7,
+            17
+        );
+
+        ctx.fillRect(
+            centerX + 6,
+            y,
+            7,
+            17
+        );
+    }
+
+    renderCane(
+        ctx,
+        x,
+        y,
+        angle
+    ) {
+        ctx.save();
+
+        ctx.translate(
+            x,
+            y
+        );
+
+        ctx.rotate(angle);
+
+        // Cabo
+        ctx.strokeStyle =
+            "#f0eee4";
+
+        ctx.lineWidth = 3;
+
+        ctx.beginPath();
+
+        ctx.moveTo(0, 0);
+
+        ctx.lineTo(
+            0,
+            this.cane.length
+        );
+
+        ctx.stroke();
+
+        // Empunhadura
+        ctx.lineWidth = 4;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            0,
+            0
+        );
+
+        ctx.lineTo(
+            6,
+            -5
+        );
+
+        ctx.stroke();
+
+        // Ponteira
+        ctx.strokeStyle =
+            "#c9c5b9";
+
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            0,
+            this.cane.length,
+            4,
+            0,
+            Math.PI
+        );
+
+        ctx.stroke();
+
+        ctx.restore();
+    }
 
     canMoveTo(
         targetX,
         targetY
     ) {
-
-        if (!this.world) {
-
-            return true;
-        }
-
-
         if (
-            !this.collision.enabled
-        ) {
-
-            return true;
-        }
-
-
-        /* ====================================================
-           CRIA A HITBOX NA NOVA POSIÇÃO
-           ==================================================== */
-
-        const collisionRect =
-            this.getCollisionRect(
-                targetX,
-                targetY
-            );
-
-
-        /* ====================================================
-           USA O SISTEMA DE COLISÃO DO WORLD
-           ==================================================== */
-
-        if (
-            typeof this.world.collides ===
-            "function"
-        ) {
-
-            return !this.world.collides(
-                collisionRect
-            );
-        }
-
-
-        /* ====================================================
-           COMPATIBILIDADE COM FUTURA IMPLEMENTAÇÃO
-           ==================================================== */
-
-        if (
+            this.world &&
             typeof this.world.canPlayerMoveTo ===
-            "function"
+                "function"
         ) {
-
             return this.world.canPlayerMoveTo(
                 this,
                 targetX,
@@ -614,701 +980,127 @@ export class Player {
             );
         }
 
-
         return true;
     }
 
+    getCollisionRect(
+        targetX = this.x,
+        targetY = this.y
+    ) {
+        const collisionWidth = 18;
+        const collisionHeight = 18;
 
-    /* ========================================================
-       LIMITES DO MUNDO
-       ======================================================== */
+        return {
+            x:
+                targetX -
+                collisionWidth / 2,
 
-    clampToWorld() {
+            y:
+                targetY -
+                collisionHeight / 2 +
+                8,
 
+            width: collisionWidth,
+            height: collisionHeight
+        };
+    }
+
+    getBounds() {
+        return {
+            x:
+                this.x -
+                this.width / 2,
+
+            y:
+                this.y -
+                this.height / 2,
+
+            width: this.width,
+            height: this.height
+        };
+    }
+
+    keepInsideWorld() {
         if (!this.world) {
-
             return;
         }
 
-
-        const worldWidth =
-            this.world.width;
-
-
-        const worldHeight =
-            this.world.height;
-
-
-        if (
-            typeof worldWidth !==
-            "number" ||
-            typeof worldHeight !==
-            "number"
-        ) {
-
-            return;
-        }
-
+        const bounds =
+            this.world.getBounds();
 
         const halfWidth =
             this.width / 2;
 
-
         const halfHeight =
             this.height / 2;
-
 
         this.x =
             Math.max(
                 halfWidth,
                 Math.min(
-                    worldWidth -
-                    halfWidth,
+                    bounds.width -
+                        halfWidth,
                     this.x
                 )
             );
-
 
         this.y =
             Math.max(
                 halfHeight,
                 Math.min(
-                    worldHeight -
-                    halfHeight,
+                    bounds.height -
+                        halfHeight,
                     this.y
                 )
             );
     }
 
-
-    /* ========================================================
-       DIREÇÃO
-       ======================================================== */
-
-    updateDirection(
-        inputX,
-        inputY
+    reset(
+        x = this.startX,
+        y = this.startY
     ) {
+        this.x = x;
+        this.y = y;
 
-        const previousDirection =
-            this.direction;
+        this.vx = 0;
+        this.vy = 0;
 
+        this.direction = "down";
 
-        if (
-            Math.abs(inputX) >
-            Math.abs(inputY)
-        ) {
+        this.animation.frame = 0;
+        this.animation.timer = 0;
+        this.animation.moving = false;
 
-            if (
-                inputX > 0
-            ) {
+        this.walkCycle = 0;
 
-                this.direction =
-                    "right";
-
-            } else {
-
-                this.direction =
-                    "left";
-            }
-
-        } else {
-
-            if (
-                inputY > 0
-            ) {
-
-                this.direction =
-                    "down";
-
-            } else {
-
-                this.direction =
-                    "up";
-            }
-        }
-
-
-        if (
-            previousDirection !==
-            this.direction
-        ) {
-
-            if (
-                typeof this.callbacks
-                    .onDirectionChange ===
-                "function"
-            ) {
-
-                this.callbacks.onDirectionChange(
-                    this.direction
-                );
-            }
-        }
+        this.cane.swing = 0;
     }
-
-
-    /* ========================================================
-       ANIMAÇÃO
-       ======================================================== */
-
-    updateAnimation(deltaTime) {
-
-        if (!this.moving) {
-
-            this.animation.frame =
-                0;
-
-            this.animation.timer =
-                0;
-
-            return;
-        }
-
-
-        this.animation.timer +=
-            deltaTime;
-
-
-        if (
-            this.animation.timer >=
-            this.animation.speed
-        ) {
-
-            this.animation.timer =
-                0;
-
-
-            this.animation.frame++;
-
-
-            if (
-                this.animation.frame >=
-                this.animation.maxFrames
-            ) {
-
-                this.animation.frame =
-                    0;
-            }
-        }
-    }
-
-
-    /* ========================================================
-       RENDER
-       ======================================================== */
-
-    render(
-        context,
-        camera = null
-    ) {
-
-        if (
-            !context ||
-            !this.visible
-        ) {
-
-            return;
-        }
-
-
-        context.save();
-
-
-        let renderX =
-            this.x;
-
-        let renderY =
-            this.y;
-
-
-        if (camera) {
-
-            renderX =
-                this.x;
-
-            renderY =
-                this.y;
-        }
-
-
-        if (
-            this.config.shadow
-        ) {
-
-            this.renderShadow(
-                context,
-                renderX,
-                renderY
-            );
-        }
-
-
-        this.renderBody(
-            context,
-            renderX,
-            renderY
-        );
-
-
-        if (
-            this.config.debug
-        ) {
-
-            this.renderDebug(
-                context,
-                renderX,
-                renderY
-            );
-        }
-
-
-        context.restore();
-    }
-
-
-    /* ========================================================
-       SOMBRA
-       ======================================================== */
-
-    renderShadow(
-        context,
-        x,
-        y
-    ) {
-
-        context.save();
-
-
-        context.fillStyle =
-            "rgba(0, 0, 0, " +
-            this.config.shadowOpacity +
-            ")";
-
-
-        context.beginPath();
-
-
-        context.ellipse(
-            x,
-            y +
-            this.height *
-            0.42,
-
-            this.config.shadowWidth,
-
-            this.config.shadowHeight,
-
-            0,
-
-            0,
-
-            Math.PI * 2
-        );
-
-
-        context.fill();
-
-
-        context.restore();
-    }
-
-
-    /* ========================================================
-       CORPO
-       ======================================================== */
-
-    renderBody(
-        context,
-        x,
-        y
-    ) {
-
-        const width =
-            this.width;
-
-
-        const height =
-            this.height;
-
-
-        /* ====================================================
-           SOMBRA DO CORPO
-           ==================================================== */
-
-        context.fillStyle =
-            "rgba(0,0,0,0.18)";
-
-
-        context.fillRect(
-            Math.floor(
-                x -
-                width / 2 +
-                3
-            ),
-
-            Math.floor(
-                y -
-                height / 2 +
-                4
-            ),
-
-            width,
-
-            height
-        );
-
-
-        /* ====================================================
-           CORPO
-           ==================================================== */
-
-        context.fillStyle =
-            "#d6dbe5";
-
-
-        context.fillRect(
-            Math.floor(
-                x -
-                width / 2
-            ),
-
-            Math.floor(
-                y -
-                height / 2
-            ),
-
-            width,
-
-            height
-        );
-
-
-        /* ====================================================
-           CABEÇA
-           ==================================================== */
-
-        context.fillStyle =
-            "#b9c0cc";
-
-
-        const headWidth =
-            Math.floor(
-                width *
-                0.64
-            );
-
-
-        const headHeight =
-            Math.floor(
-                height *
-                0.42
-            );
-
-
-        context.fillRect(
-            Math.floor(
-                x -
-                headWidth / 2
-            ),
-
-            Math.floor(
-                y -
-                height *
-                0.56
-            ),
-
-            headWidth,
-
-            headHeight
-        );
-
-
-        /* ====================================================
-           ROUPA
-           ==================================================== */
-
-        context.fillStyle =
-            "#596170";
-
-
-        context.fillRect(
-            Math.floor(
-                x -
-                width * 0.28
-            ),
-
-            Math.floor(
-                y -
-                height * 0.02
-            ),
-
-            Math.floor(
-                width * 0.56
-            ),
-
-            Math.floor(
-                height * 0.12
-            )
-        );
-
-
-        /* ====================================================
-           ROSTO
-           ==================================================== */
-
-        this.renderFace(
-            context,
-            x,
-            y
-        );
-    }
-
-
-    /* ========================================================
-       ROSTO
-       ======================================================== */
-
-    renderFace(
-        context,
-        x,
-        y
-    ) {
-
-        context.fillStyle =
-            "#252a34";
-
-
-        const eyeSize =
-            4;
-
-
-        if (
-            this.direction ===
-            "down"
-        ) {
-
-            context.fillRect(
-                Math.floor(
-                    x - 7
-                ),
-
-                Math.floor(
-                    y - 13
-                ),
-
-                eyeSize,
-
-                eyeSize
-            );
-
-
-            context.fillRect(
-                Math.floor(
-                    x + 3
-                ),
-
-                Math.floor(
-                    y - 13
-                ),
-
-                eyeSize,
-
-                eyeSize
-            );
-
-
-        } else if (
-            this.direction ===
-            "up"
-        ) {
-
-            context.fillRect(
-                Math.floor(
-                    x - 5
-                ),
-
-                Math.floor(
-                    y - 17
-                ),
-
-                10,
-
-                3
-            );
-
-
-        } else if (
-            this.direction ===
-            "left"
-        ) {
-
-            context.fillRect(
-                Math.floor(
-                    x - 11
-                ),
-
-                Math.floor(
-                    y - 9
-                ),
-
-                eyeSize,
-
-                7
-            );
-
-
-        } else if (
-            this.direction ===
-            "right"
-        ) {
-
-            context.fillRect(
-                Math.floor(
-                    x + 7
-                ),
-
-                Math.floor(
-                    y - 9
-                ),
-
-                eyeSize,
-
-                7
-            );
-        }
-    }
-
-
-    /* ========================================================
-       DEBUG
-       ======================================================== */
-
-    renderDebug(
-        context,
-        x,
-        y
-    ) {
-
-        context.strokeStyle =
-            "#ff0000";
-
-
-        context.lineWidth =
-            1;
-
-
-        const rect =
-            this.getCollisionRect(
-                x,
-                y
-            );
-
-
-        context.strokeRect(
-            rect.x,
-            rect.y,
-            rect.width,
-            rect.height
-        );
-
-
-        context.fillStyle =
-            "#ffff00";
-
-
-        context.fillRect(
-            Math.floor(
-                x - 2
-            ),
-
-            Math.floor(
-                y - 2
-            ),
-
-            4,
-
-            4
-        );
-    }
-
-
-    /* ========================================================
-       PARAR
-       ======================================================== */
-
-    stop() {
-
-        const wasMoving =
-            this.moving;
-
-
-        this.velocityX =
-            0;
-
-        this.velocityY =
-            0;
-
-        this.moving =
-            false;
-
-
-        this.animation.frame =
-            0;
-
-        this.animation.timer =
-            0;
-
-
-        if (
-            wasMoving &&
-            typeof this.callbacks.onStop ===
-            "function"
-        ) {
-
-            this.callbacks.onStop();
-        }
-    }
-
-
-    /* ========================================================
-       TELEPORTAR
-       ======================================================== */
 
     setPosition(
         x,
         y
     ) {
+        this.x = x;
+        this.y = y;
 
-        this.x =
-            x;
-
-        this.y =
-            y;
-
-
-        this.previousPosition.x =
-            x;
-
-        this.previousPosition.y =
-            y;
-
-
-        this.stop();
-
-
-        this.clampToWorld();
+        this.keepInsideWorld();
     }
 
+    getSpeed() {
+        return Math.hypot(
+            this.vx,
+            this.vy
+        );
+    }
 
-    /* ========================================================
-       DIREÇÃO MANUAL
-       ======================================================== */
+    isMoving() {
+        return (
+            Math.abs(this.vx) > 1 ||
+            Math.abs(this.vy) > 1
+        );
+    }
 
-    setDirection(
-        direction
-    ) {
-
+    setDirection(direction) {
         const validDirections = [
             "up",
             "down",
@@ -1316,235 +1108,18 @@ export class Player {
             "right"
         ];
 
-
         if (
-            !validDirections.includes(
+            validDirections.includes(
                 direction
             )
         ) {
-
-            return;
-        }
-
-
-        this.direction =
-            direction;
-    }
-
-
-    /* ========================================================
-       ATIVAR
-       ======================================================== */
-
-    enable() {
-
-        this.enabled =
-            true;
-    }
-
-
-    /* ========================================================
-       DESATIVAR
-       ======================================================== */
-
-    disable() {
-
-        this.enabled =
-            false;
-
-        this.stop();
-    }
-
-
-    /* ========================================================
-       RESET
-       ======================================================== */
-
-    reset(
-        x,
-        y
-    ) {
-
-        this.x =
-            x;
-
-        this.y =
-            y;
-
-
-        this.direction =
-            "down";
-
-
-        this.velocityX =
-            0;
-
-        this.velocityY =
-            0;
-
-
-        this.moving =
-            false;
-
-
-        this.animation.frame =
-            0;
-
-        this.animation.timer =
-            0;
-
-
-        this.enabled =
-            true;
-
-        this.visible =
-            true;
-
-
-        this.previousPosition.x =
-            x;
-
-        this.previousPosition.y =
-            y;
-
-
-        this.clampToWorld();
-    }
-
-
-    /* ========================================================
-       CENTRO
-       ======================================================== */
-
-    getCenter() {
-
-        return {
-
-            x: this.x,
-
-            y: this.y
-        };
-    }
-
-
-    /* ========================================================
-       RETÂNGULO DE COLISÃO
-       ======================================================== */
-
-    getCollisionRect(
-        x = this.x,
-        y = this.y
-    ) {
-
-        return {
-
-            x:
-                x -
-                this.collision.width /
-                2,
-
-            y:
-                y -
-                this.collision.height /
-                2,
-
-            width:
-                this.collision.width,
-
-            height:
-                this.collision.height
-        };
-    }
-
-
-    /* ========================================================
-       RETÂNGULO VISUAL
-       ======================================================== */
-
-    getBounds() {
-
-        return {
-
-            x:
-                this.x -
-                this.width /
-                2,
-
-            y:
-                this.y -
-                this.height /
-                2,
-
-            width:
-                this.width,
-
-            height:
-                this.height
-        };
-    }
-
-
-    /* ========================================================
-       CALLBACKS
-       ======================================================== */
-
-    setCallbacks(
-        callbacks = {}
-    ) {
-
-        if (
-            typeof callbacks.onMove ===
-            "function"
-        ) {
-
-            this.callbacks.onMove =
-                callbacks.onMove;
-        }
-
-
-        if (
-            typeof callbacks.onStop ===
-            "function"
-        ) {
-
-            this.callbacks.onStop =
-                callbacks.onStop;
-        }
-
-
-        if (
-            typeof callbacks.onDirectionChange ===
-            "function"
-        ) {
-
-            this.callbacks.onDirectionChange =
-                callbacks.onDirectionChange;
+            this.direction =
+                direction;
         }
     }
-
-
-    /* ========================================================
-       DESTRUIR
-       ======================================================== */
 
     destroy() {
-
-        this.stop();
-
-        this.input =
-            null;
-
-        this.world =
-            null;
-
-        this.callbacks =
-            {
-
-                onMove: null,
-
-                onStop: null,
-
-                onDirectionChange: null
-            };
+        this.input = null;
+        this.world = null;
     }
 }
