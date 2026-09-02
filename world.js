@@ -2962,8 +2962,8 @@ export class World {
 
   getSpawnPoint() {
     return {
-      x: 800,
-      y: 610
+      x: 930,
+      y: 620
     };
   }
 
