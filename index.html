@@ -1,549 +1,233 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
 
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
-  >
+  />
 
   <meta
-    name="description"
-    content="A Sala — Escape Room de acessibilidade"
-  >
+    name="theme-color"
+    content="#090b0f"
+  />
 
-  <title>A Sala — Escape Room</title>
+  <title>A SAÍDA — Escape Room</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
   <link
-    href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"
     rel="stylesheet"
-  >
+  />
 
-  <link rel="stylesheet" href="./style.css">
+  <link
+    rel="stylesheet"
+    href="./style.css?v=20260902-5"
+  />
 </head>
 
 <body>
 
-  <main id="gameShell">
+  <main id="gameRoot">
 
-    <section id="gameContainer">
+    <canvas
+      id="gameCanvas"
+      aria-label="Jogo Escape Room A Saída"
+    ></canvas>
 
-      <canvas
-        id="gameCanvas"
-        width="960"
-        height="540"
-        tabindex="0"
-        aria-label="Escape Room A Sala"
-      ></canvas>
+    <!-- =====================================================
+         CARREGAMENTO
+    ====================================================== -->
 
-      <!-- =====================================================
-           CARREGAMENTO
-      ====================================================== -->
+    <section
+      id="loadingScreen"
+      class="screen active"
+    >
+      <div class="loading-content">
 
-      <div
-        id="loadingScreen"
-        class="overlay-screen"
-      >
+        <div class="loading-mark">
+          A SAÍDA
+        </div>
 
-        <div class="loading-card">
+        <p id="loadingText">
+          Iniciando sistema...
+        </p>
 
-          <div class="loading-title">
-            A SALA
-          </div>
-
-          <div class="loading-subtitle">
-            ESCAPE ROOM
-          </div>
-
-          <div class="loading-spinner"></div>
-
-          <p id="loadingText">
-            Iniciando sistema...
-          </p>
-
+        <div class="loading-bar">
+          <div
+            id="loadingProgress"
+            class="loading-progress"
+          ></div>
         </div>
 
       </div>
+    </section>
 
 
-      <!-- =====================================================
-           MENU INICIAL
-      ====================================================== -->
+    <!-- =====================================================
+         MENU INICIAL
+    ====================================================== -->
 
-      <div
-        id="startScreen"
-        class="overlay-screen hidden"
-      >
+    <section
+      id="startScreen"
+      class="screen hidden"
+    >
 
-        <div class="menu-card">
+      <div class="start-content">
 
-          <div class="menu-eyebrow">
-            PROJETO DE ACESSIBILIDADE
-          </div>
-
-          <h1>
-            A SALA
-          </h1>
-
-          <p class="menu-description">
-            Você está preso em uma sala de aula.
-            Explore o ambiente, encontre as pistas,
-            descubra o código e encontre uma saída.
-          </p>
-
-          <div class="controls-box">
-
-            <div class="control-row">
-
-              <span class="control-key">
-                W A S D
-              </span>
-
-              <span>
-                Movimentar
-              </span>
-
-            </div>
-
-            <div class="control-row">
-
-              <span class="control-key">
-                E
-              </span>
-
-              <span>
-                Investigar
-              </span>
-
-            </div>
-
-            <div class="control-row">
-
-              <span class="control-key">
-                ESC
-              </span>
-
-              <span>
-                Pausar
-              </span>
-
-            </div>
-
-          </div>
-
-          <button
-            id="startButton"
-            class="game-button"
-            type="button"
-          >
-            ENTRAR NA SALA
-          </button>
-
+        <div class="eyebrow">
+          ESCAPE ROOM
         </div>
 
-      </div>
+        <h1>
+          A SAÍDA
+        </h1>
 
+        <p class="start-description">
+          Uma sala.
+          <br />
+          Nenhuma visão.
+          <br />
+          Apenas sons, memória e percepção.
+        </p>
 
-      <!-- =====================================================
-           HUD
-      ====================================================== -->
-
-      <div
-        id="hud"
-        class="hud hidden"
-      >
-
-        <div class="hud-objective">
-
-          <div class="hud-label">
-            OBJETIVO
-          </div>
-
-          <div id="objectiveText">
-            Encontre uma maneira de escapar.
-          </div>
-
-        </div>
-
-        <div class="hud-status">
-
-          <div id="interactionHint">
-            Explore a sala...
-          </div>
-
-        </div>
-
-        <div
-          id="voiceIndicator"
-          class="voice-indicator hidden"
+        <button
+          id="startButton"
+          class="primary-button"
+          type="button"
         >
+          INICIAR
+        </button>
 
-          <span class="voice-icon">
-            🔊
-          </span>
-
-          <span>
-            OUVINDO...
-          </span>
-
-        </div>
+        <p class="controls-preview">
+          WASD — MOVER
+          <br />
+          E — INTERAGIR
+        </p>
 
       </div>
 
+    </section>
 
-      <!-- =====================================================
-           BOTÃO DE VOZ
-      ====================================================== -->
+
+    <!-- =====================================================
+         HUD
+    ====================================================== -->
+
+    <section
+      id="hud"
+      class="hud hidden"
+    >
+
+      <div
+        id="objectivePanel"
+        class="hud-panel objective-panel"
+      >
+        <span class="hud-label">
+          OBJETIVO
+        </span>
+
+        <span id="objectiveText">
+          Encontre uma forma de sair.
+        </span>
+      </div>
+
+
+      <div
+        id="statusPanel"
+        class="hud-panel status-panel"
+      >
+        <span class="hud-label">
+          STATUS
+        </span>
+
+        <span id="statusText">
+          SISTEMA ATIVO
+        </span>
+      </div>
+
+
+      <div
+        id="voiceIndicator"
+        class="voice-indicator hidden"
+      >
+        <span class="voice-dot"></span>
+        <span>
+          OUVINDO
+        </span>
+      </div>
+
 
       <button
         id="voiceButton"
-        class="voice-button hidden"
+        class="hud-button"
         type="button"
-        aria-label="Ouvir texto"
+        aria-label="Ouvir novamente"
       >
-
-        <span>
-          🔊
-        </span>
-
-        <span>
-          OUVIR
-        </span>
-
+        🔊
       </button>
 
 
-      <!-- =====================================================
-           MENSAGEM
-      ====================================================== -->
-
       <div
-        id="messageOverlay"
-        class="modal-overlay hidden"
+        id="interactionHint"
+        class="interaction-hint"
       >
+        <span
+          id="interactionKey"
+          class="interaction-key"
+        >
+          E
+        </span>
 
-        <div class="message-card">
-
-          <div
-            id="messageTitle"
-            class="message-title"
-          >
-            A SALA
-          </div>
-
-          <div
-            id="messageText"
-            class="message-text"
-          ></div>
-
-          <div class="message-actions">
-
-            <button
-              id="messageVoiceButton"
-              class="game-button voice-action"
-              type="button"
-            >
-              🔊 OUVIR
-            </button>
-
-            <button
-              id="messageContinueButton"
-              class="game-button"
-              type="button"
-            >
-              CONTINUAR
-            </button>
-
-          </div>
-
-          <div class="message-footer">
-            ENTER para continuar
-          </div>
-
-        </div>
-
+        <span id="interactionText">
+          Interagir
+        </span>
       </div>
 
+    </section>
 
-      <!-- =====================================================
-           PUZZLE
-      ====================================================== -->
 
-      <div
-        id="puzzleOverlay"
-        class="modal-overlay hidden"
-      >
+    <!-- =====================================================
+         MENSAGEM / DIÁLOGO
+    ====================================================== -->
 
-        <div class="puzzle-card">
+    <section
+      id="messageOverlay"
+      class="overlay hidden"
+    >
 
-          <div class="puzzle-eyebrow">
-            INVESTIGAÇÃO
-          </div>
+      <div class="message-box">
 
-          <div
-            id="puzzleTitle"
-            class="puzzle-title"
-          >
-            DESAFIO
-          </div>
-
-          <div
-            id="puzzleQuestion"
-            class="puzzle-question"
-          ></div>
-
-          <button
-            id="puzzleVoiceButton"
-            class="game-button voice-action"
-            type="button"
-          >
-            🔊 OUVIR PISTA
-          </button>
-
-          <input
-            id="puzzleInput"
-            class="puzzle-input"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Digite sua resposta..."
-          >
-
-          <div
-            id="puzzleFeedback"
-            class="puzzle-feedback"
-          ></div>
-
-          <div class="puzzle-actions">
-
-            <button
-              id="puzzleSubmit"
-              class="game-button"
-              type="button"
-            >
-              CONFIRMAR
-            </button>
-
-            <button
-              id="puzzleCancel"
-              class="game-button secondary"
-              type="button"
-            >
-              CANCELAR
-            </button>
-
-          </div>
-
+        <div
+          id="messageTitle"
+          class="message-title"
+        >
+          SISTEMA
         </div>
 
-      </div>
+        <p id="messageText">
+          ...
+        </p>
 
-
-      <!-- =====================================================
-           TERMINAL
-      ====================================================== -->
-
-      <div
-        id="terminalOverlay"
-        class="modal-overlay hidden"
-      >
-
-        <div class="terminal-card">
-
-          <div class="terminal-header">
-
-            <span class="terminal-light"></span>
-
-            TERMINAL
-
-          </div>
-
-          <div
-            id="terminalText"
-            class="terminal-text"
-          >
-            SISTEMA BLOQUEADO
-          </div>
-
-          <div class="terminal-code-display">
-
-            <span id="terminalCodeDisplay">
-              _ _ _ _
-            </span>
-
-          </div>
+        <div class="message-actions">
 
           <button
-            id="terminalVoiceButton"
-            class="game-button voice-action"
+            id="messageVoiceButton"
+            class="secondary-button"
             type="button"
           >
             🔊 OUVIR
           </button>
 
-          <input
-            id="terminalInput"
-            class="terminal-input"
-            type="text"
-            inputmode="numeric"
-            maxlength="4"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Digite o código"
-          >
-
-          <div
-            id="terminalFeedback"
-            class="terminal-feedback"
-          ></div>
-
-          <div class="terminal-actions">
-
-            <button
-              id="terminalSubmit"
-              class="game-button"
-              type="button"
-            >
-              ACESSAR
-            </button>
-
-            <button
-              id="terminalCancel"
-              class="game-button secondary"
-              type="button"
-            >
-              SAIR
-            </button>
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <!-- =====================================================
-           PAUSA
-      ====================================================== -->
-
-      <div
-        id="pauseScreen"
-        class="overlay-screen hidden"
-      >
-
-        <div class="pause-card">
-
-          <div class="pause-eyebrow">
-            SISTEMA PAUSADO
-          </div>
-
-          <h2>
-            PAUSA
-          </h2>
-
-          <p>
-            Pressione ESC para continuar.
-          </p>
-
           <button
-            id="pauseButton"
-            class="game-button"
+            id="messageContinueButton"
+            class="primary-button"
             type="button"
           >
             CONTINUAR
-          </button>
-
-          <button
-            id="restartButton"
-            class="game-button secondary"
-            type="button"
-          >
-            REINICIAR
-          </button>
-
-        </div>
-
-      </div>
-
-
-      <!-- =====================================================
-           VITÓRIA
-      ====================================================== -->
-
-      <div
-        id="completeScreen"
-        class="overlay-screen hidden"
-      >
-
-        <div class="complete-card">
-
-          <div class="complete-icon">
-            ✓
-          </div>
-
-          <div class="complete-eyebrow">
-            ACESSO LIBERADO
-          </div>
-
-          <h2>
-            VOCÊ ESCAPOU!
-          </h2>
-
-          <p>
-            Você encontrou as pistas,
-            descobriu o código e conseguiu
-            encontrar uma saída.
-          </p>
-
-          <div class="complete-message">
-            Acessibilidade também significa
-            criar experiências onde todos
-            possam participar.
-          </div>
-
-          <button
-            id="completeRestartButton"
-            class="game-button"
-            type="button"
-          >
-            JOGAR NOVAMENTE
-          </button>
-
-        </div>
-
-      </div>
-
-
-      <!-- =====================================================
-           ERRO
-      ====================================================== -->
-
-      <div
-        id="gameError"
-        class="error-screen hidden"
-      >
-
-        <div class="error-card">
-
-          <h2>
-            Erro no Escape Room
-          </h2>
-
-          <p id="gameErrorText">
-            O jogo encontrou um problema ao iniciar.
-          </p>
-
-          <button
-            id="errorReloadButton"
-            class="game-button"
-            type="button"
-          >
-            RECARREGAR
           </button>
 
         </div>
@@ -553,34 +237,269 @@
     </section>
 
 
-    <!-- =======================================================
-         RODAPÉ
-    ======================================================== -->
+    <!-- =====================================================
+         PUZZLE
+    ====================================================== -->
 
-    <footer id="gameFooter">
+    <section
+      id="puzzleOverlay"
+      class="overlay hidden"
+    >
 
-      <span>
-        ESCAPE ROOM
-      </span>
+      <div class="puzzle-box">
 
-      <span>
-        PROJETO DE ACESSIBILIDADE
-      </span>
+        <div
+          id="puzzleTitle"
+          class="message-title"
+        >
+          DESAFIO
+        </div>
 
-    </footer>
+        <p id="puzzleQuestion">
+          ...
+        </p>
+
+        <button
+          id="puzzleVoiceButton"
+          class="secondary-button"
+          type="button"
+        >
+          🔊 OUVIR
+        </button>
+
+        <input
+          id="puzzleInput"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Digite sua resposta"
+        />
+
+        <p
+          id="puzzleFeedback"
+          class="feedback"
+        ></p>
+
+        <div class="message-actions">
+
+          <button
+            id="puzzleCancel"
+            class="secondary-button"
+            type="button"
+          >
+            VOLTAR
+          </button>
+
+          <button
+            id="puzzleSubmit"
+            class="primary-button"
+            type="button"
+          >
+            CONFIRMAR
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         TERMINAL
+    ====================================================== -->
+
+    <section
+      id="terminalOverlay"
+      class="overlay hidden"
+    >
+
+      <div class="terminal-box">
+
+        <div class="terminal-header">
+          TERMINAL DE SEGURANÇA
+        </div>
+
+        <p id="terminalText">
+          Insira o código de acesso.
+        </p>
+
+        <div
+          id="terminalCodeDisplay"
+          class="terminal-code"
+        >
+          _ _ _ _
+        </div>
+
+        <button
+          id="terminalVoiceButton"
+          class="secondary-button"
+          type="button"
+        >
+          🔊 OUVIR
+        </button>
+
+        <input
+          id="terminalInput"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          maxlength="8"
+          placeholder="CÓDIGO"
+        />
+
+        <p
+          id="terminalFeedback"
+          class="feedback"
+        ></p>
+
+        <div class="message-actions">
+
+          <button
+            id="terminalCancel"
+            class="secondary-button"
+            type="button"
+          >
+            CANCELAR
+          </button>
+
+          <button
+            id="terminalSubmit"
+            class="primary-button"
+            type="button"
+          >
+            ACESSAR
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         PAUSA
+    ====================================================== -->
+
+    <section
+      id="pauseScreen"
+      class="screen hidden"
+    >
+
+      <div class="pause-content">
+
+        <div class="eyebrow">
+          SISTEMA PAUSADO
+        </div>
+
+        <h2>
+          PAUSA
+        </h2>
+
+        <button
+          id="pauseButton"
+          class="primary-button"
+          type="button"
+        >
+          CONTINUAR
+        </button>
+
+        <button
+          id="restartButton"
+          class="secondary-button"
+          type="button"
+        >
+          REINICIAR
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         FASE CONCLUÍDA
+    ====================================================== -->
+
+    <section
+      id="completeScreen"
+      class="screen hidden"
+    >
+
+      <div class="complete-content">
+
+        <div class="eyebrow">
+          ESCAPE ROOM
+        </div>
+
+        <h2>
+          FASE CONCLUÍDA
+        </h2>
+
+        <p>
+          Você encontrou a saída.
+        </p>
+
+        <button
+          id="completeRestartButton"
+          class="primary-button"
+          type="button"
+        >
+          JOGAR NOVAMENTE
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         ERRO
+    ====================================================== -->
+
+    <section
+      id="gameError"
+      class="screen hidden"
+    >
+
+      <div class="error-content">
+
+        <div class="eyebrow">
+          ERRO
+        </div>
+
+        <h2>
+          NÃO FOI POSSÍVEL INICIAR
+        </h2>
+
+        <p id="gameErrorText">
+          Ocorreu um erro inesperado.
+        </p>
+
+        <button
+          id="errorReloadButton"
+          class="primary-button"
+          type="button"
+        >
+          RECARREGAR
+        </button>
+
+      </div>
+
+    </section>
 
   </main>
 
 
-  <!-- =========================================================
+  <!-- =======================================================
        JAVASCRIPT
-  ========================================================== -->
+  ======================================================== -->
 
   <script
     type="module"
-    src="./main.js"
+    src="./main.js?v=20260902-5"
   ></script>
 
 </body>
-
 </html>

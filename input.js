@@ -1,520 +1,379 @@
-/* =========================================================
-   A SALA — ESCAPE ROOM
-   INPUT.JS
-
-   Responsável por:
-   - WASD
-   - Setas direcionais
-   - E para investigar
-   - ESC para pausar/fechar interfaces
-   - ENTER para confirmar/continuar
-   - R para reiniciar
-   ========================================================= */
-
 export class Input {
+  constructor() {
+    this.down = new Set();
+    this.pressed = new Set();
 
-  constructor(game = null) {
-
-    this.game = game;
-
-    /* -------------------------------------------------------
-       ESTADO DAS TECLAS
-    ------------------------------------------------------- */
-
-    this.keys = new Set();
-
-    this.justPressed = new Set();
-
-
-    /* -------------------------------------------------------
-       EVENTOS
-    ------------------------------------------------------- */
-
-    this.boundKeyDown =
+    this.onKeyDown =
       this.handleKeyDown.bind(this);
 
-    this.boundKeyUp =
+    this.onKeyUp =
       this.handleKeyUp.bind(this);
 
-    this.boundBlur =
-      this.handleBlur.bind(this);
-
-    this.boundVisibilityChange =
-      this.handleVisibilityChange.bind(this);
-
-
-    /* -------------------------------------------------------
-       LISTENERS
-    ------------------------------------------------------- */
+    this.onBlur =
+      this.reset.bind(this);
 
     window.addEventListener(
       "keydown",
-      this.boundKeyDown,
+      this.onKeyDown,
       {
         passive: false
       }
     );
-
 
     window.addEventListener(
       "keyup",
-      this.boundKeyUp,
-      {
-        passive: false
-      }
+      this.onKeyUp
     );
-
 
     window.addEventListener(
       "blur",
-      this.boundBlur
+      this.onBlur
     );
-
-
-    document.addEventListener(
-      "visibilitychange",
-      this.boundVisibilityChange
-    );
-
   }
 
-
   /* =========================================================
-     NORMALIZAR TECLA
-     ========================================================= */
+     NORMALIZAÇÃO
+  ========================================================== */
 
-  normalizeKey(key) {
-
+  normalize(key) {
     if (
       typeof key !== "string"
     ) {
-
       return "";
-
     }
-
-
-    /*
-     * Letras ficam sempre minúsculas.
-     */
 
     if (
       key.length === 1
     ) {
-
       return key.toLowerCase();
-
     }
 
-
     return key;
-
   }
-
 
   /* =========================================================
      KEY DOWN
-     ========================================================= */
+  ========================================================== */
 
   handleKeyDown(event) {
-
-    if (!event) {
-      return;
-    }
-
-
     const key =
-      this.normalizeKey(
+      this.normalize(
         event.key
       );
-
 
     if (!key) {
       return;
     }
 
-
-    /* -------------------------------------------------------
-       Impede o navegador de rolar a página com as setas
-       ou espaço.
-    ------------------------------------------------------- */
+    /*
+      Impede que as teclas de movimentação
+      façam a página rolar.
+    */
 
     const blockedKeys = [
-
       "ArrowUp",
-
       "ArrowDown",
-
       "ArrowLeft",
-
       "ArrowRight",
-
-      " "
-
+      " ",
+      "w",
+      "a",
+      "s",
+      "d"
     ];
-
 
     if (
       blockedKeys.includes(key)
     ) {
-
       event.preventDefault();
-
     }
 
-
-    /* -------------------------------------------------------
-       justPressed só recebe a tecla na primeira vez.
-
-       Isso é importante para E, ESC e ENTER não serem
-       executados dezenas de vezes enquanto o jogador segura
-       a tecla.
-    ------------------------------------------------------- */
+    /*
+      pressed = tecla acabou de ser pressionada.
+      down = tecla continua sendo segurada.
+    */
 
     if (
-      !this.keys.has(key)
+      !this.down.has(key)
     ) {
-
-      this.justPressed.add(
-        key
-      );
-
+      this.pressed.add(key);
     }
 
-
-    this.keys.add(
-      key
-    );
-
-
-    /* -------------------------------------------------------
-       Informa o Game sobre teclas especiais.
-    ------------------------------------------------------- */
-
-    if (
-      this.game &&
-      typeof this.game.handleKeyDown ===
-      "function"
-    ) {
-
-      this.game.handleKeyDown(
-        event
-      );
-
-    }
-
+    this.down.add(key);
   }
-
 
   /* =========================================================
      KEY UP
-     ========================================================= */
+  ========================================================== */
 
   handleKeyUp(event) {
-
-    if (!event) {
-      return;
-    }
-
-
     const key =
-      this.normalizeKey(
+      this.normalize(
         event.key
       );
-
 
     if (!key) {
       return;
     }
 
-
-    this.keys.delete(
-      key
-    );
-
+    this.down.delete(key);
   }
 
-
   /* =========================================================
-     PERDEU FOCO
-     ========================================================= */
-
-  handleBlur() {
-
-    this.reset();
-
-  }
-
-
-  /* =========================================================
-     ABA FICOU ESCONDIDA
-     ========================================================= */
-
-  handleVisibilityChange() {
-
-    if (
-      document.hidden
-    ) {
-
-      this.reset();
-
-    }
-
-  }
-
-
-  /* =========================================================
-     TECLA PRESSIONADA
-     ========================================================= */
+     VERIFICAR TECLA SEGURADA
+  ========================================================== */
 
   isDown(key) {
-
-    return this.keys.has(
-      this.normalizeKey(key)
+    return this.down.has(
+      this.normalize(key)
     );
-
   }
-
 
   /* =========================================================
-     TECLA PRESSIONADA NESTE FRAME
-     ========================================================= */
+     VERIFICAR TECLA PRESSIONADA
+  ========================================================== */
 
   wasPressed(key) {
-
-    return this.justPressed.has(
-      this.normalizeKey(key)
+    return this.pressed.has(
+      this.normalize(key)
     );
-
   }
 
+  /* =========================================================
+     CONSUMIR TECLA
+     
+     Usado para ações que devem acontecer
+     somente uma vez por pressionamento.
+  ========================================================== */
+
+  consume(key) {
+    const normalized =
+      this.normalize(key);
+
+    if (
+      !this.pressed.has(
+        normalized
+      )
+    ) {
+      return false;
+    }
+
+    this.pressed.delete(
+      normalized
+    );
+
+    return true;
+  }
 
   /* =========================================================
      MOVIMENTO
-
-     Retorna um vetor normalizado.
-
-     W / ↑ = cima
-     S / ↓ = baixo
-     A / ← = esquerda
-     D / → = direita
-    ========================================================= */
+  ========================================================== */
 
   getMovementVector() {
-
     let x = 0;
-
     let y = 0;
 
-
-    /* -------------------------------------------------------
-       ESQUERDA
-    ------------------------------------------------------- */
+    /*
+      WASD
+    */
 
     if (
-      this.isDown("a") ||
+      this.isDown("a")
+    ) {
+      x -= 1;
+    }
+
+    if (
+      this.isDown("d")
+    ) {
+      x += 1;
+    }
+
+    if (
+      this.isDown("w")
+    ) {
+      y -= 1;
+    }
+
+    if (
+      this.isDown("s")
+    ) {
+      y += 1;
+    }
+
+    /*
+      Setas também funcionam.
+    */
+
+    if (
       this.isDown("ArrowLeft")
     ) {
-
       x -= 1;
-
     }
 
-
-    /* -------------------------------------------------------
-       DIREITA
-    ------------------------------------------------------- */
-
     if (
-      this.isDown("d") ||
       this.isDown("ArrowRight")
     ) {
-
       x += 1;
-
     }
 
-
-    /* -------------------------------------------------------
-       CIMA
-    ------------------------------------------------------- */
-
     if (
-      this.isDown("w") ||
       this.isDown("ArrowUp")
     ) {
-
       y -= 1;
-
     }
-
-
-    /* -------------------------------------------------------
-       BAIXO
-    ------------------------------------------------------- */
 
     if (
-      this.isDown("s") ||
       this.isDown("ArrowDown")
     ) {
-
       y += 1;
-
     }
 
+    /*
+      Normaliza a diagonal.
 
-    /* -------------------------------------------------------
-       NORMALIZAÇÃO
-
-       Sem isso, andar na diagonal seria mais rápido.
-    ------------------------------------------------------- */
+      Sem isso, andar na diagonal seria
+      mais rápido do que andar em linha reta.
+    */
 
     const length =
-      Math.hypot(
-        x,
-        y
-      );
-
+      Math.hypot(x, y);
 
     if (
       length > 0
     ) {
-
       x /= length;
-
       y /= length;
-
     }
-
 
     return {
       x,
       y
     };
-
   }
-
-
-  /* =========================================================
-     PAUSA
-     ========================================================= */
-
-  wantsPause() {
-
-    return (
-      this.wasPressed("Escape") ||
-      this.wasPressed("p")
-    );
-
-  }
-
 
   /* =========================================================
      INTERAÇÃO
-     ========================================================= */
+  ========================================================== */
 
   wantsInteract() {
-
-    return this.wasPressed(
-      "e"
-    );
-
+    return this.consume("e");
   }
-
 
   /* =========================================================
      CONFIRMAR
-     ========================================================= */
+  ========================================================== */
 
   wantsConfirm() {
+    if (
+      this.consume("Enter")
+    ) {
+      return true;
+    }
 
-    return (
-      this.wasPressed("Enter") ||
-      this.wasPressed(" ")
-    );
+    if (
+      this.consume(" ")
+    ) {
+      return true;
+    }
 
+    return false;
   }
 
-
   /* =========================================================
-     REINICIAR
-     ========================================================= */
+     PAUSA
+  ========================================================== */
 
-  wantsRestart() {
+  wantsPause() {
+    if (
+      this.consume("Escape")
+    ) {
+      return true;
+    }
 
-    return this.wasPressed(
-      "r"
-    );
+    if (
+      this.consume("p")
+    ) {
+      return true;
+    }
 
+    return false;
   }
 
+  /* =========================================================
+     NÚMERO PRESSIONADO
+  ========================================================== */
+
+  getPressedDigit() {
+    const digits = [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ];
+
+    for (
+      const digit of digits
+    ) {
+      if (
+        this.pressed.has(
+          digit
+        )
+      ) {
+        this.pressed.delete(
+          digit
+        );
+
+        return digit;
+      }
+    }
+
+    return null;
+  }
 
   /* =========================================================
-     LIMPAR JUST PRESSED
-     ========================================================= */
+     LIMPAR ESTADO DO FRAME
+  ========================================================== */
 
   endFrame() {
-
-    this.justPressed.clear();
-
+    this.pressed.clear();
   }
-
 
   /* =========================================================
      RESET
-
-     Usado quando:
-     - janela perde foco
-     - aba fica escondida
-     - jogo é reiniciado
-    ========================================================= */
+  ========================================================== */
 
   reset() {
-
-    this.keys.clear();
-
-    this.justPressed.clear();
-
+    this.down.clear();
+    this.pressed.clear();
   }
 
-
   /* =========================================================
-     DESTROY
-
-     Remove todos os listeners quando o jogo é destruído.
-    ========================================================= */
+     DESTRUIR
+  ========================================================== */
 
   destroy() {
-
     window.removeEventListener(
       "keydown",
-      this.boundKeyDown
+      this.onKeyDown
     );
-
 
     window.removeEventListener(
       "keyup",
-      this.boundKeyUp
+      this.onKeyUp
     );
-
 
     window.removeEventListener(
       "blur",
-      this.boundBlur
+      this.onBlur
     );
-
-
-    document.removeEventListener(
-      "visibilitychange",
-      this.boundVisibilityChange
-    );
-
 
     this.reset();
-
-
-    this.game = null;
-
   }
-
 }

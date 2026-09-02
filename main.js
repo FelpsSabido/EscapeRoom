@@ -1,1176 +1,826 @@
-/* =========================================================
-   A SALA — ESCAPE ROOM
-   MAIN.JS
-   ========================================================= */
-
-import { Game } from "./game.js";
-
-
-/* =========================================================
-   APPLICATION
-   ========================================================= */
+import { Game } from "./game.js?v=20260902-5";
 
 class Application {
-
   constructor() {
+    this.canvas = document.getElementById("gameCanvas");
 
-    this.canvas = null;
+    this.loadingScreen = document.getElementById("loadingScreen");
+    this.loadingText = document.getElementById("loadingText");
+    this.loadingProgress = document.getElementById("loadingProgress");
+
+    this.startScreen = document.getElementById("startScreen");
+    this.startButton = document.getElementById("startButton");
+
+    this.hud = document.getElementById("hud");
+    this.objectiveText = document.getElementById("objectiveText");
+    this.interactionHint = document.getElementById("interactionHint");
+    this.interactionKey = document.getElementById("interactionKey");
+    this.interactionText = document.getElementById("interactionText");
+
+    this.voiceIndicator = document.getElementById("voiceIndicator");
+    this.voiceButton = document.getElementById("voiceButton");
+
+    this.messageOverlay = document.getElementById("messageOverlay");
+    this.messageTitle = document.getElementById("messageTitle");
+    this.messageText = document.getElementById("messageText");
+    this.messageVoiceButton = document.getElementById(
+      "messageVoiceButton"
+    );
+    this.messageContinueButton = document.getElementById(
+      "messageContinueButton"
+    );
+
+    this.puzzleOverlay = document.getElementById("puzzleOverlay");
+    this.puzzleTitle = document.getElementById("puzzleTitle");
+    this.puzzleQuestion = document.getElementById("puzzleQuestion");
+    this.puzzleVoiceButton = document.getElementById(
+      "puzzleVoiceButton"
+    );
+    this.puzzleInput = document.getElementById("puzzleInput");
+    this.puzzleFeedback = document.getElementById("puzzleFeedback");
+    this.puzzleSubmit = document.getElementById("puzzleSubmit");
+    this.puzzleCancel = document.getElementById("puzzleCancel");
+
+    this.terminalOverlay = document.getElementById("terminalOverlay");
+    this.terminalText = document.getElementById("terminalText");
+    this.terminalCodeDisplay = document.getElementById(
+      "terminalCodeDisplay"
+    );
+    this.terminalVoiceButton = document.getElementById(
+      "terminalVoiceButton"
+    );
+    this.terminalInput = document.getElementById("terminalInput");
+    this.terminalFeedback = document.getElementById(
+      "terminalFeedback"
+    );
+    this.terminalSubmit = document.getElementById("terminalSubmit");
+    this.terminalCancel = document.getElementById("terminalCancel");
+
+    this.pauseScreen = document.getElementById("pauseScreen");
+    this.pauseButton = document.getElementById("pauseButton");
+    this.restartButton = document.getElementById("restartButton");
+
+    this.completeScreen = document.getElementById("completeScreen");
+    this.completeRestartButton = document.getElementById(
+      "completeRestartButton"
+    );
+
+    this.gameError = document.getElementById("gameError");
+    this.gameErrorText = document.getElementById("gameErrorText");
+    this.errorReloadButton = document.getElementById(
+      "errorReloadButton"
+    );
 
     this.game = null;
 
+    this.running = false;
     this.lastTime = 0;
-
     this.animationFrame = null;
 
-    this.running = false;
+    this.bindEvents();
 
-    this.initialized = false;
+    window.escapeRoom = {
+      application: this
+    };
 
-
-    this.boundLoop =
-      this.loop.bind(this);
-
-    this.boundResize =
-      this.handleResize.bind(this);
-
-    this.boundVisibility =
-      this.handleVisibility.bind(this);
-
+    this.initialize();
   }
 
-
   /* =======================================================
-     INITIALIZAÇÃO
-  ======================================================= */
+     INICIALIZAÇÃO
+  ======================================================== */
 
-  init() {
-
-    if (this.initialized) {
-      return;
-    }
-
-    this.canvas =
-      document.getElementById("gameCanvas");
-
-
-    if (!this.canvas) {
-
-      console.error(
-        "Canvas #gameCanvas não encontrado."
-      );
-
-      this.showFatalError(
-        "O canvas principal do jogo não foi encontrado."
-      );
-
-      return;
-    }
-
-
-    this.configureCanvas();
-
-    this.setupInterface();
-
-    this.setupEvents();
-
-
+  async initialize() {
     try {
+      this.setLoading(
+        10,
+        "Preparando sistema..."
+      );
 
-      this.game =
-        new Game(this.canvas);
+      await this.wait(150);
+
+      this.setLoading(
+        30,
+        "Carregando ambiente..."
+      );
+
+      this.game = new Game(this.canvas);
+
+      await this.wait(150);
+
+      this.setLoading(
+        55,
+        "Preparando personagem..."
+      );
+
+      await this.wait(150);
+
+      this.setLoading(
+        75,
+        "Preparando áudio..."
+      );
+
+      await this.wait(150);
+
+      this.setLoading(
+        92,
+        "Finalizando..."
+      );
+
+      await this.wait(200);
+
+      this.setLoading(
+        100,
+        "Sistema pronto."
+      );
+
+      await this.wait(300);
+
+      this.showStartScreen();
+
+      window.escapeRoom.game = this.game;
+
+      this.startLoop();
 
     } catch (error) {
-
       console.error(
-        "Erro ao criar o jogo:",
+        "Erro ao inicializar o jogo:",
         error
       );
 
-      this.showFatalError(
-        "Não foi possível iniciar o sistema do jogo."
+      this.showError(
+        error?.message ||
+        "Erro desconhecido ao iniciar o jogo."
       );
-
-      return;
     }
-
-
-    this.initialized = true;
-
-    this.showLoading();
-
-
-    /*
-     * Pequeno atraso proposital.
-     *
-     * Isso evita que a tela de carregamento
-     * desapareça instantaneamente em máquinas rápidas.
-     */
-
-    setTimeout(() => {
-
-      this.finishLoading();
-
-    }, 700);
-
-
-    this.lastTime =
-      performance.now();
-
-    this.running = true;
-
-    this.animationFrame =
-      requestAnimationFrame(
-        this.boundLoop
-      );
-
   }
 
-
-  /* =======================================================
-     CANVAS
-  ======================================================= */
-
-  configureCanvas() {
-
-    this.canvas.width = 960;
-
-    this.canvas.height = 540;
-
-    this.canvas.setAttribute(
-      "role",
-      "application"
-    );
-
-    this.canvas.setAttribute(
-      "aria-label",
-      "Escape Room A Sala"
-    );
-
-    this.canvas.setAttribute(
-      "tabindex",
-      "0"
-    );
-
-
-    /*
-     * Evita menu contextual do botão direito.
-     */
-
-    this.canvas.addEventListener(
-      "contextmenu",
-      (event) => {
-
-        event.preventDefault();
-
-      }
-    );
-
-
-    /*
-     * Clicar no jogo devolve o foco
-     * para o teclado.
-     */
-
-    this.canvas.addEventListener(
-      "click",
-      () => {
-
-        this.canvas.focus();
-
-      }
-    );
-
+  wait(milliseconds) {
+    return new Promise((resolve) => {
+      window.setTimeout(
+        resolve,
+        milliseconds
+      );
+    });
   }
 
+  setLoading(progress, text) {
+    if (this.loadingProgress) {
+      this.loadingProgress.style.width =
+        `${Math.max(0, Math.min(100, progress))}%`;
+    }
+
+    if (this.loadingText) {
+      this.loadingText.textContent = text;
+    }
+  }
 
   /* =======================================================
-     INTERFACE
-  ======================================================= */
+     EVENTOS
+  ======================================================== */
 
-  setupInterface() {
+  bindEvents() {
 
-    const startButton =
-      document.getElementById(
-        "startButton"
-      );
-
-
-    const restartButton =
-      document.getElementById(
-        "restartButton"
-      );
-
-
-    const pauseButton =
-      document.getElementById(
-        "pauseButton"
-      );
-
-
-    const completeRestartButton =
-      document.getElementById(
-        "completeRestartButton"
-      );
-
-
-    const errorReloadButton =
-      document.getElementById(
-        "errorReloadButton"
-      );
-
-
-    const messageContinueButton =
-      document.getElementById(
-        "messageContinueButton"
-      );
-
-
-    const messageVoiceButton =
-      document.getElementById(
-        "messageVoiceButton"
-      );
-
-
-    const puzzleSubmit =
-      document.getElementById(
-        "puzzleSubmit"
-      );
-
-
-    const puzzleCancel =
-      document.getElementById(
-        "puzzleCancel"
-      );
-
-
-    const puzzleVoiceButton =
-      document.getElementById(
-        "puzzleVoiceButton"
-      );
-
-
-    const terminalSubmit =
-      document.getElementById(
-        "terminalSubmit"
-      );
-
-
-    const terminalCancel =
-      document.getElementById(
-        "terminalCancel"
-      );
-
-
-    const terminalVoiceButton =
-      document.getElementById(
-        "terminalVoiceButton"
-      );
-
-
-    const voiceButton =
-      document.getElementById(
-        "voiceButton"
-      );
-
-
-    /* -------------------------------------------------------
-       INICIAR
-    ------------------------------------------------------- */
-
-    if (startButton) {
-
-      startButton.addEventListener(
+    if (this.startButton) {
+      this.startButton.addEventListener(
         "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.start();
-
-          this.canvas.focus();
-
-        }
+        () => this.startGame()
       );
-
     }
 
-
-    /* -------------------------------------------------------
-       PAUSA
-    ------------------------------------------------------- */
-
-    if (pauseButton) {
-
-      pauseButton.addEventListener(
+    if (this.voiceButton) {
+      this.voiceButton.addEventListener(
         "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.togglePause();
-
-          this.canvas.focus();
-
-        }
+        () => this.game?.speakCurrentText()
       );
-
     }
 
-
-    /* -------------------------------------------------------
-       REINICIAR
-    ------------------------------------------------------- */
-
-    if (restartButton) {
-
-      restartButton.addEventListener(
+    if (this.messageVoiceButton) {
+      this.messageVoiceButton.addEventListener(
         "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.restart();
-
-          this.canvas.focus();
-
-        }
+        () => this.game?.speakCurrentText()
       );
-
     }
 
-
-    /* -------------------------------------------------------
-       REINICIAR APÓS VITÓRIA
-    ------------------------------------------------------- */
-
-    if (completeRestartButton) {
-
-      completeRestartButton.addEventListener(
+    if (this.messageContinueButton) {
+      this.messageContinueButton.addEventListener(
         "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.restart();
-
-          this.canvas.focus();
-
-        }
+        () => this.game?.closeMessage()
       );
-
     }
 
-
-    /* -------------------------------------------------------
-       RECARREGAR
-    ------------------------------------------------------- */
-
-    if (errorReloadButton) {
-
-      errorReloadButton.addEventListener(
+    if (this.puzzleVoiceButton) {
+      this.puzzleVoiceButton.addEventListener(
         "click",
-        () => {
-
-          window.location.reload();
-
-        }
+        () => this.game?.speakCurrentPuzzle()
       );
-
     }
 
-
-    /* -------------------------------------------------------
-       CONTINUAR MENSAGEM
-    ------------------------------------------------------- */
-
-    if (messageContinueButton) {
-
-      messageContinueButton.addEventListener(
+    if (this.puzzleSubmit) {
+      this.puzzleSubmit.addEventListener(
         "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.closeMessage();
-
-          this.canvas.focus();
-
-        }
+        () => this.game?.submitPuzzle()
       );
-
     }
 
-
-    /* -------------------------------------------------------
-       VOZ DA MENSAGEM
-    ------------------------------------------------------- */
-
-    if (messageVoiceButton) {
-
-      messageVoiceButton.addEventListener(
+    if (this.puzzleCancel) {
+      this.puzzleCancel.addEventListener(
         "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.speakCurrentText();
-
-        }
+        () => this.game?.closePuzzle()
       );
-
     }
 
-
-    /* -------------------------------------------------------
-       VOZ DA PISTA
-    ------------------------------------------------------- */
-
-    if (puzzleVoiceButton) {
-
-      puzzleVoiceButton.addEventListener(
-        "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.speakCurrentPuzzle();
-
-        }
-      );
-
-    }
-
-
-    /* -------------------------------------------------------
-       CANCELAR PUZZLE
-    ------------------------------------------------------- */
-
-    if (puzzleCancel) {
-
-      puzzleCancel.addEventListener(
-        "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.closePuzzle();
-
-          this.canvas.focus();
-
-        }
-      );
-
-    }
-
-
-    /* -------------------------------------------------------
-       ENVIAR PUZZLE
-    ------------------------------------------------------- */
-
-    if (puzzleSubmit) {
-
-      puzzleSubmit.addEventListener(
-        "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.submitPuzzle();
-
-        }
-      );
-
-    }
-
-
-    /* -------------------------------------------------------
-       TERMINAL
-    ------------------------------------------------------- */
-
-    if (terminalSubmit) {
-
-      terminalSubmit.addEventListener(
-        "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.submitTerminal();
-
-        }
-      );
-
-    }
-
-
-    if (terminalCancel) {
-
-      terminalCancel.addEventListener(
-        "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.closeTerminal();
-
-          this.canvas.focus();
-
-        }
-      );
-
-    }
-
-
-    /* -------------------------------------------------------
-       VOZ DO TERMINAL
-    ------------------------------------------------------- */
-
-    if (terminalVoiceButton) {
-
-      terminalVoiceButton.addEventListener(
-        "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.speakTerminal();
-
-        }
-      );
-
-    }
-
-
-    /* -------------------------------------------------------
-       BOTÃO DE VOZ PRINCIPAL
-    ------------------------------------------------------- */
-
-    if (voiceButton) {
-
-      voiceButton.addEventListener(
-        "click",
-        () => {
-
-          if (!this.game) {
-            return;
-          }
-
-          this.game.speakCurrentText();
-
-        }
-      );
-
-    }
-
-
-    /* -------------------------------------------------------
-       ENTER NOS INPUTS
-    ------------------------------------------------------- */
-
-    const puzzleInput =
-      document.getElementById(
-        "puzzleInput"
-      );
-
-
-    if (puzzleInput) {
-
-      puzzleInput.addEventListener(
+    if (this.puzzleInput) {
+      this.puzzleInput.addEventListener(
         "keydown",
         (event) => {
-
           if (event.key === "Enter") {
-
             event.preventDefault();
-
-            if (this.game) {
-
-              this.game.submitPuzzle();
-
-            }
-
+            this.game?.submitPuzzle();
           }
 
+          if (event.key === "Escape") {
+            event.preventDefault();
+            this.game?.closePuzzle();
+          }
         }
       );
-
     }
 
-
-    const terminalInput =
-      document.getElementById(
-        "terminalInput"
+    if (this.terminalVoiceButton) {
+      this.terminalVoiceButton.addEventListener(
+        "click",
+        () => this.game?.speakTerminal()
       );
+    }
 
+    if (this.terminalSubmit) {
+      this.terminalSubmit.addEventListener(
+        "click",
+        () => this.game?.submitTerminal()
+      );
+    }
 
-    if (terminalInput) {
+    if (this.terminalCancel) {
+      this.terminalCancel.addEventListener(
+        "click",
+        () => this.game?.closeTerminal()
+      );
+    }
 
-      terminalInput.addEventListener(
+    if (this.terminalInput) {
+      this.terminalInput.addEventListener(
         "keydown",
         (event) => {
-
           if (event.key === "Enter") {
-
             event.preventDefault();
-
-            if (this.game) {
-
-              this.game.submitTerminal();
-
-            }
-
+            this.game?.submitTerminal();
           }
 
+          if (event.key === "Escape") {
+            event.preventDefault();
+            this.game?.closeTerminal();
+          }
         }
       );
-
     }
 
-  }
+    if (this.pauseButton) {
+      this.pauseButton.addEventListener(
+        "click",
+        () => this.game?.togglePause()
+      );
+    }
 
+    if (this.restartButton) {
+      this.restartButton.addEventListener(
+        "click",
+        () => this.game?.restart()
+      );
+    }
 
-  /* =======================================================
-     EVENTOS DA JANELA
-  ======================================================= */
+    if (this.completeRestartButton) {
+      this.completeRestartButton.addEventListener(
+        "click",
+        () => this.game?.restart()
+      );
+    }
 
-  setupEvents() {
-
-    window.addEventListener(
-      "resize",
-      this.boundResize
-    );
-
+    if (this.errorReloadButton) {
+      this.errorReloadButton.addEventListener(
+        "click",
+        () => window.location.reload()
+      );
+    }
 
     document.addEventListener(
       "visibilitychange",
-      this.boundVisibility
-    );
-
-
-    window.addEventListener(
-      "error",
-      (event) => {
-
-        console.error(
-          "Erro global:",
-          event.error || event.message
-        );
-
+      () => {
+        if (
+          document.hidden &&
+          this.game &&
+          this.game.state === "playing"
+        ) {
+          this.game.pause();
+        }
       }
     );
 
-
     window.addEventListener(
-      "unhandledrejection",
-      (event) => {
-
-        console.error(
-          "Promise rejeitada:",
-          event.reason
-        );
-
+      "resize",
+      () => {
+        this.game?.resize();
       }
     );
-
-
-    this.handleResize();
-
   }
 
-
   /* =======================================================
-     RESPONSIVIDADE
-  ======================================================= */
+     INICIAR JOGO
+  ======================================================== */
 
-  handleResize() {
-
-    if (!this.canvas) {
+  startGame() {
+    if (!this.game) {
       return;
     }
 
+    this.hideElement(
+      this.loadingScreen
+    );
 
-    /*
-     * O Canvas mantém resolução interna fixa.
-     *
-     * O CSS é responsável por ampliar/reduzir
-     * sem deformar a proporção 16:9.
-     */
+    this.hideElement(
+      this.startScreen
+    );
 
-    this.canvas.style.aspectRatio =
-      "16 / 9";
+    this.hideElement(
+      this.pauseScreen
+    );
 
+    this.hideElement(
+      this.completeScreen
+    );
+
+    this.hideElement(
+      this.gameError
+    );
+
+    this.showElement(
+      this.hud
+    );
+
+    this.game.start();
+
+    this.updateHUD();
+
+    this.startLoop();
   }
-
 
   /* =======================================================
-     VISIBILIDADE
-  ======================================================= */
+     LOOP
+  ======================================================== */
 
-  handleVisibility() {
-
-    if (
-      document.hidden &&
-      this.game &&
-      this.game.state === "playing"
-    ) {
-
-      this.game.pause();
-
-    }
-
-  }
-
-
-  /* =======================================================
-     LOADING
-  ======================================================= */
-
-  showLoading() {
-
-    const loading =
-      document.getElementById(
-        "loadingScreen"
-      );
-
-
-    const start =
-      document.getElementById(
-        "startScreen"
-      );
-
-
-    const hud =
-      document.getElementById(
-        "hud"
-      );
-
-
-    const voice =
-      document.getElementById(
-        "voiceButton"
-      );
-
-
-    if (loading) {
-
-      loading.classList.remove(
-        "hidden"
-      );
-
-    }
-
-
-    if (start) {
-
-      start.classList.add(
-        "hidden"
-      );
-
-    }
-
-
-    if (hud) {
-
-      hud.classList.add(
-        "hidden"
-      );
-
-    }
-
-
-    if (voice) {
-
-      voice.classList.add(
-        "hidden"
-      );
-
-    }
-
-  }
-
-
-  finishLoading() {
-
-    const loading =
-      document.getElementById(
-        "loadingScreen"
-      );
-
-
-    const start =
-      document.getElementById(
-        "startScreen"
-      );
-
-
-    if (loading) {
-
-      loading.classList.add(
-        "hidden"
-      );
-
-    }
-
-
-    if (start) {
-
-      start.classList.remove(
-        "hidden"
-      );
-
-    }
-
-
-    const loadingText =
-      document.getElementById(
-        "loadingText"
-      );
-
-
-    if (loadingText) {
-
-      loadingText.textContent =
-        "Sistema pronto.";
-
-    }
-
-  }
-
-
-  /* =======================================================
-     LOOP PRINCIPAL
-  ======================================================= */
-
-  loop(currentTime) {
-
-    if (!this.running) {
-
+  startLoop() {
+    if (this.running) {
       return;
-
     }
 
+    this.running = true;
+    this.lastTime = performance.now();
 
-    let deltaTime =
-      (
-        currentTime -
-        this.lastTime
-      ) / 1000;
+    const loop = (time) => {
 
+      if (!this.running) {
+        return;
+      }
 
-    if (
-      !Number.isFinite(deltaTime)
-    ) {
+      const deltaTime =
+        Math.min(
+          (time - this.lastTime) / 1000,
+          0.05
+        );
 
-      deltaTime = 0;
-
-    }
-
-
-    /*
-     * Limita o salto de tempo.
-     *
-     * Isso evita que o personagem
-     * atravesse paredes quando a aba
-     * fica congelada por alguns instantes.
-     */
-
-    deltaTime =
-      Math.min(
-        deltaTime,
-        0.05
-      );
-
-
-    this.lastTime =
-      currentTime;
-
-
-    if (this.game) {
+      this.lastTime = time;
 
       try {
+        if (this.game) {
+          this.game.update(deltaTime);
+          this.game.render();
 
-        this.game.update(
-          deltaTime
-        );
-
-        this.game.render();
-
+          this.updateHUD();
+        }
       } catch (error) {
-
         console.error(
-          "Erro durante o jogo:",
+          "Erro no game loop:",
           error
         );
 
         this.running = false;
 
-        this.showFatalError(
+        this.showError(
+          error?.message ||
           "O jogo encontrou um erro durante a execução."
         );
 
         return;
-
       }
 
-    }
-
+      this.animationFrame =
+        requestAnimationFrame(loop);
+    };
 
     this.animationFrame =
-      requestAnimationFrame(
-        this.boundLoop
-      );
-
+      requestAnimationFrame(loop);
   }
 
-
-  /* =======================================================
-     ERRO FATAL
-  ======================================================= */
-
-  showFatalError(message) {
-
-    const errorScreen =
-      document.getElementById(
-        "gameError"
-      );
-
-
-    const errorText =
-      document.getElementById(
-        "gameErrorText"
-      );
-
-
-    const loading =
-      document.getElementById(
-        "loadingScreen"
-      );
-
-
-    const start =
-      document.getElementById(
-        "startScreen"
-      );
-
-
-    const hud =
-      document.getElementById(
-        "hud"
-      );
-
-
-    if (loading) {
-
-      loading.classList.add(
-        "hidden"
-      );
-
-    }
-
-
-    if (start) {
-
-      start.classList.add(
-        "hidden"
-      );
-
-    }
-
-
-    if (hud) {
-
-      hud.classList.add(
-        "hidden"
-      );
-
-    }
-
-
-    if (errorText) {
-
-      errorText.textContent =
-        message;
-
-    }
-
-
-    if (errorScreen) {
-
-      errorScreen.classList.remove(
-        "hidden"
-      );
-
-    } else {
-
-      /*
-       * Fallback caso o HTML tenha sido
-       * alterado ou esteja incompleto.
-       */
-
-      const fallback =
-        document.createElement(
-          "div"
-        );
-
-
-      fallback.style.position =
-        "fixed";
-
-      fallback.style.inset = "0";
-
-      fallback.style.zIndex =
-        "999999";
-
-      fallback.style.display =
-        "flex";
-
-      fallback.style.alignItems =
-        "center";
-
-      fallback.style.justifyContent =
-        "center";
-
-      fallback.style.background =
-        "#050608";
-
-      fallback.style.color =
-        "#ffffff";
-
-      fallback.style.fontFamily =
-        "Arial, sans-serif";
-
-      fallback.style.textAlign =
-        "center";
-
-      fallback.style.padding =
-        "30px";
-
-      fallback.textContent =
-        message;
-
-      document.body.appendChild(
-        fallback
-      );
-
-    }
-
-  }
-
-
-  /* =======================================================
-     DESTROY
-  ======================================================= */
-
-  destroy() {
-
+  stopLoop() {
     this.running = false;
 
-
-    if (
-      this.animationFrame !== null
-    ) {
-
+    if (this.animationFrame !== null) {
       cancelAnimationFrame(
         this.animationFrame
       );
 
       this.animationFrame = null;
-
     }
-
-
-    window.removeEventListener(
-      "resize",
-      this.boundResize
-    );
-
-
-    document.removeEventListener(
-      "visibilitychange",
-      this.boundVisibility
-    );
-
-
-    if (
-      this.game &&
-      typeof this.game.destroy === "function"
-    ) {
-
-      this.game.destroy();
-
-    }
-
-
-    this.game = null;
-
-    this.canvas = null;
-
-    this.initialized = false;
-
   }
 
-}
+  /* =======================================================
+     HUD
+  ======================================================== */
 
+  updateHUD() {
+    if (!this.game) {
+      return;
+    }
+
+    const state = this.game.state;
+
+    if (
+      state === "playing" ||
+      state === "message" ||
+      state === "puzzle" ||
+      state === "terminal"
+    ) {
+      this.showElement(this.hud);
+    }
+
+    if (
+      state === "menu" ||
+      state === "paused" ||
+      state === "complete" ||
+      state === "error"
+    ) {
+      if (state !== "paused") {
+        this.hideElement(this.hud);
+      }
+    }
+
+    if (
+      this.objectiveText &&
+      this.game.objectiveText
+    ) {
+      this.objectiveText.textContent =
+        this.game.objectiveText;
+    }
+
+    this.updateInteractionHint();
+
+    if (
+      this.voiceIndicator &&
+      this.game.isSpeaking
+    ) {
+      this.showElement(
+        this.voiceIndicator
+      );
+    } else {
+      this.hideElement(
+        this.voiceIndicator
+      );
+    }
+
+    if (
+      this.voiceButton &&
+      (
+        state === "playing" ||
+        state === "message" ||
+        state === "puzzle" ||
+        state === "terminal"
+      )
+    ) {
+      this.showElement(
+        this.voiceButton
+      );
+    } else {
+      this.hideElement(
+        this.voiceButton
+      );
+    }
+
+    this.syncOverlays();
+  }
+
+  updateInteractionHint() {
+    if (
+      !this.interactionHint ||
+      !this.game
+    ) {
+      return;
+    }
+
+    if (
+      this.game.state !== "playing" ||
+      this.game.messageOpen ||
+      this.game.puzzleOpen ||
+      this.game.terminalOpen
+    ) {
+      this.hideElement(
+        this.interactionHint
+      );
+
+      return;
+    }
+
+    const target =
+      this.game.currentInteractionTarget;
+
+    if (!target) {
+      this.hideElement(
+        this.interactionHint
+      );
+
+      return;
+    }
+
+    this.interactionKey.textContent = "E";
+
+    this.interactionText.textContent =
+      target.prompt ||
+      target.label ||
+      "Interagir";
+
+    this.showElement(
+      this.interactionHint
+    );
+  }
+
+  /* =======================================================
+     SINCRONIZAÇÃO DOS OVERLAYS
+  ======================================================== */
+
+  syncOverlays() {
+    if (!this.game) {
+      return;
+    }
+
+    if (
+      this.game.messageOpen
+    ) {
+      this.showElement(
+        this.messageOverlay
+      );
+
+      if (this.messageTitle) {
+        this.messageTitle.textContent =
+          this.game.currentMessageTitle ||
+          "SISTEMA";
+      }
+
+      if (this.messageText) {
+        this.messageText.textContent =
+          this.game.currentMessageText ||
+          "";
+      }
+    } else {
+      this.hideElement(
+        this.messageOverlay
+      );
+    }
+
+    if (
+      this.game.puzzleOpen
+    ) {
+      this.showElement(
+        this.puzzleOverlay
+      );
+
+      if (this.puzzleTitle) {
+        this.puzzleTitle.textContent =
+          this.game.currentPuzzleTitle ||
+          "DESAFIO";
+      }
+
+      if (this.puzzleQuestion) {
+        this.puzzleQuestion.textContent =
+          this.game.currentPuzzleQuestion ||
+          "";
+      }
+
+      if (
+        document.activeElement !==
+        this.puzzleInput
+      ) {
+        this.puzzleInput?.focus();
+      }
+    } else {
+      this.hideElement(
+        this.puzzleOverlay
+      );
+    }
+
+    if (
+      this.game.terminalOpen
+    ) {
+      this.showElement(
+        this.terminalOverlay
+      );
+
+      if (this.terminalText) {
+        this.terminalText.textContent =
+          this.game.currentTerminalText ||
+          "Insira o código de acesso.";
+      }
+
+      if (this.terminalCodeDisplay) {
+        this.terminalCodeDisplay.textContent =
+          this.game.terminalCodeDisplay ||
+          "_ _ _ _";
+      }
+
+      if (
+        document.activeElement !==
+        this.terminalInput
+      ) {
+        this.terminalInput?.focus();
+      }
+    } else {
+      this.hideElement(
+        this.terminalOverlay
+      );
+    }
+
+    if (
+      this.game.state === "paused"
+    ) {
+      this.showElement(
+        this.pauseScreen
+      );
+    } else {
+      this.hideElement(
+        this.pauseScreen
+      );
+    }
+
+    if (
+      this.game.state === "complete"
+    ) {
+      this.showElement(
+        this.completeScreen
+      );
+    } else {
+      this.hideElement(
+        this.completeScreen
+      );
+    }
+  }
+
+  /* =======================================================
+     TELAS
+  ======================================================== */
+
+  showStartScreen() {
+    this.hideElement(
+      this.loadingScreen
+    );
+
+    this.hideElement(
+      this.gameError
+    );
+
+    this.showElement(
+      this.startScreen
+    );
+  }
+
+  showError(message) {
+    this.stopLoop();
+
+    this.hideElement(
+      this.loadingScreen
+    );
+
+    this.hideElement(
+      this.startScreen
+    );
+
+    this.hideElement(
+      this.hud
+    );
+
+    this.hideElement(
+      this.pauseScreen
+    );
+
+    this.hideElement(
+      this.completeScreen
+    );
+
+    if (this.gameErrorText) {
+      this.gameErrorText.textContent =
+        message;
+    }
+
+    this.showElement(
+      this.gameError
+    );
+  }
+
+  /* =======================================================
+     HELPERS
+  ======================================================== */
+
+  showElement(element) {
+    if (!element) {
+      return;
+    }
+
+    element.classList.remove(
+      "hidden"
+    );
+
+    element.classList.add(
+      "active",
+      "is-visible"
+    );
+  }
+
+  hideElement(element) {
+    if (!element) {
+      return;
+    }
+
+    element.classList.remove(
+      "active",
+      "is-visible"
+    );
+
+    element.classList.add(
+      "hidden"
+    );
+  }
+
+  /* =======================================================
+     DESTRUIÇÃO
+  ======================================================== */
+
+  destroy() {
+    this.stopLoop();
+
+    if (this.game) {
+      this.game.destroy();
+      this.game = null;
+    }
+
+    window.escapeRoom = null;
+  }
+}
 
 /* =========================================================
    INICIALIZAÇÃO
-   ========================================================= */
+========================================================= */
 
-const application =
-  new Application();
+let application = null;
 
-
-if (
-  document.readyState ===
-  "loading"
-) {
-
-  document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-      application.init();
-
-    },
-    {
-      once: true
-    }
+try {
+  application = new Application();
+} catch (error) {
+  console.error(
+    "Falha crítica ao iniciar aplicação:",
+    error
   );
 
-} else {
+  const errorElement =
+    document.getElementById("gameError");
 
-  application.init();
+  const errorText =
+    document.getElementById("gameErrorText");
 
+  if (errorText) {
+    errorText.textContent =
+      error?.message ||
+      "Falha crítica ao iniciar o jogo.";
+  }
+
+  if (errorElement) {
+    errorElement.classList.remove(
+      "hidden"
+    );
+
+    errorElement.classList.add(
+      "active",
+      "is-visible"
+    );
+  }
 }
 
-
-/* =========================================================
-   DEBUG
-   ========================================================= */
-
-window.escapeRoom =
-  application;
+export {
+  Application
+};

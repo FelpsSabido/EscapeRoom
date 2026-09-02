@@ -1,811 +1,424 @@
-/* =========================================================
-   A SALA — ESCAPE ROOM
-   PLAYER.JS
-
-   Responsável por:
-
-   - Personagem
-   - Movimento
-   - Colisão
-   - Animação
-   - Direção
-   - Sombra
-   - Pixel art
-   - Posição
-   - Velocidade
-   ========================================================= */
-
 export class Player {
+  constructor({
+    world,
+    game = null
+  } = {}) {
+    this.world = world;
+    this.game = game;
 
-  constructor(options = {}) {
+    this.width = 42;
+    this.height = 64;
 
-    /* -------------------------------------------------------
-       REFERÊNCIAS
-    ------------------------------------------------------- */
+    /*
+      Hitbox menor que o sprite.
 
-    this.world =
-      options.world || null;
+      Isso permite que o personagem passe
+      naturalmente pelos espaços entre as mesas.
+    */
 
-    this.game =
-      options.game || null;
+    this.hitboxWidth = 20;
+    this.hitboxHeight = 18;
 
+    this.speed = 210;
 
-    /* -------------------------------------------------------
-       TAMANHO DO PERSONAGEM
-
-       O ponto x/y representa o centro do personagem.
-    ------------------------------------------------------- */
-
-    this.width = 34;
-
-    this.height = 52;
-
-
-    /* -------------------------------------------------------
-       POSIÇÃO
-    ------------------------------------------------------- */
-
-    const spawn =
-      this.world &&
-      typeof this.world.getSpawnPoint === "function"
-        ? this.world.getSpawnPoint()
-        : {
-            x: 900,
-            y: 500
-          };
-
-
-    this.x =
-      Number.isFinite(options.x)
-        ? options.x
-        : spawn.x;
-
-
-    this.y =
-      Number.isFinite(options.y)
-        ? options.y
-        : spawn.y;
-
-
-    /* -------------------------------------------------------
-       VELOCIDADE
-    ------------------------------------------------------- */
+    this.acceleration = 1450;
+    this.deceleration = 1700;
 
     this.velocityX = 0;
-
     this.velocityY = 0;
 
-    this.speed = 220;
-
-    this.acceleration = 1800;
-
-    this.friction = 1500;
-
-
-    /* -------------------------------------------------------
-       DIREÇÃO
-
-       down = frente
-       up = costas
-       left = esquerda
-       right = direita
-    ------------------------------------------------------- */
+    this.x = 0;
+    this.y = 0;
 
     this.direction = "down";
 
+    this.isMoving = false;
+    this.enabled = true;
 
-    /* -------------------------------------------------------
-       ANIMAÇÃO
-    ------------------------------------------------------- */
+    this.animationTime = 0;
+    this.animationFrame = 0;
 
-    this.walkTime = 0;
+    this.reset();
+  }
 
-    this.walkFrame = 0;
+  /* =========================================================
+     RESET
+  ========================================================== */
+
+  reset() {
+    const spawn =
+      this.world.getSpawnPoint();
+
+    this.x = spawn.x;
+    this.y = spawn.y;
+
+    this.velocityX = 0;
+    this.velocityY = 0;
+
+    this.direction = "down";
 
     this.isMoving = false;
 
-
-    /* -------------------------------------------------------
-       PEQUENOS EFEITOS
-    ------------------------------------------------------- */
-
-    this.bob = 0;
-
-    this.shadowPulse = 0;
-
-
-    /* -------------------------------------------------------
-       ESTADO
-    ------------------------------------------------------- */
+    this.animationTime = 0;
+    this.animationFrame = 0;
 
     this.enabled = true;
-
   }
-
 
   /* =========================================================
-     SET GAME
-     ========================================================= */
+     ATIVAR / DESATIVAR
+  ========================================================== */
 
-  setGame(game) {
+  setEnabled(enabled) {
+    this.enabled =
+      Boolean(enabled);
 
-    this.game = game;
-
+    if (!this.enabled) {
+      this.velocityX = 0;
+      this.velocityY = 0;
+      this.isMoving = false;
+    }
   }
-
 
   /* =========================================================
      UPDATE
-     ========================================================= */
+  ========================================================== */
 
   update(
     deltaTime,
     input
   ) {
-
     if (
-      !this.enabled
+      !this.enabled ||
+      !input
     ) {
-
       return;
-
     }
-
-
-    if (
-      !Number.isFinite(deltaTime)
-    ) {
-
-      deltaTime = 0;
-
-    }
-
-
-    /*
-     * Evita saltos gigantes caso a aba fique congelada.
-     */
-
-    deltaTime =
-      Math.min(
-        deltaTime,
-        0.05
-      );
-
-
-    /* -------------------------------------------------------
-       MOVIMENTO
-    ------------------------------------------------------- */
 
     const movement =
-      input &&
-      typeof input.getMovementVector ===
-      "function"
+      input.getMovementVector();
 
-        ? input.getMovementVector()
-
-        : {
-            x: 0,
-            y: 0
-          };
-
-
-    const moving =
-      Math.abs(movement.x) > 0 ||
-      Math.abs(movement.y) > 0;
-
-
-    this.isMoving =
-      moving;
-
-
-    /* -------------------------------------------------------
-       DIREÇÃO
-
-       Priorizamos o eixo com maior intensidade para evitar
-       que a direção fique mudando rapidamente na diagonal.
-    ------------------------------------------------------- */
-
-    if (
-      moving
-    ) {
-
-      if (
-        Math.abs(movement.x) >
-        Math.abs(movement.y)
-      ) {
-
-        this.direction =
-          movement.x > 0
-            ? "right"
-            : "left";
-
-      } else {
-
-        this.direction =
-          movement.y > 0
-            ? "down"
-            : "up";
-
-      }
-
-    }
-
-
-    /* -------------------------------------------------------
-       VELOCIDADE DESEJADA
-    ------------------------------------------------------- */
-
-    const targetVelocityX =
+    const targetX =
       movement.x *
       this.speed;
 
-
-    const targetVelocityY =
+    const targetY =
       movement.y *
       this.speed;
 
-
     /*
-     * Aceleração.
-     */
-
-    this.velocityX =
-      this.approach(
-        this.velocityX,
-        targetVelocityX,
-        this.acceleration *
-        deltaTime
-      );
-
-
-    this.velocityY =
-      this.approach(
-        this.velocityY,
-        targetVelocityY,
-        this.acceleration *
-        deltaTime
-      );
-
-
-    /*
-     * Quando não estamos apertando nada, desaceleramos
-     * gradualmente.
-     */
+      Aceleração suave.
+    */
 
     if (
-      !moving
+      Math.abs(movement.x) > 0
     ) {
-
       this.velocityX =
-        this.approach(
+        this.moveTowards(
+          this.velocityX,
+          targetX,
+          this.acceleration *
+            deltaTime
+        );
+    } else {
+      this.velocityX =
+        this.moveTowards(
           this.velocityX,
           0,
-          this.friction *
-          deltaTime
+          this.deceleration *
+            deltaTime
         );
+    }
 
-
+    if (
+      Math.abs(movement.y) > 0
+    ) {
       this.velocityY =
-        this.approach(
+        this.moveTowards(
+          this.velocityY,
+          targetY,
+          this.acceleration *
+            deltaTime
+        );
+    } else {
+      this.velocityY =
+        this.moveTowards(
           this.velocityY,
           0,
-          this.friction *
-          deltaTime
+          this.deceleration *
+            deltaTime
         );
-
     }
 
+    this.isMoving =
+      Math.abs(
+        this.velocityX
+      ) > 1 ||
+      Math.abs(
+        this.velocityY
+      ) > 1;
 
-    /* -------------------------------------------------------
-       MOVIMENTO COM COLISÃO
-    ------------------------------------------------------- */
+    /*
+      Direção do personagem.
+    */
 
-    const dx =
-      this.velocityX *
-      deltaTime;
+    if (
+      Math.abs(movement.x) >
+      Math.abs(movement.y)
+    ) {
+      if (
+        movement.x > 0
+      ) {
+        this.direction =
+          "right";
+      } else if (
+        movement.x < 0
+      ) {
+        this.direction =
+          "left";
+      }
+    } else if (
+      Math.abs(movement.y) > 0
+    ) {
+      if (
+        movement.y > 0
+      ) {
+        this.direction =
+          "down";
+      } else {
+        this.direction =
+          "up";
+      }
+    }
 
-
-    const dy =
-      this.velocityY *
-      deltaTime;
-
+    /*
+      Movimento com colisão.
+    */
 
     this.moveWithCollision(
-      dx,
-      dy
+      this.velocityX *
+        deltaTime,
+      this.velocityY *
+        deltaTime
     );
 
-
-    /* -------------------------------------------------------
-       ANIMAÇÃO
-    ------------------------------------------------------- */
+    /*
+      Animação.
+    */
 
     if (
-      this.isMoving &&
-      (
-        Math.abs(this.velocityX) > 5 ||
-        Math.abs(this.velocityY) > 5
-      )
+      this.isMoving
     ) {
-
-      this.walkTime +=
+      this.animationTime +=
         deltaTime;
 
-      /*
-       * Quatro quadros de caminhada.
-       */
+      if (
+        this.animationTime >=
+        0.11
+      ) {
+        this.animationTime =
+          0;
 
-      const frameDuration =
-        0.11;
-
-
-      this.walkFrame =
-        Math.floor(
-          this.walkTime /
-          frameDuration
-        ) % 4;
-
-
-      /*
-       * Movimento vertical do corpo.
-       */
-
-      this.bob =
-        Math.sin(
-          this.walkTime *
-          Math.PI *
-          9
-        ) *
-        1.5;
-
+        this.animationFrame =
+          (
+            this.animationFrame +
+            1
+          ) %
+          4;
+      }
     } else {
-
-      this.walkTime = 0;
-
-      this.walkFrame = 0;
-
-      this.bob =
-        this.approach(
-          this.bob,
-          0,
-          15 * deltaTime
-        );
-
+      this.animationTime = 0;
+      this.animationFrame = 0;
     }
-
-
-    /*
-     * Pequena pulsação da sombra.
-     */
-
-    this.shadowPulse +=
-      deltaTime;
-
   }
 
-
   /* =========================================================
-     APPROACH
-     ========================================================= */
-
-  approach(
-    current,
-    target,
-    amount
-  ) {
-
-    if (
-      current < target
-    ) {
-
-      return Math.min(
-        current + amount,
-        target
-      );
-
-    }
-
-
-    if (
-      current > target
-    ) {
-
-      return Math.max(
-        current - amount,
-        target
-      );
-
-    }
-
-
-    return target;
-
-  }
-
-
-  /* =========================================================
-     MOVEMENT + COLLISION
-     ========================================================= */
+     MOVIMENTO COM COLISÃO
+  ========================================================== */
 
   moveWithCollision(
-    dx,
-    dy
+    deltaX,
+    deltaY
   ) {
-
-    if (
-      !this.world
-    ) {
-
-      this.x += dx;
-
-      this.y += dy;
-
-      return;
-
-    }
-
-
     /*
-     * Eixo X separado do eixo Y.
-     *
-     * Isso permite que o personagem deslize pela lateral
-     * dos móveis em vez de ficar completamente travado.
-     */
+      Primeiro tenta mover horizontalmente.
+    */
 
     if (
-      dx !== 0
+      Math.abs(deltaX) > 0
     ) {
-
       const nextX =
         this.x +
-        dx;
-
+        deltaX;
 
       if (
-        this.canMoveTo(
+        this.world.canPlayerMoveTo(
           nextX,
-          this.y
+          this.y,
+          this.hitboxWidth,
+          this.hitboxHeight
         )
       ) {
-
-        this.x =
-          nextX;
-
+        this.x = nextX;
       } else {
-
-        this.velocityX =
-          0;
-
+        this.velocityX = 0;
       }
-
     }
-
-
-    if (
-      dy !== 0
-    ) {
-
-      const nextY =
-        this.y +
-        dy;
-
-
-      if (
-        this.canMoveTo(
-          this.x,
-          nextY
-        )
-      ) {
-
-        this.y =
-          nextY;
-
-      } else {
-
-        this.velocityY =
-          0;
-
-      }
-
-    }
-
 
     /*
-     * Limite de segurança.
-     *
-     * Mesmo que algo estranho aconteça com a colisão,
-     * o personagem nunca consegue sair do mundo.
-     */
+      Depois tenta mover verticalmente.
 
-    const margin =
-      25;
+      Separar os eixos permite que o jogador
+      "deslize" pelas paredes e mesas.
+    */
 
+    if (
+      Math.abs(deltaY) > 0
+    ) {
+      const nextY =
+        this.y +
+        deltaY;
+
+      if (
+        this.world.canPlayerMoveTo(
+          this.x,
+          nextY,
+          this.hitboxWidth,
+          this.hitboxHeight
+        )
+      ) {
+        this.y = nextY;
+      } else {
+        this.velocityY = 0;
+      }
+    }
+
+    /*
+      Garantia adicional para nunca sair
+      dos limites da sala.
+    */
+
+    const margin = 70;
 
     this.x =
       Math.max(
         margin,
         Math.min(
           this.world.width -
-          margin,
+            margin,
           this.x
         )
       );
-
 
     this.y =
       Math.max(
         margin,
         Math.min(
           this.world.height -
-          margin,
+            margin,
           this.y
         )
       );
-
   }
 
-
   /* =========================================================
-     CAN MOVE TO
-     ========================================================= */
+     ACELERAÇÃO
+  ========================================================== */
 
-  canMoveTo(
-    x,
-    y
+  moveTowards(
+    current,
+    target,
+    amount
   ) {
-
     if (
-      !this.world
+      current <
+      target
     ) {
-
-      return true;
-
+      return Math.min(
+        current +
+          amount,
+        target
+      );
     }
 
-
     if (
-      typeof this.world.canPlayerMoveTo !==
-      "function"
+      current >
+      target
     ) {
-
-      return true;
-
+      return Math.max(
+        current -
+          amount,
+        target
+      );
     }
 
-
-    return this.world.canPlayerMoveTo(
-      this,
-      x,
-      y
-    );
-
+    return target;
   }
 
-
   /* =========================================================
-     GET BOUNDS
-     ========================================================= */
+     RENDER
+  ========================================================== */
 
-  getBoundsAt(
-    x,
-    y
-  ) {
+  render(ctx) {
+    if (!ctx) {
+      return;
+    }
 
-    return {
+    ctx.save();
 
-      x:
-        x -
-        this.width / 2,
+    /*
+      O x/y representa o centro inferior
+      aproximado do personagem.
+    */
 
-      y:
-        y -
-        this.height / 2,
+    const drawX =
+      Math.round(
+        this.x -
+          this.width / 2
+      );
 
-      width:
-        this.width,
+    const drawY =
+      Math.round(
+        this.y -
+          this.height +
+          10
+      );
 
-      height:
-        this.height
+    /*
+      Sombra no chão.
+    */
 
-    };
-
-  }
-
-
-  /* =========================================================
-     GET BOUNDS
-     ========================================================= */
-
-  getBounds() {
-
-    return this.getBoundsAt(
+    this.renderShadow(
+      ctx,
       this.x,
       this.y
     );
 
-  }
-
-
-  /* =========================================================
-     GET POSITION
-     ========================================================= */
-
-  getPosition() {
-
-    return {
-
-      x:
-        this.x,
-
-      y:
-        this.y
-
-    };
-
-  }
-
-
-  /* =========================================================
-     SET POSITION
-     ========================================================= */
-
-  setPosition(
-    x,
-    y
-  ) {
-
-    if (
-      Number.isFinite(x)
-    ) {
-
-      this.x =
-        x;
-
-    }
-
-
-    if (
-      Number.isFinite(y)
-    ) {
-
-      this.y =
-        y;
-
-    }
-
-
-    this.velocityX = 0;
-
-    this.velocityY = 0;
-
-  }
-
-
-  /* =========================================================
-     RESET
-     ========================================================= */
-
-  reset() {
-
-    if (
-      this.world &&
-      typeof this.world.getSpawnPoint ===
-      "function"
-    ) {
-
-      const spawn =
-        this.world.getSpawnPoint();
-
-
-      this.x =
-        spawn.x;
-
-
-      this.y =
-        spawn.y;
-
-    }
-
-
-    this.velocityX = 0;
-
-    this.velocityY = 0;
-
-    this.direction = "down";
-
-    this.walkTime = 0;
-
-    this.walkFrame = 0;
-
-    this.isMoving = false;
-
-    this.bob = 0;
-
-  }
-
-
-  /* =========================================================
-     ENABLE / DISABLE
-     ========================================================= */
-
-  setEnabled(
-    enabled
-  ) {
-
-    this.enabled =
-      Boolean(enabled);
-
-
-    if (
-      !this.enabled
-    ) {
-
-      this.velocityX = 0;
-
-      this.velocityY = 0;
-
-    }
-
-  }
-
-
-  /* =========================================================
-     RENDER
-     ========================================================= */
-
-  render(
-    ctx
-  ) {
-
-    if (
-      !ctx
-    ) {
-
-      return;
-
-    }
-
-
-    ctx.save();
-
-
     /*
-     * Sombra.
-     */
+      Pequeno balanço durante a caminhada.
+    */
 
-    this.renderShadow(
-      ctx
+    let bob = 0;
+
+    if (
+      this.isMoving
+    ) {
+      bob =
+        Math.sin(
+          this.animationFrame *
+            Math.PI / 2
+        ) *
+        2;
+    }
+
+    ctx.translate(
+      0,
+      bob
     );
 
-
     /*
-     * Corpo.
-
-     * O personagem é desenhado alguns pixels acima
-     * do ponto de colisão para dar sensação de profundidade.
-     */
-
-    const drawX =
-      Math.round(
-        this.x
-      );
-
-
-    const drawY =
-      Math.round(
-        this.y +
-        this.bob
-      );
-
-
-    /*
-     * Pixel art sem suavização.
-
-     */
-
-    ctx.imageSmoothingEnabled =
-      false;
-
+      Sprite pixel-art.
+    */
 
     this.renderCharacter(
       ctx,
@@ -813,1175 +426,576 @@ export class Player {
       drawY
     );
 
-
     ctx.restore();
-
   }
 
-
   /* =========================================================
-     SHADOW
-     ========================================================= */
+     SOMBRA
+  ========================================================== */
 
   renderShadow(
-    ctx
+    ctx,
+    x,
+    y
   ) {
-
-    const pulse =
-      Math.sin(
-        this.shadowPulse *
-        4
-      ) *
-      0.04;
-
-
-    const width =
-      26 +
-      pulse * 10;
-
-
-    const height =
-      9 +
-      pulse * 3;
-
-
     ctx.save();
 
-
     ctx.fillStyle =
-      "rgba(0,0,0,0.45)";
-
+      "rgba(0,0,0,0.48)";
 
     ctx.beginPath();
 
-
     ctx.ellipse(
-      this.x,
-      this.y +
-      this.height / 2 -
-      2,
-
-      width,
-      height,
-
+      Math.round(x),
+      Math.round(y + 4),
+      23,
+      8,
       0,
-
       0,
-
       Math.PI * 2
     );
 
+    ctx.fill();
+
+    /*
+      Pequeno núcleo da sombra.
+    */
+
+    ctx.fillStyle =
+      "rgba(0,0,0,0.25)";
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+      Math.round(x),
+      Math.round(y + 3),
+      13,
+      4,
+      0,
+      0,
+      Math.PI * 2
+    );
 
     ctx.fill();
 
-
     ctx.restore();
-
   }
 
-
   /* =========================================================
-     CHARACTER
-     ========================================================= */
+     PERSONAGEM
+  ========================================================== */
 
   renderCharacter(
     ctx,
     x,
     y
   ) {
+    /*
+      Paleta própria do personagem.
+
+      Tudo é desenhado em blocos,
+      mantendo aparência pixel-art.
+    */
+
+    const skin =
+      "#c88f6a";
+
+    const skinDark =
+      "#8e5d49";
+
+    const hair =
+      "#211d22";
+
+    const hairLight =
+      "#352d31";
+
+    const shirt =
+      "#596b6f";
+
+    const shirtDark =
+      "#39474a";
+
+    const pants =
+      "#282d35";
+
+    const pantsLight =
+      "#3b424d";
+
+    const shoes =
+      "#16181c";
 
     /*
-     * Tamanho base em pixels.
+      CABEÇA
+    */
 
-     * O personagem é construído com retângulos e polígonos
-     * simples para manter o estilo pixel-art.
-     */
+    ctx.fillStyle =
+      hair;
 
-    const walk =
-      this.isMoving
-        ? this.walkFrame
-        : 0;
+    ctx.fillRect(
+      x + 11,
+      y + 2,
+      21,
+      10
+    );
 
-
-    /*
-     * Pequena oscilação dos braços/pernas.
-     */
-
-    let legOffset = 0;
-
-    let armOffset = 0;
-
-
-    if (
-      this.isMoving
-    ) {
-
-      if (
-        walk === 0 ||
-        walk === 2
-      ) {
-
-        legOffset = 2;
-
-        armOffset = -2;
-
-      } else {
-
-        legOffset = -2;
-
-        armOffset = 2;
-
-      }
-
-    }
-
+    ctx.fillRect(
+      x + 7,
+      y + 9,
+      29,
+      22
+    );
 
     /*
-     * ======================================================
-     * DIREÇÃO PARA BAIXO
-     * ======================================================
-     */
+      Cabelo lateral.
+    */
+
+    ctx.fillRect(
+      x + 7,
+      y + 13,
+      6,
+      17
+    );
+
+    ctx.fillRect(
+      x + 30,
+      y + 13,
+      6,
+      15
+    );
+
+    /*
+      Rosto
+    */
+
+    ctx.fillStyle =
+      skin;
+
+    ctx.fillRect(
+      x + 13,
+      y + 11,
+      18,
+      17
+    );
+
+    /*
+      Orelhas
+    */
+
+    ctx.fillRect(
+      x + 10,
+      y + 17,
+      4,
+      7
+    );
+
+    ctx.fillRect(
+      x + 30,
+      y + 17,
+      4,
+      7
+    );
+
+    /*
+      Sombra do rosto
+    */
+
+    ctx.fillStyle =
+      skinDark;
+
+    ctx.fillRect(
+      x + 13,
+      y + 24,
+      18,
+      4
+    );
+
+    /*
+      Cabelo frontal.
+    */
+
+    ctx.fillStyle =
+      hair;
+
+    ctx.fillRect(
+      x + 12,
+      y + 7,
+      20,
+      7
+    );
+
+    ctx.fillRect(
+      x + 16,
+      y + 4,
+      13,
+      6
+    );
+
+    ctx.fillRect(
+      x + 10,
+      y + 10,
+      6,
+      6
+    );
+
+    /*
+      Pequeno detalhe do cabelo.
+    */
+
+    ctx.fillStyle =
+      hairLight;
+
+    ctx.fillRect(
+      x + 18,
+      y + 5,
+      8,
+      3
+    );
+
+    /*
+      OLHOS
+
+      Como o protagonista não enxerga,
+      mantemos os olhos estilizados,
+      sem depender deles para jogar.
+    */
+
+    ctx.fillStyle =
+      "#272126";
 
     if (
       this.direction ===
       "down"
     ) {
-
-      this.renderDown(
-        ctx,
-        x,
-        y,
-        legOffset,
-        armOffset
+      ctx.fillRect(
+        x + 17,
+        y + 17,
+        3,
+        3
       );
 
-      return;
-
+      ctx.fillRect(
+        x + 25,
+        y + 17,
+        3,
+        3
+      );
     }
 
+    /*
+      CORPO
+    */
+
+    ctx.fillStyle =
+      shirtDark;
+
+    ctx.fillRect(
+      x + 8,
+      y + 30,
+      27,
+      25
+    );
+
+    ctx.fillStyle =
+      shirt;
+
+    ctx.fillRect(
+      x + 12,
+      y + 31,
+      19,
+      21
+    );
 
     /*
-     * ======================================================
-     * DIREÇÃO PARA CIMA
-     * ======================================================
-     */
+      Detalhe da camisa.
+    */
+
+    ctx.fillStyle =
+      "rgba(220,220,205,0.16)";
+
+    ctx.fillRect(
+      x + 19,
+      y + 33,
+      5,
+      15
+    );
+
+    /*
+      BRAÇOS
+    */
+
+    ctx.fillStyle =
+      skin;
+
+    ctx.fillRect(
+      x + 5,
+      y + 33,
+      7,
+      20
+    );
+
+    ctx.fillRect(
+      x + 31,
+      y + 33,
+      7,
+      20
+    );
+
+    /*
+      Mãos
+    */
+
+    ctx.fillStyle =
+      skinDark;
+
+    ctx.fillRect(
+      x + 5,
+      y + 50,
+      7,
+      6
+    );
+
+    ctx.fillRect(
+      x + 31,
+      y + 50,
+      7,
+      6
+    );
+
+    /*
+      Calça
+    */
+
+    ctx.fillStyle =
+      pants;
+
+    ctx.fillRect(
+      x + 10,
+      y + 53,
+      23,
+      18
+    );
+
+    /*
+      Separação das pernas.
+    */
+
+    ctx.fillStyle =
+      pantsLight;
+
+    ctx.fillRect(
+      x + 20,
+      y + 54,
+      3,
+      15
+    );
+
+    /*
+      PERNAS
+    */
+
+    ctx.fillStyle =
+      pants;
+
+    ctx.fillRect(
+      x + 11,
+      y + 66,
+      9,
+      16
+    );
+
+    ctx.fillRect(
+      x + 23,
+      y + 66,
+      9,
+      16
+    );
+
+    /*
+      ANIMAÇÃO DOS PÉS
+    */
 
     if (
-      this.direction ===
-      "up"
+      this.isMoving
     ) {
+      if (
+        this.animationFrame %
+          2 ===
+        0
+      ) {
+        ctx.fillRect(
+          x + 9,
+          y + 78,
+          12,
+          6
+        );
 
-      this.renderUp(
-        ctx,
-        x,
-        y,
-        legOffset,
-        armOffset
-      );
+        ctx.fillRect(
+          x + 24,
+          y + 76,
+          12,
+          6
+        );
+      } else {
+        ctx.fillRect(
+          x + 7,
+          y + 76,
+          12,
+          6
+        );
 
-      return;
-
+        ctx.fillRect(
+          x + 25,
+          y + 79,
+          12,
+          6
+        );
+      }
     }
 
+    /*
+      SAPATOS
+    */
+
+    ctx.fillStyle =
+      shoes;
+
+    ctx.fillRect(
+      x + 8,
+      y + 79,
+      12,
+      7
+    );
+
+    ctx.fillRect(
+      x + 25,
+      y + 79,
+      12,
+      7
+    );
 
     /*
-     * ======================================================
-     * ESQUERDA
-     * ======================================================
-     */
+      DETALHE DA BENGALA / ACESSIBILIDADE
+
+      O objeto acompanha o personagem e reforça
+      visualmente a proposta do protagonista.
+    */
+
+    this.renderWalkingStick(
+      ctx,
+      x,
+      y
+    );
+  }
+
+  /* =========================================================
+     BENGALA
+  ========================================================== */
+
+  renderWalkingStick(
+    ctx,
+    x,
+    y
+  ) {
+    ctx.save();
+
+    ctx.strokeStyle =
+      "#d1d0c5";
+
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
 
     if (
       this.direction ===
       "left"
     ) {
-
-      this.renderSide(
-        ctx,
-        x,
-        y,
-        -1,
-        legOffset,
-        armOffset
+      ctx.moveTo(
+        x + 9,
+        y + 44
       );
 
-      return;
+      ctx.lineTo(
+        x - 2,
+        y + 78
+      );
 
+      ctx.lineTo(
+        x - 8,
+        y + 82
+      );
+    } else if (
+      this.direction ===
+      "right"
+    ) {
+      ctx.moveTo(
+        x + 34,
+        y + 44
+      );
+
+      ctx.lineTo(
+        x + 46,
+        y + 78
+      );
+
+      ctx.lineTo(
+        x + 52,
+        y + 82
+      );
+    } else {
+      ctx.moveTo(
+        x + 34,
+        y + 44
+      );
+
+      ctx.lineTo(
+        x + 40,
+        y + 78
+      );
+
+      ctx.lineTo(
+        x + 47,
+        y + 82
+      );
     }
 
-
-    /*
-     * ======================================================
-     * DIREITA
-     * ======================================================
-     */
-
-    this.renderSide(
-      ctx,
-      x,
-      y,
-      1,
-      legOffset,
-      armOffset
-    );
-
-  }
-
-
-  /* =========================================================
-     FRONT
-     ========================================================= */
-
-  renderDown(
-    ctx,
-    x,
-    y,
-    legOffset,
-    armOffset
-  ) {
-
-    /*
-     * CABELO — sombra atrás da cabeça.
-     */
-
-    ctx.fillStyle =
-      "#24201f";
-
-
-    ctx.fillRect(
-      x - 13,
-      y - 26,
-      26,
-      23
-    );
-
-
-    /*
-     * Cabelo lateral.
-     */
-
-    ctx.fillRect(
-      x - 16,
-      y - 18,
-      5,
-      15
-    );
-
-
-    ctx.fillRect(
-      x + 11,
-      y - 18,
-      5,
-      15
-    );
-
-
-    /*
-     * ROSTO.
-
-     */
-
-    ctx.fillStyle =
-      "#c58f6b";
-
-
-    ctx.fillRect(
-      x - 11,
-      y - 20,
-      22,
-      22
-    );
-
-
-    /*
-     * Orelhas.
-
-     */
-
-    ctx.fillRect(
-      x - 14,
-      y - 14,
-      4,
-      9
-    );
-
-
-    ctx.fillRect(
-      x + 10,
-      y - 14,
-      4,
-      9
-    );
-
-
-    /*
-     * Franja.
-
-     */
-
-    ctx.fillStyle =
-      "#302725";
-
-
-    ctx.fillRect(
-      x - 11,
-      y - 21,
-      22,
-      7
-    );
-
-
-    ctx.fillRect(
-      x - 7,
-      y - 25,
-      14,
-      7
-    );
-
-
-    /*
-     * Olhos.
-
-     */
-
-    ctx.fillStyle =
-      "#191919";
-
-
-    ctx.fillRect(
-      x - 7,
-      y - 11,
-      4,
-      4
-    );
-
-
-    ctx.fillRect(
-      x + 3,
-      y - 11,
-      4,
-      4
-    );
-
-
-    /*
-     * Nariz.
-
-     */
-
-    ctx.fillStyle =
-      "#9d684f";
-
-
-    ctx.fillRect(
-      x - 1,
-      y - 5,
-      3,
-      4
-    );
-
-
-    /*
-     * Boca.
-
-     */
-
-    ctx.fillStyle =
-      "#75483d";
-
-
-    ctx.fillRect(
-      x - 4,
-      y + 2,
-      8,
-      2
-    );
-
-
-    /*
-     * PESCOÇO.
-
-     */
-
-    ctx.fillStyle =
-      "#ad775a";
-
-
-    ctx.fillRect(
-      x - 6,
-      y + 2,
-      12,
-      8
-    );
-
-
-    /*
-     * CORPO / BLUSA.
-
-     */
-
-    ctx.fillStyle =
-      "#4e5964";
-
-
-    ctx.fillRect(
-      x - 15,
-      y + 8,
-      30,
-      25
-    );
-
-
-    /*
-     * Detalhe central da camisa.
-
-     */
-
-    ctx.fillStyle =
-      "#707985";
-
-
-    ctx.fillRect(
-      x - 3,
-      y + 9,
-      6,
-      22
-    );
-
-
-    /*
-     * BRAÇO ESQUERDO.
-
-     */
-
-    ctx.fillStyle =
-      "#4e5964";
-
-
-    ctx.fillRect(
-      x - 21,
-      y + 11 +
-      armOffset,
-      7,
-      20
-    );
-
-
-    /*
-     * Mão esquerda.
-
-     */
-
-    ctx.fillStyle =
-      "#c58f6b";
-
-
-    ctx.fillRect(
-      x - 21,
-      y + 29 +
-      armOffset,
-      7,
-      7
-    );
-
-
-    /*
-     * BRAÇO DIREITO.
-
-     */
-
-    ctx.fillStyle =
-      "#4e5964";
-
-
-    ctx.fillRect(
-      x + 14,
-      y + 11 -
-      armOffset,
-      7,
-      20
-    );
-
-
-    /*
-     * Mão direita.
-
-     */
-
-    ctx.fillStyle =
-      "#c58f6b";
-
-
-    ctx.fillRect(
-      x + 14,
-      y + 29 -
-      armOffset,
-      7,
-      7
-    );
-
-
-    /*
-     * CALÇA.
-
-     */
-
-    ctx.fillStyle =
-      "#303a45";
-
-
-    ctx.fillRect(
-      x - 14,
-      y + 32,
-      28,
-      16
-    );
-
-
-    /*
-     * PERNAS.
-
-     */
-
-    ctx.fillStyle =
-      "#303a45";
-
-
-    ctx.fillRect(
-      x - 12,
-      y + 45 +
-      legOffset,
-      9,
-      12
-    );
-
-
-    ctx.fillRect(
-      x + 3,
-      y + 45 -
-      legOffset,
-      9,
-      12
-    );
-
-
-    /*
-     * TÊNIS.
-
-     */
-
-    ctx.fillStyle =
-      "#252526";
-
-
-    ctx.fillRect(
-      x - 14,
-      y + 55 +
-      legOffset,
-      12,
-      6
-    );
-
-
-    ctx.fillRect(
-      x + 2,
-      y + 55 -
-      legOffset,
-      12,
-      6
-    );
-
-
-    /*
-     * Pequenos detalhes claros.
-
-     */
-
-    ctx.fillStyle =
-      "#8f9497";
-
-
-    ctx.fillRect(
-      x - 11,
-      y + 55 +
-      legOffset,
-      6,
-      2
-    );
-
-
-    ctx.fillRect(
-      x + 5,
-      y + 55 -
-      legOffset,
-      6,
-      2
-    );
-
-  }
-
-
-  /* =========================================================
-     BACK
-     ========================================================= */
-
-  renderUp(
-    ctx,
-    x,
-    y,
-    legOffset,
-    armOffset
-  ) {
-
-    /*
-     * CABELO.
-
-     */
-
-    ctx.fillStyle =
-      "#24201f";
-
-
-    ctx.fillRect(
-      x - 14,
-      y - 26,
-      28,
-      27
-    );
-
-
-    ctx.fillRect(
-      x - 17,
-      y - 18,
-      5,
-      17
-    );
-
-
-    ctx.fillRect(
-      x + 12,
-      y - 18,
-      5,
-      17
-    );
-
-
-    /*
-     * Pescoço.
-
-     */
-
-    ctx.fillStyle =
-      "#ad775a";
-
-
-    ctx.fillRect(
-      x - 6,
-      y,
-      12,
-      9
-    );
-
-
-    /*
-     * Corpo.
-
-     */
-
-    ctx.fillStyle =
-      "#4e5964";
-
-
-    ctx.fillRect(
-      x - 15,
-      y + 7,
-      30,
-      26
-    );
-
-
-    /*
-     * Mochila.
-
-     */
-
-    ctx.fillStyle =
-      "#39434d";
-
-
-    ctx.fillRect(
-      x - 12,
-      y + 10,
-      24,
-      22
-    );
-
-
-    ctx.fillStyle =
-      "#596773";
-
-
-    ctx.fillRect(
-      x - 8,
-      y + 14,
-      16,
-      3
-    );
-
-
-    /*
-     * Alças.
-
-     */
-
-    ctx.strokeStyle =
-      "#252c32";
-
-
-    ctx.lineWidth =
-      3;
-
-
-    ctx.beginPath();
-
-
-    ctx.moveTo(
-      x - 12,
-      y + 8
-    );
-
-
-    ctx.lineTo(
-      x - 7,
-      y + 22
-    );
-
-
     ctx.stroke();
 
-
-    ctx.beginPath();
-
-
-    ctx.moveTo(
-      x + 12,
-      y + 8
-    );
-
-
-    ctx.lineTo(
-      x + 7,
-      y + 22
-    );
-
-
-    ctx.stroke();
-
-
     /*
-     * Braços.
-
-     */
+      Ponta.
+    */
 
     ctx.fillStyle =
-      "#4e5964";
-
-
-    ctx.fillRect(
-      x - 21,
-      y + 10 +
-      armOffset,
-      7,
-      21
-    );
-
-
-    ctx.fillRect(
-      x + 14,
-      y + 10 -
-      armOffset,
-      7,
-      21
-    );
-
-
-    /*
-     * Mãos.
-
-     */
-
-    ctx.fillStyle =
-      "#c58f6b";
-
-
-    ctx.fillRect(
-      x - 21,
-      y + 29 +
-      armOffset,
-      7,
-      7
-    );
-
-
-    ctx.fillRect(
-      x + 14,
-      y + 29 -
-      armOffset,
-      7,
-      7
-    );
-
-
-    /*
-     * Calça.
-
-     */
-
-    ctx.fillStyle =
-      "#303a45";
-
-
-    ctx.fillRect(
-      x - 14,
-      y + 32,
-      28,
-      16
-    );
-
-
-    /*
-     * Pernas.
-
-     */
-
-    ctx.fillRect(
-      x - 12,
-      y + 45 +
-      legOffset,
-      9,
-      12
-    );
-
-
-    ctx.fillRect(
-      x + 3,
-      y + 45 -
-      legOffset,
-      9,
-      12
-    );
-
-
-    /*
-     * Tênis.
-
-     */
-
-    ctx.fillStyle =
-      "#252526";
-
-
-    ctx.fillRect(
-      x - 14,
-      y + 55 +
-      legOffset,
-      12,
-      6
-    );
-
-
-    ctx.fillRect(
-      x + 2,
-      y + 55 -
-      legOffset,
-      12,
-      6
-    );
-
-  }
-
-
-  /* =========================================================
-     SIDE
-     ========================================================= */
-
-  renderSide(
-    ctx,
-    x,
-    y,
-    side,
-    legOffset,
-    armOffset
-  ) {
-
-    const flip =
-      side === -1;
-
-
-    ctx.save();
-
-
-    /*
-     * Espelhamos tudo quando andando para esquerda.
-
-     */
+      "#e0ddd1";
 
     if (
-      flip
+      this.direction ===
+      "left"
     ) {
-
-      ctx.translate(
-        x * 2,
-        0
+      ctx.fillRect(
+        x - 10,
+        y + 80,
+        7,
+        3
       );
-
-
-      ctx.scale(
-        -1,
-        1
+    } else if (
+      this.direction ===
+      "right"
+    ) {
+      ctx.fillRect(
+        x + 49,
+        y + 80,
+        7,
+        3
       );
-
+    } else {
+      ctx.fillRect(
+        x + 44,
+        y + 80,
+        7,
+        3
+      );
     }
 
-
-    /*
-     * CABELO.
-
-     */
-
-    ctx.fillStyle =
-      "#24201f";
-
-
-    ctx.fillRect(
-      x - 10,
-      y - 26,
-      20,
-      25
-    );
-
-
-    ctx.fillRect(
-      x - 14,
-      y - 18,
-      6,
-      17
-    );
-
-
-    /*
-     * ROSTO.
-
-     */
-
-    ctx.fillStyle =
-      "#c58f6b";
-
-
-    ctx.fillRect(
-      x - 6,
-      y - 20,
-      18,
-      21
-    );
-
-
-    /*
-     * Nariz.
-
-     */
-
-    ctx.fillRect(
-      x + 10,
-      y - 10,
-      5,
-      5
-    );
-
-
-    /*
-     * Franja.
-
-     */
-
-    ctx.fillStyle =
-      "#302725";
-
-
-    ctx.fillRect(
-      x - 7,
-      y - 22,
-      18,
-      7
-    );
-
-
-    /*
-     * Olho.
-
-     */
-
-    ctx.fillStyle =
-      "#191919";
-
-
-    ctx.fillRect(
-      x + 5,
-      y - 11,
-      4,
-      4
-    );
-
-
-    /*
-     * Pescoço.
-
-     */
-
-    ctx.fillStyle =
-      "#ad775a";
-
-
-    ctx.fillRect(
-      x - 3,
-      y,
-      10,
-      9
-    );
-
-
-    /*
-     * Corpo.
-
-     */
-
-    ctx.fillStyle =
-      "#4e5964";
-
-
-    ctx.fillRect(
-      x - 11,
-      y + 8,
-      27,
-      25
-    );
-
-
-    /*
-     * Braço visível.
-
-     */
-
-    ctx.fillRect(
-      x + 10,
-      y + 11 +
-      armOffset,
-      8,
-      21
-    );
-
-
-    /*
-     * Mão.
-
-     */
-
-    ctx.fillStyle =
-      "#c58f6b";
-
-
-    ctx.fillRect(
-      x + 10,
-      y + 30 +
-      armOffset,
-      8,
-      7
-    );
-
-
-    /*
-     * Calça.
-
-     */
-
-    ctx.fillStyle =
-      "#303a45";
-
-
-    ctx.fillRect(
-      x - 10,
-      y + 32,
-      24,
-      16
-    );
-
-
-    /*
-     * Pernas.
-
-     */
-
-    ctx.fillRect(
-      x - 8,
-      y + 45 +
-      legOffset,
-      9,
-      12
-    );
-
-
-    ctx.fillRect(
-      x + 5,
-      y + 45 -
-      legOffset,
-      9,
-      12
-    );
-
-
-    /*
-     * Tênis.
-
-     */
-
-    ctx.fillStyle =
-      "#252526";
-
-
-    ctx.fillRect(
-      x - 10,
-      y + 55 +
-      legOffset,
-      13,
-      6
-    );
-
-
-    ctx.fillRect(
-      x + 4,
-      y + 55 -
-      legOffset,
-      13,
-      6
-    );
-
-
     ctx.restore();
-
   }
-
-
-  /* =========================================================
-     DESTROY
-     ========================================================= */
-
-  destroy() {
-
-    this.world = null;
-
-    this.game = null;
-
-    this.enabled = false;
-
-  }
-
 }

@@ -1,2177 +1,1033 @@
-/* =========================================================
-   A SALA — ESCAPE ROOM
-   WORLD.JS
-
-   Responsável por:
-
-   - Construção do mapa
-   - Paredes
-   - Piso
-   - Porta
-   - Janelas
-   - Quadro
-   - Carteiras
-   - Mesa do professor
-   - Computador
-   - Armário
-   - Estante
-   - Relógio
-   - Cartazes
-   - Planta
-   - Lixeira
-   - Colisões
-   - Objetos interativos
-   - Sombras
-   - Iluminação ambiente
-   - Decoração
-   - Pixel art
-   ========================================================= */
-
-
-/* =========================================================
-   WORLD
-   ========================================================= */
-
 export class World {
-
-  constructor(
-    width = 1800,
-    height = 1000
-  ) {
-
+  constructor(width = 1800, height = 1000) {
     this.width = width;
-
     this.height = height;
-
-
-    /* -------------------------------------------------------
-       ESTADO
-    ------------------------------------------------------- */
-
-    this.doorOpen = false;
 
     this.game = null;
 
+    this.floorColor = "#17191d";
+    this.wallColor = "#25282d";
+    this.wallDark = "#111318";
+    this.lineColor = "#343941";
 
-    /* -------------------------------------------------------
-       COLEÇÕES
-    ------------------------------------------------------- */
-
-    this.colliders = [];
-
-    this.interactions = [];
-
-    this.decorations = [];
-
-    this.lights = [];
-
-    this.desks = [];
-
-
-    /* -------------------------------------------------------
-       CORES DA SALA
-    ------------------------------------------------------- */
-
-    this.colors = {
-
-      floor: "#272624",
-
-      floorLight: "#302e2b",
-
-      floorDark: "#1e1d1b",
-
-      wall: "#393733",
-
-      wallTop: "#504c44",
-
-      wallBottom: "#292825",
-
-      wood: "#6c5137",
-
-      woodDark: "#3e2d20",
-
-      woodLight: "#8a6b49",
-
-      metal: "#55585a",
-
-      metalDark: "#292b2c",
-
-      paper: "#d9d0ba",
-
-      paperDark: "#a69d89",
-
-      blackboard: "#17201f",
-
-      blackboardFrame: "#634b32",
-
-      glass: "#283e47",
-
-      glassLight: "#56747b",
-
-      red: "#8b3e3e",
-
-      redDark: "#512727",
-
-      green: "#465b43",
-
-      greenDark: "#263526",
-
-      yellow: "#b69a57",
-
-      white: "#d8d5c9",
-
-      shadow: "rgba(0,0,0,0.40)"
-
+    this.exitDoor = {
+      id: "exit",
+      x: 70,
+      y: 365,
+      width: 120,
+      height: 220,
+      open: false
     };
 
+    this.objects = [];
+    this.colliders = [];
 
-    /* -------------------------------------------------------
-       CONSTRUÇÃO
-    ------------------------------------------------------- */
-
-    this.buildRoom();
-
-    this.buildObjects();
-
-    this.buildInteractions();
-
-    this.buildLighting();
-
+    this.build();
   }
-
 
   /* =========================================================
      GAME
-     ========================================================= */
+  ========================================================== */
 
   setGame(game) {
-
     this.game = game;
-
   }
 
+  /* =========================================================
+     CONSTRUÇÃO DO MAPA
+  ========================================================== */
+
+  build() {
+    this.objects = [];
+    this.colliders = [];
+
+    /*
+      QUADRO
+    */
+
+    this.addObject({
+      id: "board",
+      type: "board",
+      x: 525,
+      y: 90,
+      width: 570,
+      height: 175,
+      label: "Quadro",
+      description:
+        "Um grande quadro está preso à parede."
+    });
+
+    /*
+      RELÓGIO
+    */
+
+    this.addObject({
+      id: "clock",
+      type: "clock",
+      x: 1370,
+      y: 105,
+      width: 90,
+      height: 90,
+      label: "Relógio",
+      description:
+        "Um relógio antigo está preso à parede."
+    });
+
+    /*
+      JANELAS
+    */
+
+    this.addObject({
+      id: "window_1",
+      type: "window",
+      x: 240,
+      y: 82,
+      width: 205,
+      height: 145,
+      label: "Janela",
+      description:
+        "Uma janela grande ocupa parte da parede."
+    });
+
+    this.addObject({
+      id: "window_2",
+      type: "window",
+      x: 1190,
+      y: 82,
+      width: 205,
+      height: 145,
+      label: "Janela",
+      description:
+        "Uma segunda janela deixa entrar uma luz fraca."
+    });
+
+    /*
+      ARMÁRIO
+    */
+
+    this.addObject({
+      id: "cabinet",
+      type: "cabinet",
+      x: 1450,
+      y: 350,
+      width: 170,
+      height: 270,
+      label: "Armário",
+      description:
+        "Um armário escolar de madeira."
+    });
+
+    /*
+      ESTANTE
+    */
+
+    this.addObject({
+      id: "bookshelf",
+      type: "bookshelf",
+      x: 210,
+      y: 325,
+      width: 185,
+      height: 300,
+      label: "Estante",
+      description:
+        "Uma estante cheia de livros."
+    });
+
+    /*
+      MESA DO PROFESSOR
+    */
+
+    this.addObject({
+      id: "teacherDesk",
+      type: "teacherDesk",
+      x: 1225,
+      y: 675,
+      width: 310,
+      height: 115,
+      label: "Mesa do professor",
+      description:
+        "Uma grande mesa de professor."
+    });
+
+    /*
+      COMPUTADOR
+    */
+
+    this.addObject({
+      id: "computer",
+      type: "computer",
+      x: 1330,
+      y: 625,
+      width: 95,
+      height: 85,
+      label: "Computador",
+      description:
+        "Um computador permanece ligado sobre a mesa."
+    });
+
+    /*
+      CARTAZES
+    */
+
+    this.addObject({
+      id: "poster_left",
+      type: "poster",
+      x: 405,
+      y: 105,
+      width: 80,
+      height: 115,
+      label: "Cartaz",
+      description:
+        "Um cartaz antigo está preso à parede."
+    });
+
+    this.addObject({
+      id: "poster_right",
+      type: "poster",
+      x: 1115,
+      y: 105,
+      width: 55,
+      height: 110,
+      label: "Cartaz",
+      description:
+        "Um pequeno cartaz está preso à parede."
+    });
+
+    /*
+      PLANTA
+    */
+
+    this.addObject({
+      id: "plant",
+      type: "plant",
+      x: 1540,
+      y: 210,
+      width: 85,
+      height: 110,
+      label: "Planta",
+      description:
+        "Uma planta está em um vaso no canto da sala."
+    });
+
+    /*
+      LIXEIRA
+    */
+
+    this.addObject({
+      id: "trash",
+      type: "trash",
+      x: 410,
+      y: 650,
+      width: 65,
+      height: 85,
+      label: "Lixeira",
+      description:
+        "Uma lixeira metálica."
+    });
+
+    /*
+      BANDEIRA / ELEMENTO DECORATIVO
+    */
+
+    this.addObject({
+      id: "flag",
+      type: "flag",
+      x: 1650,
+      y: 120,
+      width: 80,
+      height: 110,
+      label: "Painel",
+      description:
+        "Um painel decorativo da sala."
+    });
+
+    /*
+      MESAS DOS ALUNOS
+    */
+
+    const desks = [
+      {
+        id: "desk_1",
+        x: 500,
+        y: 355
+      },
+      {
+        id: "desk_2",
+        x: 750,
+        y: 355
+      },
+      {
+        id: "desk_3",
+        x: 1000,
+        y: 355
+      },
+      {
+        id: "desk_4",
+        x: 500,
+        y: 680
+      },
+      {
+        id: "desk_5",
+        x: 750,
+        y: 680
+      },
+      {
+        id: "desk_6",
+        x: 1000,
+        y: 680
+      }
+    ];
+
+    for (
+      const desk of desks
+    ) {
+      this.addObject({
+        id: desk.id,
+        type: "desk",
+        x: desk.x,
+        y: desk.y,
+        width: 185,
+        height: 120,
+        label: "Mesa escolar",
+        description:
+          "Uma mesa escolar de madeira."
+      });
+    }
+
+    /*
+      CONSTRUÇÃO DAS COLISÕES
+    */
+
+    this.buildColliders();
+  }
+
+  /* =========================================================
+     OBJETOS
+  ========================================================== */
+
+  addObject(object) {
+    this.objects.push(object);
+  }
+
+  /* =========================================================
+     COLISORES
+  ========================================================== */
+
+  buildColliders() {
+    this.colliders = [];
+
+    /*
+      PAREDES EXTERNAS
+    */
+
+    this.colliders.push({
+      x: 0,
+      y: 0,
+      width: this.width,
+      height: 55
+    });
+
+    this.colliders.push({
+      x: 0,
+      y: this.height - 55,
+      width: this.width,
+      height: 55
+    });
+
+    this.colliders.push({
+      x: 0,
+      y: 0,
+      width: 55,
+      height: this.height
+    });
+
+    /*
+      Parede direita.
+      Existe uma abertura correspondente
+      à porta de saída.
+    */
+
+    this.colliders.push({
+      x: this.width - 55,
+      y: 0,
+      width: 55,
+      height: this.height
+    });
+
+    /*
+      OBJETOS BLOQUEADORES
+    */
+
+    for (
+      const object of this.objects
+    ) {
+      if (
+        object.type === "window" ||
+        object.type === "board" ||
+        object.type === "clock" ||
+        object.type === "poster" ||
+        object.type === "flag" ||
+        object.type === "plant" ||
+        object.type === "trash"
+      ) {
+        continue;
+      }
+
+      this.colliders.push({
+        x: object.x,
+        y: object.y,
+        width: object.width,
+        height: object.height
+      });
+    }
+
+    /*
+      PORTA FECHADA
+    */
+
+    if (
+      !this.exitDoor.open
+    ) {
+      this.colliders.push({
+        x: this.exitDoor.x,
+        y: this.exitDoor.y,
+        width: this.exitDoor.width,
+        height: this.exitDoor.height
+      });
+    }
+  }
 
   /* =========================================================
      RESET
-     ========================================================= */
+  ========================================================== */
 
   reset() {
+    this.exitDoor.open = false;
 
-    this.doorOpen = false;
-
+    this.buildColliders();
   }
 
+  setDoorOpen(open) {
+    this.exitDoor.open =
+      Boolean(open);
+
+    this.buildColliders();
+  }
 
   /* =========================================================
-     ROOM
-     ========================================================= */
+     SPAWN
+  ========================================================== */
 
-  buildRoom() {
-
+  getSpawnPoint() {
     /*
-     * A sala ocupa praticamente todo o mundo.
-     *
-     * As paredes possuem espessura suficiente para que
-     * o personagem nunca atravesse o cenário.
-     */
-
-    this.room = {
-
-      x: 70,
-
-      y: 60,
-
-      width: 1660,
-
-      height: 880
-
-    };
-
-
-    this.wallThickness = 42;
-
-
-    /* -------------------------------------------------------
-       PAREDE SUPERIOR
-    ------------------------------------------------------- */
-
-    this.addCollider({
-
-      x:
-        this.room.x,
-
-      y:
-        this.room.y,
-
-      width:
-        this.room.width,
-
-      height:
-        this.wallThickness,
-
-      type:
-        "wall"
-
-    });
-
-
-    /* -------------------------------------------------------
-       PAREDE DIREITA
-    ------------------------------------------------------- */
-
-    this.addCollider({
-
-      x:
-        this.room.x +
-        this.room.width -
-        this.wallThickness,
-
-      y:
-        this.room.y,
-
-      width:
-        this.wallThickness,
-
-      height:
-        this.room.height,
-
-      type:
-        "wall"
-
-    });
-
-
-    /* -------------------------------------------------------
-       PAREDE INFERIOR
-    ------------------------------------------------------- */
-
-    this.addCollider({
-
-      x:
-        this.room.x,
-
-      y:
-        this.room.y +
-        this.room.height -
-        this.wallThickness,
-
-      width:
-        this.room.width,
-
-      height:
-        this.wallThickness,
-
-      type:
-        "wall"
-
-    });
-
-
-    /*
-     * Parede esquerda.
-     *
-     * Ela é dividida em duas partes porque a porta de saída
-     * fica nela.
-     */
-
-    const door = this.getExitDoor();
-
-
-    /* -------------------------------------------------------
-       PAREDE ESQUERDA — PARTE SUPERIOR
-    ------------------------------------------------------- */
-
-    this.addCollider({
-
-      x:
-        this.room.x,
-
-      y:
-        this.room.y,
-
-      width:
-        this.wallThickness,
-
-      height:
-        door.y -
-        this.room.y,
-
-      type:
-        "wall"
-
-    });
-
-
-    /* -------------------------------------------------------
-       PAREDE ESQUERDA — PARTE INFERIOR
-    ------------------------------------------------------- */
-
-    this.addCollider({
-
-      x:
-        this.room.x,
-
-      y:
-        door.y +
-        door.height,
-
-      width:
-        this.wallThickness,
-
-      height:
-        (
-          this.room.y +
-          this.room.height
-        ) -
-        (
-          door.y +
-          door.height
-        ),
-
-      type:
-        "wall"
-
-    });
-
-
-    /* -------------------------------------------------------
-       BORDA DO PISO
-    ------------------------------------------------------- */
-
-    this.decorations.push({
-
-      type:
-        "floorBorder",
-
-      x:
-        this.room.x +
-        this.wallThickness,
-
-      y:
-        this.room.y +
-        this.wallThickness,
-
-      width:
-        this.room.width -
-        this.wallThickness * 2,
-
-      height:
-        this.room.height -
-        this.wallThickness * 2
-
-    });
-
-  }
-
-
-  /* =========================================================
-     OBJECTS
-     ========================================================= */
-
-  buildObjects() {
-
-    /* -------------------------------------------------------
-       PORTA
-    ------------------------------------------------------- */
-
-    this.exitDoor = {
-
-      id:
-        "exit",
-
-      x:
-        70,
-
-      y:
-        390,
-
-      width:
-        42,
-
-      height:
-        170,
-
-      interactionRadius:
-        150,
-
-      open:
-        false
-
-    };
-
-
-    /* -------------------------------------------------------
-       QUADRO
-    ------------------------------------------------------- */
-
-    this.board = {
-
-      id:
-        "board",
-
-      x:
-        500,
-
-      y:
-        105,
-
-      width:
-        560,
-
-      height:
-        205
-
-    };
-
-
-    this.addCollider({
-
-      x:
-        this.board.x,
-
-      y:
-        this.board.y,
-
-      width:
-        this.board.width,
-
-      height:
-        this.board.height,
-
-      type:
-        "board"
-
-    });
-
-
-    /* -------------------------------------------------------
-       JANELA ESQUERDA
-    ------------------------------------------------------- */
-
-    this.windowLeft = {
-
-      x:
-        270,
-
-      y:
-        110,
-
-      width:
-        170,
-
-      height:
-        190
-
-    };
-
-
-    this.addCollider({
-
-      x:
-        this.windowLeft.x,
-
-      y:
-        this.windowLeft.y,
-
-      width:
-        this.windowLeft.width,
-
-      height:
-        this.windowLeft.height,
-
-      type:
-        "window"
-
-    });
-
-
-    /* -------------------------------------------------------
-       JANELA DIREITA
-    ------------------------------------------------------- */
-
-    this.windowRight = {
-
-      x:
-        1160,
-
-      y:
-        110,
-
-      width:
-        170,
-
-      height:
-        190
-
-    };
-
-
-    this.addCollider({
-
-      x:
-        this.windowRight.x,
-
-      y:
-        this.windowRight.y,
-
-      width:
-        this.windowRight.width,
-
-      height:
-        this.windowRight.height,
-
-      type:
-        "window"
-
-    });
-
-
-    /* -------------------------------------------------------
-       ARMÁRIO
-    ------------------------------------------------------- */
-
-    this.cabinet = {
-
-      id:
-        "cabinet",
-
-      x:
-        250,
-
-      y:
-        555,
-
-      width:
-        175,
-
-      height:
-        245
-
-    };
-
-
-    this.addCollider({
-
-      x:
-        this.cabinet.x,
-
-      y:
-        this.cabinet.y,
-
-      width:
-        this.cabinet.width,
-
-      height:
-        this.cabinet.height,
-
-      type:
-        "furniture"
-
-    });
-
-
-    /* -------------------------------------------------------
-       ESTANTE
-    ------------------------------------------------------- */
-
-    this.bookshelf = {
-
-      id:
-        "bookshelf",
-
-      x:
-        1390,
-
-      y:
-        530,
-
-      width:
-        210,
-
-      height:
-        270
-
-    };
-
-
-    this.addCollider({
-
-      x:
-        this.bookshelf.x,
-
-      y:
-        this.bookshelf.y,
-
-      width:
-        this.bookshelf.width,
-
-      height:
-        this.bookshelf.height,
-
-      type:
-        "furniture"
-
-    });
-
-
-    /* -------------------------------------------------------
-       MESA DO PROFESSOR
-    /* ------------------------------------------------------- */
-
-    this.teacherDesk = {
-
-      x:
-        610,
-
-      y:
-        520,
-
-      width:
-        340,
-
-      height:
-        120
-
-    };
-
-
-    this.addCollider({
-
-      x:
-        this.teacherDesk.x,
-
-      y:
-        this.teacherDesk.y,
-
-      width:
-        this.teacherDesk.width,
-
-      height:
-        this.teacherDesk.height,
-
-      type:
-        "furniture"
-
-    });
-
-
-    /* -------------------------------------------------------
-       COMPUTADOR
-    ------------------------------------------------------- */
-
-    this.computer = {
-
-      id:
-        "computer",
-
-      x:
-        735,
-
-      y:
-        470,
-
-      width:
-        90,
-
-      height:
-        70
-
-    };
-
-
-    /* -------------------------------------------------------
-       RELÓGIO
-    ------------------------------------------------------- */
-
-    this.clock = {
-
-      id:
-        "clock",
-
-      x:
-        1395,
-
-      y:
-        115,
-
-      width:
-        100,
-
-      height:
-        100
-
-    };
-
-
-    /* -------------------------------------------------------
-       CARTAZ ESQUERDO
-    ------------------------------------------------------- */
-
-    this.posterLeft = {
-
-      id:
-        "poster_left",
-
-      x:
-        310,
-
-      y:
-        355,
-
-      width:
-        145,
-
-      height:
-        105
-
-    };
-
-
-    /* -------------------------------------------------------
-       CARTAZ DIREITO
-    ------------------------------------------------------- */
-
-    this.posterRight = {
-
-      id:
-        "poster_right",
-
-      x:
-        1190,
-
-      y:
-        355,
-
-      width:
-        145,
-
-      height:
-        105
-
-    };
-
-
-    /* -------------------------------------------------------
-       PLANTA
-    ------------------------------------------------------- */
-
-    this.plant = {
-
-      x:
-        1630,
-
-      y:
-        700,
-
-      width:
-        65,
-
-      height:
-        150
-
-    };
-
-
-    this.addCollider({
-
-      x:
-        this.plant.x,
-
-      y:
-        this.plant.y,
-
-      width:
-        this.plant.width,
-
-      height:
-        this.plant.height,
-
-      type:
-        "decoration"
-
-    });
-
-
-    /* -------------------------------------------------------
-       LIXEIRA
-    ------------------------------------------------------- */
-
-    this.trash = {
-
-      x:
-        460,
-
-      y:
-        770,
-
-      width:
-        65,
-
-      height:
-        85
-
-    };
-
-
-    this.addCollider({
-
-      x:
-        this.trash.x,
-
-      y:
-        this.trash.y,
-
-      width:
-        this.trash.width,
-
-      height:
-        this.trash.height,
-
-      type:
-        "decoration"
-
-    });
-
-
-    /* -------------------------------------------------------
-       BANDEIRA / SÍMBOLO DA ESCOLA
-    ------------------------------------------------------- */
-
-    this.flag = {
-
-      x:
-        1535,
-
-      y:
-        280,
-
-      width:
-        110,
-
-      height:
-        120
-
-    };
-
-
-    /*
-     * A bandeira não possui colisão.
-     * Ela é somente decoração.
-     */
-
-
-    /* -------------------------------------------------------
-       CARTEIRAS
-    ------------------------------------------------------- */
-
-    this.createDesks();
-
-  }
-
-
-  /* =========================================================
-     CREATE DESKS
-     ========================================================= */
-
-  createDesks() {
-
-    /*
-     * A organização foi feita em duas fileiras.
-     *
-     * Há corredores largos entre elas para o personagem
-     * circular sem ficar preso.
-     */
-
-    const deskData = [
-
-      {
-        id:
-          "desk_1",
-
-        x:
-          500,
-
-        y:
-          350
-
-      },
-
-      {
-        id:
-          "desk_2",
-
-        x:
-          750,
-
-        y:
-          350
-
-      },
-
-      {
-        id:
-          "desk_3",
-
-        x:
-          1000,
-
-        y:
-          350
-
-      },
-
-      {
-        id:
-          "desk_4",
-
-        x:
-          500,
-
-        y:
-          690
-
-      },
-
-      {
-        id:
-          "desk_5",
-
-        x:
-          750,
-
-        y:
-          690
-
-      },
-
-      {
-        id:
-          "desk_6",
-
-        x:
-          1000,
-
-        y:
-          690
-
-      }
-
-    ];
-
-
-    for (
-      const data of deskData
-    ) {
-
-      const desk = {
-
-        id:
-          data.id,
-
-        x:
-          data.x,
-
-        y:
-          data.y,
-
-        width:
-          155,
-
-        height:
-          105,
-
-        interactionRadius:
-          110
-
-      };
-
-
-      this.desks.push(
-        desk
-      );
-
-
-      this.addCollider({
-
-        x:
-          desk.x,
-
-        y:
-          desk.y,
-
-        width:
-          desk.width,
-
-        height:
-          desk.height,
-
-        type:
-          "desk",
-
-        id:
-          desk.id
-
-      });
-
-    }
-
-  }
-
-
-  /* =========================================================
-     INTERACTIONS
-     ========================================================= */
-
-  buildInteractions() {
-
-    /* -------------------------------------------------------
-       QUADRO
-    ------------------------------------------------------- */
-
-    this.addInteraction({
-
-      id:
-        "board",
-
-      label:
-        "Investigar quadro",
-
-      x:
-        this.board.x +
-        this.board.width / 2,
-
-      y:
-        this.board.y +
-        this.board.height +
-        25,
-
-      radius:
-        150
-
-    });
-
-
-    /* -------------------------------------------------------
-       RELÓGIO
-    ------------------------------------------------------- */
-
-    this.addInteraction({
-
-      id:
-        "clock",
-
-      label:
-        "Investigar relógio",
-
-      x:
-        this.clock.x +
-        this.clock.width / 2,
-
-      y:
-        this.clock.y +
-        this.clock.height +
-        20,
-
-      radius:
-        125
-
-    });
-
-
-    /* -------------------------------------------------------
-       ARMÁRIO
-    ------------------------------------------------------- */
-
-    this.addInteraction({
-
-      id:
-        "cabinet",
-
-      label:
-        "Investigar armário",
-
-      x:
-        this.cabinet.x +
-        this.cabinet.width / 2,
-
-      y:
-        this.cabinet.y +
-        this.cabinet.height +
-        25,
-
-      radius:
-        125
-
-    });
-
-
-    /* -------------------------------------------------------
-       ESTANTE
-    ------------------------------------------------------- */
-
-    this.addInteraction({
-
-      id:
-        "bookshelf",
-
-      label:
-        "Investigar estante",
-
-      x:
-        this.bookshelf.x +
-        this.bookshelf.width / 2,
-
-      y:
-        this.bookshelf.y +
-        this.bookshelf.height +
-        25,
-
-      radius:
-        135
-
-    });
-
-
-    /* -------------------------------------------------------
-       COMPUTADOR
-    ------------------------------------------------------- */
-
-    this.addInteraction({
-
-      id:
-        "computer",
-
-      label:
-        "Investigar computador",
-
-      x:
-        this.computer.x +
-        this.computer.width / 2,
-
-      y:
-        this.computer.y +
-        this.computer.height +
-        35,
-
-      radius:
-        110
-
-    });
-
-
-    /* -------------------------------------------------------
-       CARTAZES
-    ------------------------------------------------------- */
-
-    this.addInteraction({
-
-      id:
-        "poster_left",
-
-      label:
-        "Investigar cartaz",
-
-      x:
-        this.posterLeft.x +
-        this.posterLeft.width / 2,
-
-      y:
-        this.posterLeft.y +
-        this.posterLeft.height +
-        30,
-
-      radius:
-        105
-
-    });
-
-
-    this.addInteraction({
-
-      id:
-        "poster_right",
-
-      label:
-        "Investigar cartaz",
-
-      x:
-        this.posterRight.x +
-        this.posterRight.width / 2,
-
-      y:
-        this.posterRight.y +
-        this.posterRight.height +
-        30,
-
-      radius:
-        105
-
-    });
-
-
-    /* -------------------------------------------------------
-       CARTEIRAS
-    ------------------------------------------------------- */
-
-    for (
-      const desk of this.desks
-    ) {
-
-      this.addInteraction({
-
-        id:
-          desk.id,
-
-        label:
-          "Investigar carteira",
-
-        x:
-          desk.x +
-          desk.width / 2,
-
-        y:
-          desk.y +
-          desk.height +
-          25,
-
-        radius:
-          desk.interactionRadius
-
-      });
-
-    }
-
-
-    /* -------------------------------------------------------
-       PORTA
-    ------------------------------------------------------- */
-
-    this.addInteraction({
-
-      id:
-        "exit",
-
-      label:
-        "Investigar porta",
-
-      x:
-        this.exitDoor.x +
-        this.exitDoor.width +
-        35,
-
-      y:
-        this.exitDoor.y +
-        this.exitDoor.height / 2,
-
-      radius:
-        this.exitDoor.interactionRadius
-
-    });
-
-  }
-
-
-  /* =========================================================
-     LIGHTS
-     ========================================================= */
-
-  buildLighting() {
-
-    /*
-     * Lâmpadas no teto.
-     */
-
-    this.lights = [
-
-      {
-        x:
-          450,
-
-        y:
-          90,
-
-        radius:
-          150,
-
-        intensity:
-          0.18
-
-      },
-
-      {
-        x:
-          800,
-
-        y:
-          90,
-
-        radius:
-          170,
-
-        intensity:
-          0.22
-
-      },
-
-      {
-        x:
-          1150,
-
-        y:
-          90,
-
-        radius:
-          150,
-
-        intensity:
-          0.18
-
-      },
-
-      {
-        x:
-          1480,
-
-        y:
-          90,
-
-        radius:
-          140,
-
-        intensity:
-          0.16
-
-      }
-
-    ];
-
-  }
-
-
-  /* =========================================================
-     ADD COLLIDER
-     ========================================================= */
-
-  addCollider(collider) {
-
-    this.colliders.push(
-      collider
-    );
-
-  }
-
-
-  /* =========================================================
-     ADD INTERACTION
-     ========================================================= */
-
-  addInteraction(interaction) {
-
-    this.interactions.push(
-      interaction
-    );
-
-  }
-
-
-  /* =========================================================
-     EXIT DOOR
-     ========================================================= */
-
-  getExitDoor() {
+      IMPORTANTE:
+      Este ponto fica em uma área livre da sala,
+      longe das mesas.
+
+      Não alterar para dentro da área
+      de colisão da desk_6.
+    */
 
     return {
-
-      x:
-        70,
-
-      y:
-        390,
-
-      width:
-        42,
-
-      height:
-        170
-
+      x: 1160,
+      y: 600
     };
-
   }
 
-
   /* =========================================================
-     COLLISION
-     ========================================================= */
+     COLISÃO DO JOGADOR
+  ========================================================== */
 
-  collides(
+  canPlayerMoveTo(
     x,
     y,
-    width,
-    height
+    width = 20,
+    height = 18
   ) {
+    const halfWidth =
+      width / 2;
+
+    const halfHeight =
+      height / 2;
 
     const playerRect = {
+      x:
+        x - halfWidth,
 
-      x,
-
-      y,
+      y:
+        y - halfHeight,
 
       width,
-
       height
-
     };
-
 
     for (
       const collider of
       this.colliders
     ) {
-
       if (
         this.rectsOverlap(
           playerRect,
           collider
         )
       ) {
-
-        return true;
-
+        return false;
       }
-
     }
 
-
-    /*
-     * Porta fechada.
-     */
-
-    if (
-      !this.doorOpen
-    ) {
-
-      const door =
-        this.exitDoor;
-
-
-      if (
-        this.rectsOverlap(
-          playerRect,
-          door
-        )
-      ) {
-
-        return true;
-
-      }
-
-    }
-
-
-    return false;
-
+    return true;
   }
-
-
-  /* =========================================================
-     RECT COLLISION
-     ========================================================= */
 
   rectsOverlap(
     a,
     b
   ) {
-
     return (
-
       a.x <
-      b.x + b.width &&
-
+        b.x + b.width &&
       a.x + a.width >
-      b.x &&
-
+        b.x &&
       a.y <
-      b.y + b.height &&
-
+        b.y + b.height &&
       a.y + a.height >
-      b.y
-
+        b.y
     );
-
   }
 
-
   /* =========================================================
-     PLAYER COLLISION
-     ========================================================= */
-
-  canPlayerMoveTo(
-    player,
-    x,
-    y
-  ) {
-
-    if (
-      !player
-    ) {
-
-      return false;
-
-    }
-
-
-    const width =
-      player.width ||
-      36;
-
-
-    const height =
-      player.height ||
-      52;
-
-
-    /*
-     * O ponto recebido pelo Player representa o centro
-     * do personagem.
-     */
-
-    const bounds = {
-
-      x:
-        x -
-        width / 2,
-
-      y:
-        y -
-        height / 2,
-
-      width,
-
-      height
-
-    };
-
-
-    /*
-     * Pequena margem para evitar que o personagem
-     * fique raspando nos móveis.
-     */
-
-    const margin = 4;
-
-
-    const safeBounds = {
-
-      x:
-        bounds.x +
-        margin,
-
-      y:
-        bounds.y +
-        margin,
-
-      width:
-        bounds.width -
-        margin * 2,
-
-      height:
-        bounds.height -
-        margin * 2
-
-    };
-
-
-    return !this.collides(
-      safeBounds.x,
-      safeBounds.y,
-      safeBounds.width,
-      safeBounds.height
-    );
-
-  }
-
-
-  /* =========================================================
-     INTERACTION TARGETS
-     ========================================================= */
-
-  getInteractionTargets(
-    player
-  ) {
-
-    if (
-      !player
-    ) {
-
-      return [];
-
-    }
-
-
-    const px =
-      player.x;
-
-
-    const py =
-      player.y;
-
-
-    return this.interactions
-      .map(
-        interaction => {
-
-          const distance =
-            Math.hypot(
-              interaction.x -
-              px,
-
-              interaction.y -
-              py
-            );
-
-
-          return {
-
-            ...interaction,
-
-            distance
-
-          };
-
-        }
-      )
-      .filter(
-        interaction =>
-          interaction.distance <=
-          interaction.radius
-      )
-      .sort(
-        (
-          a,
-          b
-        ) =>
-          a.distance -
-          b.distance
-      );
-
-  }
-
-
-  /* =========================================================
-     NEAREST INTERACTION
-     ========================================================= */
+     INTERAÇÕES
+  ========================================================== */
 
   getNearestInteraction(
     player
   ) {
+    if (!player) {
+      return null;
+    }
 
-    const targets =
-      this.getInteractionTargets(
-        player
-      );
+    let nearest = null;
 
+    let nearestDistance =
+      Infinity;
 
-    return (
-      targets[0] ||
-      null
-    );
+    const interactionRadius =
+      105;
 
-  }
+    for (
+      const object of
+      this.objects
+    ) {
+      if (
+        !object.label
+      ) {
+        continue;
+      }
 
+      const centerX =
+        object.x +
+        object.width / 2;
 
-  /* =========================================================
-     SET DOOR OPEN
-     ========================================================= */
+      const centerY =
+        object.y +
+        object.height / 2;
 
-  setDoorOpen(
-    open
-  ) {
+      const distance =
+        Math.hypot(
+          player.x -
+            centerX,
+          player.y -
+            centerY
+        );
 
-    this.doorOpen =
-      Boolean(open);
+      if (
+        distance <
+          interactionRadius &&
+        distance <
+          nearestDistance
+      ) {
+        nearest =
+          object;
 
-
-    this.exitDoor.open =
-      this.doorOpen;
-
-  }
-
-
-  /* =========================================================
-     SPAWN
-     ========================================================= */
-
-  getSpawnPoint() {
+        nearestDistance =
+          distance;
+      }
+    }
 
     /*
-     * IMPORTANTE:
-     *
-     * Este ponto fica no corredor central da sala.
-     *
-     * Não fica dentro da mesa do professor,
-     * nem dentro de uma carteira,
-     * nem perto demais de uma parede.
-     */
+      PORTA
+    */
 
-    return {
+    const doorCenterX =
+      this.exitDoor.x +
+      this.exitDoor.width / 2;
 
-      x:
-        1120,
+    const doorCenterY =
+      this.exitDoor.y +
+      this.exitDoor.height / 2;
 
-      y:
-        610
+    const doorDistance =
+      Math.hypot(
+        player.x -
+          doorCenterX,
+        player.y -
+          doorCenterY
+      );
 
-    };
+    if (
+      doorDistance <
+        interactionRadius &&
+      doorDistance <
+        nearestDistance
+    ) {
+      nearest = {
+        ...this.exitDoor,
+        label: "Porta de saída",
+        description:
+          "Uma porta pesada está diante de você."
+      };
+    }
 
+    return nearest;
   }
 
-
   /* =========================================================
-     RENDER
-     ========================================================= */
+     RENDERIZAÇÃO PRINCIPAL
+  ========================================================== */
 
   render(
     ctx,
     game
   ) {
-
-    if (
-      !ctx
-    ) {
-
+    if (!ctx) {
       return;
-
     }
 
+    const camera =
+      game?.camera || {
+        x: 0,
+        y: 0
+      };
 
-    this.renderFloor(
-      ctx
+    ctx.save();
+
+    ctx.translate(
+      -Math.round(
+        camera.x
+      ),
+      -Math.round(
+        camera.y
+      )
     );
 
-
-    this.renderWall(
+    this.renderRoom(
       ctx
     );
-
 
     this.renderWindows(
       ctx
     );
 
-
     this.renderBoard(
       ctx
     );
-
-
-    this.renderPosters(
-      ctx
-    );
-
-
-    this.renderFlag(
-      ctx
-    );
-
 
     this.renderClock(
       ctx
     );
 
+    this.renderDoor(
+      ctx
+    );
 
     this.renderCabinet(
       ctx
     );
 
-
     this.renderBookshelf(
       ctx
     );
-
 
     this.renderTeacherDesk(
       ctx
     );
 
-
     this.renderComputer(
       ctx
     );
-
 
     this.renderDesks(
       ctx
     );
 
+    this.renderPosters(
+      ctx
+    );
 
     this.renderPlant(
       ctx
     );
 
-
     this.renderTrash(
       ctx
     );
 
-
-    this.renderDoor(
+    this.renderFlag(
       ctx
     );
 
-
-    this.renderDecorativeDetails(
-      ctx
-    );
-
-
-    this.renderWorldLights(
+    this.renderInteractionMarkers(
       ctx,
       game
     );
 
+    ctx.restore();
+
+    /*
+      Iluminação é aplicada em coordenadas
+      de tela, portanto vem depois da câmera.
+    */
+
+    this.renderLighting(
+      ctx,
+      game?.player,
+      camera,
+      game?.time || 0
+    );
   }
 
-
   /* =========================================================
-     FLOOR
-     ========================================================= */
+     SALA
+  ========================================================== */
 
-  renderFloor(ctx) {
-
-    const r =
-      this.room;
-
-
+  renderRoom(ctx) {
     /*
-     * Base.
-     */
+      Piso
+    */
 
     ctx.fillStyle =
-      this.colors.floor;
-
+      this.floorColor;
 
     ctx.fillRect(
-      r.x,
-      r.y,
-      r.width,
-      r.height
+      0,
+      0,
+      this.width,
+      this.height
     );
 
+    /*
+      Parede superior
+    */
+
+    ctx.fillStyle =
+      this.wallColor;
+
+    ctx.fillRect(
+      0,
+      0,
+      this.width,
+      55
+    );
 
     /*
-     * Faixas de piso.
-     */
+      Parede inferior
+    */
 
-    const tileSize =
-      64;
+    ctx.fillRect(
+      0,
+      this.height - 55,
+      this.width,
+      55
+    );
 
+    /*
+      Parede esquerda
+    */
+
+    ctx.fillRect(
+      0,
+      0,
+      55,
+      this.height
+    );
+
+    /*
+      Parede direita
+    */
+
+    ctx.fillRect(
+      this.width - 55,
+      0,
+      55,
+      this.height
+    );
+
+    /*
+      Faixa escura nas paredes
+    */
+
+    ctx.fillStyle =
+      this.wallDark;
+
+    ctx.fillRect(
+      0,
+      50,
+      this.width,
+      7
+    );
+
+    ctx.fillRect(
+      0,
+      this.height - 57,
+      this.width,
+      7
+    );
+
+    /*
+      Linhas do piso
+    */
+
+    ctx.strokeStyle =
+      this.lineColor;
+
+    ctx.lineWidth = 1;
+
+    const tileSize = 64;
 
     for (
-      let y =
-        r.y +
-        this.wallThickness;
+      let x = 55;
+      x <
+        this.width - 55;
+      x += tileSize
+    ) {
+      ctx.beginPath();
 
+      ctx.moveTo(
+        x,
+        55
+      );
+
+      ctx.lineTo(
+        x,
+        this.height - 55
+      );
+
+      ctx.stroke();
+    }
+
+    for (
+      let y = 55;
       y <
-        r.y +
-        r.height -
-        this.wallThickness;
-
+        this.height - 55;
       y += tileSize
     ) {
+      ctx.beginPath();
 
+      ctx.moveTo(
+        55,
+        y
+      );
+
+      ctx.lineTo(
+        this.width - 55,
+        y
+      );
+
+      ctx.stroke();
+    }
+
+    /*
+      Pequenos detalhes no piso
+    */
+
+    ctx.fillStyle =
+      "rgba(255,255,255,0.025)";
+
+    for (
+      let x = 80;
+      x < this.width - 80;
+      x += 128
+    ) {
       for (
-        let x =
-          r.x +
-          this.wallThickness;
-
-        x <
-          r.x +
-          r.width -
-          this.wallThickness;
-
-        x += tileSize
+        let y = 80;
+        y < this.height - 80;
+        y += 128
       ) {
-
-        const alternate =
-          (
-            Math.floor(
-              x / tileSize
-            ) +
-            Math.floor(
-              y / tileSize
-            )
-          ) % 2;
-
-
-        ctx.fillStyle =
-          alternate
-            ? this.colors.floorLight
-            : this.colors.floor;
-
-
-        ctx.fillRect(
-          x,
-          y,
-          tileSize,
-          tileSize
-        );
-
-
-        /*
-         * Linha fina entre as placas.
-         */
-
-        ctx.fillStyle =
-          "rgba(0,0,0,0.12)";
-
-
-        ctx.fillRect(
-          x,
-          y,
-          tileSize,
-          2
-        );
-
-
         ctx.fillRect(
           x,
           y,
           2,
-          tileSize
+          2
         );
-
       }
-
     }
-
-
-    /*
-     * Pequenas imperfeições do piso.
-     */
-
-    for (
-      let i = 0;
-      i < 75;
-      i++
-    ) {
-
-      const x =
-        r.x +
-        55 +
-        Math.random() *
-        (
-          r.width -
-          110
-        );
-
-
-      const y =
-        r.y +
-        55 +
-        Math.random() *
-        (
-          r.height -
-          110
-        );
-
-
-      ctx.fillStyle =
-        "rgba(255,255,255,0.025)";
-
-
-      ctx.fillRect(
-        Math.floor(x),
-        Math.floor(y),
-        2,
-        2
-      );
-
-    }
-
   }
 
-
   /* =========================================================
-     WALL
-     ========================================================= */
+     JANELAS
+  ========================================================== */
 
-  renderWall(ctx) {
-
-    const r =
-      this.room;
-
-
-    /*
-     * Parede.
-     */
-
-    ctx.fillStyle =
-      this.colors.wall;
-
-
-    ctx.fillRect(
-      r.x,
-      r.y,
-      r.width,
-      r.height
-    );
-
-
-    /*
-     * Interior do piso.
-     */
-
-    ctx.fillStyle =
-      this.colors.floor;
-
-
-    ctx.fillRect(
-      r.x +
-      this.wallThickness,
-
-      r.y +
-      this.wallThickness,
-
-      r.width -
-      this.wallThickness * 2,
-
-      r.height -
-      this.wallThickness * 2
-    );
-
-
-    /*
-     * Parte superior da parede.
-     */
-
-    ctx.fillStyle =
-      this.colors.wallTop;
-
-
-    ctx.fillRect(
-      r.x,
-      r.y,
-      r.width,
-      12
-    );
-
-
-    /*
-     * Sombra inferior da parede.
-     */
-
-    ctx.fillStyle =
-      this.colors.wallBottom;
-
-
-    ctx.fillRect(
-      r.x,
-      r.y +
-      this.wallThickness -
-      8,
-
-      r.width,
-
-      8
-    );
-
-
-    /*
-     * Molduras verticais.
-     */
-
-    ctx.fillStyle =
-      "rgba(255,255,255,0.035)";
-
+  renderWindows(ctx) {
+    const windows =
+      this.objects.filter(
+        (object) =>
+          object.type ===
+          "window"
+      );
 
     for (
-      let x =
-        r.x + 80;
-
-      x <
-        r.x +
-        r.width -
-        80;
-
-      x += 180
+      const windowObject of
+      windows
     ) {
+      const x =
+        windowObject.x;
+
+      const y =
+        windowObject.y;
+
+      const w =
+        windowObject.width;
+
+      const h =
+        windowObject.height;
+
+      /*
+        Moldura
+      */
+
+      ctx.fillStyle =
+        "#0d1014";
+
+      ctx.fillRect(
+        x - 7,
+        y - 7,
+        w + 14,
+        h + 14
+      );
+
+      /*
+        Vidro
+      */
+
+      ctx.fillStyle =
+        "#29343b";
 
       ctx.fillRect(
         x,
-        r.y,
-        3,
-        this.wallThickness
+        y,
+        w,
+        h
       );
 
+      /*
+        Reflexo
+      */
+
+      ctx.fillStyle =
+        "rgba(210,220,220,0.06)";
+
+      ctx.fillRect(
+        x + 12,
+        y + 12,
+        w * 0.42,
+        h - 24
+      );
+
+      /*
+        Divisórias
+      */
+
+      ctx.fillStyle =
+        "#11151a";
+
+      ctx.fillRect(
+        x + w / 2 - 4,
+        y,
+        8,
+        h
+      );
+
+      ctx.fillRect(
+        x,
+        y + h / 2 - 4,
+        w,
+        8
+      );
+
+      /*
+        Luz exterior fraca
+      */
+
+      const glow =
+        ctx.createLinearGradient(
+          x,
+          y,
+          x,
+          y + h
+        );
+
+      glow.addColorStop(
+        0,
+        "rgba(190,205,200,0.08)"
+      );
+
+      glow.addColorStop(
+        1,
+        "rgba(190,205,200,0)"
+      );
+
+      ctx.fillStyle =
+        glow;
+
+      ctx.fillRect(
+        x,
+        y,
+        w,
+        h
+      );
     }
-
   }
-
 
   /* =========================================================
-     WINDOWS
-     ========================================================= */
+     QUADRO
+  ========================================================== */
 
-  renderWindows(ctx) {
+  renderBoard(ctx) {
+    const board =
+      this.objects.find(
+        (object) =>
+          object.id ===
+          "board"
+      );
 
-    this.renderWindow(
-      ctx,
-      this.windowLeft
-    );
+    if (!board) {
+      return;
+    }
 
-
-    this.renderWindow(
-      ctx,
-      this.windowRight
-    );
-
-  }
-
-
-  renderWindow(
-    ctx,
-    windowObject
-  ) {
-
-    const x =
-      windowObject.x;
-
-
-    const y =
-      windowObject.y;
-
-
-    const w =
-      windowObject.width;
-
-
-    const h =
-      windowObject.height;
-
+    const x = board.x;
+    const y = board.y;
+    const w = board.width;
+    const h = board.height;
 
     /*
-     * Sombra.
-     */
+      Sombra
+    */
 
     ctx.fillStyle =
-      "rgba(0,0,0,0.35)";
-
+      "rgba(0,0,0,0.42)";
 
     ctx.fillRect(
-      x + 8,
-      y + 10,
+      x + 12,
+      y + 14,
       w,
       h
     );
 
-
     /*
-     * Moldura.
-     */
+      Moldura
+    */
 
     ctx.fillStyle =
-      this.colors.woodDark;
-
+      "#533e2c";
 
     ctx.fillRect(
       x - 8,
@@ -2180,14 +1036,12 @@ export class World {
       h + 16
     );
 
-
     /*
-     * Vidro.
-     */
+      Quadro
+    */
 
     ctx.fillStyle =
-      this.colors.glass;
-
+      "#17251f";
 
     ctx.fillRect(
       x,
@@ -2196,598 +1050,152 @@ export class World {
       h
     );
 
-
     /*
-     * Céu.
-     */
+      Textura
+    */
 
     ctx.fillStyle =
-      "#344c52";
+      "rgba(255,255,255,0.025)";
 
+    for (
+      let i = 0;
+      i < 35;
+      i++
+    ) {
+      const px =
+        x +
+        Math.random() *
+          w;
 
-    ctx.fillRect(
-      x + 8,
-      y + 8,
-      w - 16,
-      h * 0.45
+      const py =
+        y +
+        Math.random() *
+          h;
+
+      ctx.fillRect(
+        px,
+        py,
+        2,
+        2
+      );
+    }
+
+    /*
+      Escrita em pixel art simples
+    */
+
+    ctx.fillStyle =
+      "rgba(224,226,207,0.55)";
+
+    ctx.font =
+      "bold 22px monospace";
+
+    ctx.fillText(
+      "7 × 8 = ?",
+      x + 34,
+      y + 58
     );
 
-
-    /*
-     * Área externa escura.
-     */
-
     ctx.fillStyle =
-      "#1c2729";
+      "rgba(224,226,207,0.28)";
 
+    ctx.font =
+      "17px monospace";
 
-    ctx.fillRect(
-      x + 8,
-      y + 8 + h * 0.45,
-      w - 16,
-      h * 0.47
+    ctx.fillText(
+      "PENSE ANTES DE RESPONDER",
+      x + 34,
+      y + 94
     );
 
-
-    /*
-     * Reflexos.
-     */
-
     ctx.fillStyle =
-      "rgba(255,255,255,0.09)";
+      "rgba(224,226,207,0.20)";
 
-
-    ctx.fillRect(
-      x + 18,
-      y + 20,
-      8,
-      h - 40
+    ctx.fillText(
+      "A resposta pode abrir um caminho.",
+      x + 34,
+      y + 130
     );
 
-
     /*
-     * Divisórias.
-     */
+      Giz
+    */
 
     ctx.fillStyle =
-      this.colors.wood;
-
+      "#d8d3be";
 
     ctx.fillRect(
-      x +
-      w / 2 -
-      5,
+      x + w - 100,
+      y + h - 26,
+      72,
+      6
+    );
 
-      y,
+    ctx.fillStyle =
+      "#8e8a7c";
 
+    ctx.fillRect(
+      x + w - 28,
+      y + h - 26,
       10,
-
-      h
+      6
     );
-
-
-    ctx.fillRect(
-      x,
-
-      y +
-      h / 2 -
-      5,
-
-      w,
-
-      10
-    );
-
-
-    /*
-     * Peitoril.
-     */
-
-    ctx.fillStyle =
-      this.colors.woodLight;
-
-
-    ctx.fillRect(
-      x - 14,
-      y + h,
-      w + 28,
-      13
-    );
-
-
-    ctx.fillStyle =
-      this.colors.woodDark;
-
-
-    ctx.fillRect(
-      x - 14,
-      y + h + 13,
-      w + 28,
-      5
-    );
-
   }
 
-
   /* =========================================================
-     BOARD
-     ========================================================= */
+     RELÓGIO
+  ========================================================== */
 
-  renderBoard(ctx) {
+  renderClock(ctx) {
+    const clock =
+      this.objects.find(
+        (object) =>
+          object.id ===
+          "clock"
+      );
 
-    const b =
-      this.board;
+    if (!clock) {
+      return;
+    }
 
+    const cx =
+      clock.x +
+      clock.width / 2;
+
+    const cy =
+      clock.y +
+      clock.height / 2;
+
+    const radius =
+      clock.width / 2;
 
     /*
-     * Sombra.
-     */
+      Sombra
+    */
 
     ctx.fillStyle =
       "rgba(0,0,0,0.4)";
 
-
-    ctx.fillRect(
-      b.x + 10,
-      b.y + 12,
-      b.width,
-      b.height
-    );
-
-
-    /*
-     * Moldura.
-     */
-
-    ctx.fillStyle =
-      this.colors.blackboardFrame;
-
-
-    ctx.fillRect(
-      b.x - 10,
-      b.y - 10,
-      b.width + 20,
-      b.height + 20
-    );
-
-
-    /*
-     * Quadro.
-     */
-
-    ctx.fillStyle =
-      this.colors.blackboard;
-
-
-    ctx.fillRect(
-      b.x,
-      b.y,
-      b.width,
-      b.height
-    );
-
-
-    /*
-     * Textura.
-     */
-
-    for (
-      let i = 0;
-      i < 30;
-      i++
-    ) {
-
-      const x =
-        b.x +
-        Math.random() *
-        b.width;
-
-
-      const y =
-        b.y +
-        Math.random() *
-        b.height;
-
-
-      ctx.fillStyle =
-        "rgba(255,255,255,0.035)";
-
-
-      ctx.fillRect(
-        x,
-        y,
-        2,
-        2
-      );
-
-    }
-
-
-    /*
-     * Texto desenhado como pista.
-     */
-
-    ctx.fillStyle =
-      "#b9b7a9";
-
-
-    ctx.font =
-      "18px monospace";
-
-
-    ctx.fillText(
-      "OBSERVE.",
-      b.x + 35,
-      b.y + 55
-    );
-
-
-    ctx.fillStyle =
-      "#87877d";
-
-
-    ctx.fillText(
-      "2  4  6  ?",
-      b.x + 40,
-      b.y + 100
-    );
-
-
-    ctx.fillStyle =
-      "#676961";
-
-
-    ctx.fillRect(
-      b.x + 40,
-      b.y + 125,
-      180,
-      3
-    );
-
-
-    ctx.fillRect(
-      b.x + 40,
-      b.y + 145,
-      120,
-      3
-    );
-
-
-    /*
-     * Giz.
-     */
-
-    ctx.fillStyle =
-      "#d4d0bf";
-
-
-    ctx.fillRect(
-      b.x + 470,
-      b.y + 160,
-      38,
-      7
-    );
-
-
-    ctx.fillStyle =
-      "#8c897c";
-
-
-    ctx.fillRect(
-      b.x + 470,
-      b.y + 167,
-      38,
-      3
-    );
-
-  }
-
-
-  /* =========================================================
-     POSTERS
-     ========================================================= */
-
-  renderPosters(ctx) {
-
-    this.renderPoster(
-      ctx,
-      this.posterLeft,
-      false
-    );
-
-
-    this.renderPoster(
-      ctx,
-      this.posterRight,
-      true
-    );
-
-  }
-
-
-  renderPoster(
-    ctx,
-    poster,
-    second
-  ) {
-
-    const x =
-      poster.x;
-
-
-    const y =
-      poster.y;
-
-
-    const w =
-      poster.width;
-
-
-    const h =
-      poster.height;
-
-
-    /*
-     * Sombra.
-     */
-
-    ctx.fillStyle =
-      "rgba(0,0,0,0.28)";
-
-
-    ctx.fillRect(
-      x + 7,
-      y + 9,
-      w,
-      h
-    );
-
-
-    /*
-     * Papel.
-     */
-
-    ctx.fillStyle =
-      second
-        ? "#b9c0ae"
-        : "#c4bda7";
-
-
-    ctx.fillRect(
-      x,
-      y,
-      w,
-      h
-    );
-
-
-    /*
-     * Cabeçalho.
-     */
-
-    ctx.fillStyle =
-      second
-        ? "#596d5b"
-        : "#6b6656";
-
-
-    ctx.fillRect(
-      x,
-      y,
-      w,
-      25
-    );
-
-
-    /*
-     * Texto.
-     */
-
-    ctx.fillStyle =
-      "#33352f";
-
-
-    ctx.font =
-      "bold 12px monospace";
-
-
-    ctx.fillText(
-      second
-        ? "ATENÇÃO"
-        : "ESCOLA",
-
-      x + 12,
-      y + 17
-    );
-
-
-    ctx.fillStyle =
-      "#626257";
-
-
-    for (
-      let i = 0;
-      i < 4;
-      i++
-    ) {
-
-      ctx.fillRect(
-        x + 12,
-        y + 42 +
-        i * 13,
-
-        w - 24 -
-        i * 15,
-
-        3
-      );
-
-    }
-
-
-    /*
-     * Alfinete.
-     */
-
-    ctx.fillStyle =
-      "#8b3535";
-
-
-    ctx.fillRect(
-      x +
-      w / 2 -
-      3,
-
-      y - 5,
-
-      6,
-
-      6
-    );
-
-  }
-
-
-  /* =========================================================
-     FLAG
-     ========================================================= */
-
-  renderFlag(ctx) {
-
-    const f =
-      this.flag;
-
-
-    ctx.fillStyle =
-      this.colors.woodDark;
-
-
-    ctx.fillRect(
-      f.x,
-      f.y,
-      7,
-      f.height
-    );
-
-
-    ctx.fillStyle =
-      "#596b58";
-
-
     ctx.beginPath();
-
-
-    ctx.moveTo(
-      f.x + 7,
-      f.y + 12
-    );
-
-
-    ctx.lineTo(
-      f.x + f.width,
-      f.y + 35
-    );
-
-
-    ctx.lineTo(
-      f.x + 7,
-      f.y + 65
-    );
-
-
-    ctx.closePath();
-
-
-    ctx.fill();
-
-
-    /*
-     * Símbolo central.
-     */
-
-    ctx.fillStyle =
-      "#d5cfb4";
-
-
-    ctx.fillRect(
-      f.x + 35,
-      f.y + 33,
-      22,
-      22
-    );
-
-
-    ctx.fillStyle =
-      "#596b58";
-
-
-    ctx.fillRect(
-      f.x + 42,
-      f.y + 40,
-      8,
-      8
-    );
-
-  }
-
-
-  /* =========================================================
-     CLOCK
-     ========================================================= */
-
-  renderClock(ctx) {
-
-    const c =
-      this.clock;
-
-
-    const cx =
-      c.x +
-      c.width / 2;
-
-
-    const cy =
-      c.y +
-      c.height / 2;
-
-
-    const radius =
-      c.width / 2;
-
-
-    /*
-     * Sombra.
-     */
-
-    ctx.fillStyle =
-      "rgba(0,0,0,0.35)";
-
-
-    ctx.beginPath();
-
 
     ctx.arc(
       cx + 7,
-      cy + 8,
-      radius + 4,
+      cy + 9,
+      radius,
       0,
       Math.PI * 2
     );
 
-
     ctx.fill();
 
-
     /*
-     * Corpo.
-     */
+      Corpo
+    */
 
     ctx.fillStyle =
-      "#d0c8af";
-
+      "#5a4635";
 
     ctx.beginPath();
-
 
     ctx.arc(
       cx,
@@ -2797,1265 +1205,404 @@ export class World {
       Math.PI * 2
     );
 
-
     ctx.fill();
 
-
     /*
-     * Borda.
-     */
-
-    ctx.strokeStyle =
-      "#6a665a";
-
-
-    ctx.lineWidth =
-      8;
-
-
-    ctx.stroke();
-
-
-    /*
-     * Interior.
-     */
+      Mostrador
+    */
 
     ctx.fillStyle =
-      "#202322";
-
+      "#d2c8a8";
 
     ctx.beginPath();
-
 
     ctx.arc(
       cx,
       cy,
-      radius - 12,
+      radius - 8,
       0,
       Math.PI * 2
     );
 
-
     ctx.fill();
 
-
     /*
-     * Marcas.
-     */
-
-    ctx.fillStyle =
-      "#c7c2ad";
-
-
-    for (
-      let i = 0;
-      i < 12;
-      i++
-    ) {
-
-      const angle =
-        i *
-        Math.PI /
-        6;
-
-
-      const inner =
-        radius - 25;
-
-
-      const outer =
-        radius - 17;
-
-
-      const x1 =
-        cx +
-        Math.cos(angle) *
-        inner;
-
-
-      const y1 =
-        cy +
-        Math.sin(angle) *
-        inner;
-
-
-      const x2 =
-        cx +
-        Math.cos(angle) *
-        outer;
-
-
-      const y2 =
-        cy +
-        Math.sin(angle) *
-        outer;
-
-
-      ctx.strokeStyle =
-        "#c7c2ad";
-
-
-      ctx.lineWidth =
-        i % 3 === 0
-          ? 3
-          : 1;
-
-
-      ctx.beginPath();
-
-
-      ctx.moveTo(
-        x1,
-        y1
-      );
-
-
-      ctx.lineTo(
-        x2,
-        y2
-      );
-
-
-      ctx.stroke();
-
-    }
-
-
-    /*
-     * Ponteiros.
-     */
+      Ponteiros
+    */
 
     ctx.strokeStyle =
-      "#d8d3be";
+      "#22252a";
 
-
-    ctx.lineWidth =
-      4;
-
+    ctx.lineWidth = 5;
 
     ctx.beginPath();
-
 
     ctx.moveTo(
       cx,
       cy
     );
 
-
     ctx.lineTo(
-      cx,
-      cy - 25
+      cx - 12,
+      cy - 21
     );
-
 
     ctx.stroke();
 
-
-    ctx.lineWidth =
-      3;
-
-
     ctx.beginPath();
-
 
     ctx.moveTo(
       cx,
       cy
     );
 
-
     ctx.lineTo(
-      cx + 27,
-      cy
+      cx + 22,
+      cy + 7
     );
-
 
     ctx.stroke();
 
-
     /*
-     * Centro.
-     */
+      Centro
+    */
 
     ctx.fillStyle =
-      "#a84e4e";
-
+      "#25282d";
 
     ctx.beginPath();
-
 
     ctx.arc(
       cx,
       cy,
-      5,
+      6,
       0,
       Math.PI * 2
     );
 
-
     ctx.fill();
-
   }
 
+  /* =========================================================
+     PORTA
+  ========================================================== */
+
+  renderDoor(ctx) {
+    const door =
+      this.exitDoor;
+
+    const x = door.x;
+    const y = door.y;
+    const w = door.width;
+    const h = door.height;
+
+    /*
+      Moldura
+    */
+
+    ctx.fillStyle =
+      "#0d0f12";
+
+    ctx.fillRect(
+      x - 12,
+      y - 12,
+      w + 24,
+      h + 24
+    );
+
+    if (
+      door.open
+    ) {
+      /*
+        Interior escuro
+      */
+
+      ctx.fillStyle =
+        "#050609";
+
+      ctx.fillRect(
+        x,
+        y,
+        w,
+        h
+      );
+
+      /*
+        Luz vindo de fora
+      */
+
+      const light =
+        ctx.createLinearGradient(
+          x,
+          y,
+          x + w,
+          y
+        );
+
+      light.addColorStop(
+        0,
+        "rgba(220,215,180,0.04)"
+      );
+
+      light.addColorStop(
+        0.5,
+        "rgba(220,215,180,0.16)"
+      );
+
+      light.addColorStop(
+        1,
+        "rgba(220,215,180,0)"
+      );
+
+      ctx.fillStyle =
+        light;
+
+      ctx.fillRect(
+        x,
+        y,
+        w,
+        h
+      );
+
+      return;
+    }
+
+    /*
+      Porta fechada
+    */
+
+    ctx.fillStyle =
+      "#473528";
+
+    ctx.fillRect(
+      x,
+      y,
+      w,
+      h
+    );
+
+    /*
+      Painéis
+    */
+
+    ctx.strokeStyle =
+      "#2c211a";
+
+    ctx.lineWidth = 8;
+
+    ctx.strokeRect(
+      x + 13,
+      y + 14,
+      w - 26,
+      h - 28
+    );
+
+    ctx.strokeRect(
+      x + 27,
+      y + 28,
+      w - 54,
+      h - 56
+    );
+
+    /*
+      Maçaneta
+    */
+
+    ctx.fillStyle =
+      "#c0a86d";
+
+    ctx.beginPath();
+
+    ctx.arc(
+      x + w - 24,
+      y + h / 2,
+      7,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+    /*
+      Placa
+    */
+
+    ctx.fillStyle =
+      "#b9a77c";
+
+    ctx.fillRect(
+      x + 25,
+      y + 20,
+      w - 50,
+      28
+    );
+
+    ctx.fillStyle =
+      "#25201a";
+
+    ctx.font =
+      "bold 14px monospace";
+
+    ctx.textAlign =
+      "center";
+
+    ctx.fillText(
+      "SAÍDA",
+      x + w / 2,
+      y + 40
+    );
+
+    ctx.textAlign =
+      "left";
+  }
 
   /* =========================================================
-     CABINET
-     ========================================================= */
+     ARMÁRIO
+  ========================================================== */
 
   renderCabinet(ctx) {
-
-    const c =
-      this.cabinet;
-
-
-    /*
-     * Sombra.
-     */
-
-    ctx.fillStyle =
-      "rgba(0,0,0,0.35)";
-
-
-    ctx.fillRect(
-      c.x + 10,
-      c.y + 13,
-      c.width,
-      c.height
-    );
-
-
-    /*
-     * Corpo.
-     */
-
-    ctx.fillStyle =
-      this.colors.metalDark;
-
-
-    ctx.fillRect(
-      c.x,
-      c.y,
-      c.width,
-      c.height
-    );
-
-
-    /*
-     * Parte superior.
-     */
-
-    ctx.fillStyle =
-      this.colors.metal;
-
-
-    ctx.fillRect(
-      c.x,
-      c.y,
-      c.width,
-      15
-    );
-
-
-    /*
-     * Portas.
-     */
-
-    const doorWidth =
-      c.width / 2 -
-      5;
-
-
-    for (
-      let i = 0;
-      i < 2;
-      i++
-    ) {
-
-      const x =
-        c.x +
-        i *
-        (doorWidth + 10);
-
-
-      ctx.fillStyle =
-        "#484b4c";
-
-
-      ctx.fillRect(
-        x,
-        c.y + 20,
-        doorWidth,
-        c.height - 30
+    const object =
+      this.objects.find(
+        (item) =>
+          item.id ===
+          "cabinet"
       );
 
-
-      ctx.strokeStyle =
-        "#252727";
-
-
-      ctx.lineWidth =
-        3;
-
-
-      ctx.strokeRect(
-        x,
-        c.y + 20,
-        doorWidth,
-        c.height - 30
-      );
-
-
-      /*
-       * Maçaneta.
-       */
-
-      ctx.fillStyle =
-        "#9b9075";
-
-
-      ctx.fillRect(
-        x +
-        doorWidth -
-        20,
-
-        c.y +
-        c.height / 2,
-
-        7,
-
-        7
-      );
-
+    if (!object) {
+      return;
     }
 
+    const x = object.x;
+    const y = object.y;
+    const w = object.width;
+    const h = object.height;
 
     /*
-     * Pés.
-     */
-
-    ctx.fillStyle =
-      "#242526";
-
-
-    ctx.fillRect(
-      c.x + 15,
-      c.y + c.height,
-      15,
-      10
-    );
-
-
-    ctx.fillRect(
-      c.x + c.width - 30,
-      c.y + c.height,
-      15,
-      10
-    );
-
-  }
-
-
-  /* =========================================================
-     BOOKSHELF
-     ========================================================= */
-
-  renderBookshelf(ctx) {
-
-    const b =
-      this.bookshelf;
-
-
-    /*
-     * Sombra.
-     */
-
-    ctx.fillStyle =
-      "rgba(0,0,0,0.4)";
-
-
-    ctx.fillRect(
-      b.x + 10,
-      b.y + 12,
-      b.width,
-      b.height
-    );
-
-
-    /*
-     * Estrutura.
-     */
-
-    ctx.fillStyle =
-      this.colors.woodDark;
-
-
-    ctx.fillRect(
-      b.x,
-      b.y,
-      b.width,
-      b.height
-    );
-
-
-    /*
-     * Interior.
-     */
-
-    ctx.fillStyle =
-      "#35281d";
-
-
-    ctx.fillRect(
-      b.x + 12,
-      b.y + 12,
-      b.width - 24,
-      b.height - 24
-    );
-
-
-    const shelfHeight =
-      54;
-
-
-    for (
-      let row = 0;
-      row < 4;
-      row++
-    ) {
-
-      const y =
-        b.y +
-        20 +
-        row *
-        shelfHeight;
-
-
-      ctx.fillStyle =
-        this.colors.wood;
-
-
-      ctx.fillRect(
-        b.x + 8,
-        y + 42,
-        b.width - 16,
-        9
-      );
-
-
-      /*
-       * Livros.
-       */
-
-      const bookColors = [
-
-        "#6d4540",
-
-        "#53634d",
-
-        "#786b4e",
-
-        "#4e5964",
-
-        "#73543e"
-
-      ];
-
-
-      let offset =
-        20;
-
-
-      for (
-        let i = 0;
-        i < 7;
-        i++
-      ) {
-
-        const bookWidth =
-          15 +
-          Math.floor(
-            Math.random() * 9
-          );
-
-
-        ctx.fillStyle =
-          bookColors[
-            (
-              i +
-              row
-            ) %
-            bookColors.length
-          ];
-
-
-        ctx.fillRect(
-          b.x +
-          offset,
-
-          y,
-
-          bookWidth,
-
-          42
-        );
-
-
-        ctx.fillStyle =
-          "rgba(255,255,255,0.1)";
-
-
-        ctx.fillRect(
-          b.x +
-          offset +
-          3,
-
-          y + 5,
-
-          2,
-
-          32
-        );
-
-
-        offset +=
-          bookWidth +
-          4;
-
-
-        if (
-          offset >
-          b.width - 25
-        ) {
-
-          break;
-
-        }
-
-      }
-
-    }
-
-  }
-
-
-  /* =========================================================
-     TEACHER DESK
-     ========================================================= */
-
-  renderTeacherDesk(ctx) {
-
-    const d =
-      this.teacherDesk;
-
-
-    /*
-     * Sombra.
-     */
+      Sombra
+    */
 
     ctx.fillStyle =
       "rgba(0,0,0,0.42)";
 
-
     ctx.fillRect(
-      d.x + 12,
-      d.y + 15,
-      d.width,
-      d.height
+      x + 12,
+      y + 14,
+      w,
+      h
     );
 
-
     /*
-     * Corpo.
-     */
-
-    ctx.fillStyle =
-      this.colors.woodDark;
-
-
-    ctx.fillRect(
-      d.x,
-      d.y,
-      d.width,
-      d.height
-    );
-
-
-    /*
-     * Tampo.
-     */
-
-    ctx.fillStyle =
-      this.colors.woodLight;
-
-
-    ctx.fillRect(
-      d.x - 7,
-      d.y - 8,
-      d.width + 14,
-      18
-    );
-
-
-    /*
-     * Frente.
-
+      Estrutura
     */
 
     ctx.fillStyle =
-      this.colors.wood;
-
+      "#49382c";
 
     ctx.fillRect(
-      d.x + 15,
-      d.y + 25,
-      d.width - 30,
-      65
+      x,
+      y,
+      w,
+      h
     );
 
-
     /*
-     * Gavetas.
-
+      Portas
     */
 
-    ctx.strokeStyle =
-      this.colors.woodDark;
+    ctx.fillStyle =
+      "#5a4434";
 
+    ctx.fillRect(
+      x + 12,
+      y + 14,
+      w / 2 - 17,
+      h - 28
+    );
 
-    ctx.lineWidth =
-      3;
-
-
-    for (
-      let i = 0;
-      i < 3;
-      i++
-    ) {
-
-      ctx.strokeRect(
-        d.x + 35 +
-        i * 82,
-
-        d.y + 35,
-
-        65,
-
-        38
-      );
-
-    }
-
+    ctx.fillRect(
+      x + w / 2 + 5,
+      y + 14,
+      w / 2 - 17,
+      h - 28
+    );
 
     /*
-     * Puxadores.
-     */
+      Divisão
+    */
 
     ctx.fillStyle =
-      "#a28b64";
+      "#2c211a";
 
+    ctx.fillRect(
+      x + w / 2 - 3,
+      y + 14,
+      6,
+      h - 28
+    );
 
-    for (
-      let i = 0;
-      i < 3;
-      i++
-    ) {
+    /*
+      Puxadores
+    */
 
-      ctx.fillRect(
-        d.x + 64 +
-        i * 82,
+    ctx.fillStyle =
+      "#b29a6c";
 
-        d.y + 52,
+    ctx.fillRect(
+      x + w / 2 - 20,
+      y + h / 2 - 4,
+      8,
+      8
+    );
 
-        9,
-
-        4
-      );
-
-    }
-
+    ctx.fillRect(
+      x + w / 2 + 12,
+      y + h / 2 - 4,
+      8,
+      8
+    );
   }
-
 
   /* =========================================================
-     COMPUTER
-     ========================================================= */
+     ESTANTE
+  ========================================================== */
 
-  renderComputer(ctx) {
-
-    const c =
-      this.computer;
-
-
-    /*
-     * Monitor.
-     */
-
-    ctx.fillStyle =
-      "#242628";
-
-
-    ctx.fillRect(
-      c.x,
-      c.y,
-      c.width,
-      c.height
-    );
-
-
-    ctx.strokeStyle =
-      "#111314";
-
-
-    ctx.lineWidth =
-      4;
-
-
-    ctx.strokeRect(
-      c.x,
-      c.y,
-      c.width,
-      c.height
-    );
-
-
-    /*
-     * Tela.
-     */
-
-    ctx.fillStyle =
-      this.doorOpen
-        ? "#39594a"
-        : "#14221f";
-
-
-    ctx.fillRect(
-      c.x + 8,
-      c.y + 8,
-      c.width - 16,
-      c.height - 22
-    );
-
-
-    /*
-     * Texto da tela.
-
-    */
-
-    ctx.fillStyle =
-      this.doorOpen
-        ? "#9ed0a7"
-        : "#768b82";
-
-
-    ctx.font =
-      "8px monospace";
-
-
-    ctx.fillText(
-      this.doorOpen
-        ? "ACCESS OK"
-        : "LOCKED",
-
-      c.x + 14,
-      c.y + 30
-    );
-
-
-    /*
-     * Luz.
-
-    */
-
-    ctx.fillStyle =
-      this.doorOpen
-        ? "#78b98a"
-        : "#9b4848";
-
-
-    ctx.fillRect(
-      c.x + 15,
-      c.y + 47,
-      7,
-      7
-    );
-
-
-    /*
-     * Pé.
-
-    */
-
-    ctx.fillStyle =
-      "#333638";
-
-
-    ctx.fillRect(
-      c.x + 38,
-      c.y + c.height,
-      14,
-      12
-    );
-
-
-    ctx.fillRect(
-      c.x + 25,
-      c.y + c.height + 10,
-      40,
-      7
-    );
-
-  }
-
-
-  /* =========================================================
-     DESKS
-     ========================================================= */
-
-  renderDesks(ctx) {
-
-    for (
-      const desk of
-      this.desks
-    ) {
-
-      this.renderDesk(
-        ctx,
-        desk
+  renderBookshelf(ctx) {
+    const object =
+      this.objects.find(
+        (item) =>
+          item.id ===
+          "bookshelf"
       );
 
+    if (!object) {
+      return;
     }
 
-  }
-
-
-  renderDesk(
-    ctx,
-    desk
-  ) {
-
-    const x =
-      desk.x;
-
-
-    const y =
-      desk.y;
-
-
-    const w =
-      desk.width;
-
-
-    const h =
-      desk.height;
-
+    const x = object.x;
+    const y = object.y;
+    const w = object.width;
+    const h = object.height;
 
     /*
-     * Sombra.
-     */
+      Sombra
+    */
 
     ctx.fillStyle =
-      "rgba(0,0,0,0.38)";
-
+      "rgba(0,0,0,0.4)";
 
     ctx.fillRect(
-      x + 9,
+      x + 10,
       y + 12,
       w,
       h
     );
 
-
     /*
-     * Tampo.
-     */
-
-    ctx.fillStyle =
-      this.colors.wood;
-
-
-    ctx.fillRect(
-      x,
-      y,
-      w,
-      55
-    );
-
-
-    /*
-     * Borda superior.
-
+      Madeira
     */
 
     ctx.fillStyle =
-      this.colors.woodLight;
-
-
-    ctx.fillRect(
-      x,
-      y,
-      w,
-      7
-    );
-
-
-    /*
-     * Parte frontal.
-
-    */
-
-    ctx.fillStyle =
-      this.colors.woodDark;
-
-
-    ctx.fillRect(
-      x + 12,
-      y + 55,
-      w - 24,
-      12
-    );
-
-
-    /*
-     * Pernas.
-
-    */
-
-    ctx.fillStyle =
-      this.colors.metalDark;
-
-
-    ctx.fillRect(
-      x + 15,
-      y + 67,
-      10,
-      38
-    );
-
-
-    ctx.fillRect(
-      x + w - 25,
-      y + 67,
-      10,
-      38
-    );
-
-
-    /*
-     * Caderno.
-
-    */
-
-    ctx.fillStyle =
-      this.colors.paper;
-
-
-    ctx.fillRect(
-      x + 25,
-      y + 15,
-      50,
-      28
-    );
-
-
-    ctx.fillStyle =
-      "#7c7768";
-
-
-    ctx.fillRect(
-      x + 32,
-      y + 22,
-      35,
-      2
-    );
-
-
-    ctx.fillRect(
-      x + 32,
-      y + 29,
-      27,
-      2
-    );
-
-
-    ctx.fillRect(
-      x + 32,
-      y + 36,
-      32,
-      2
-    );
-
-
-    /*
-     * Lápis.
-
-    */
-
-    ctx.fillStyle =
-      "#a28a5b";
-
-
-    ctx.fillRect(
-      x + 90,
-      y + 32,
-      42,
-      5
-    );
-
-
-    ctx.fillStyle =
-      "#3d3024";
-
-
-    ctx.fillRect(
-      x + 128,
-      y + 32,
-      5,
-      5
-    );
-
-  }
-
-
-  /* =========================================================
-     PLANT
-     ========================================================= */
-
-  renderPlant(ctx) {
-
-    const p =
-      this.plant;
-
-
-    /*
-     * Sombra.
-
-    */
-
-    ctx.fillStyle =
-      "rgba(0,0,0,0.35)";
-
-
-    ctx.fillRect(
-      p.x - 5,
-      p.y + p.height - 10,
-      p.width + 10,
-      15
-    );
-
-
-    /*
-     * Vaso.
-
-    */
-
-    ctx.fillStyle =
-      "#8a5942";
-
-
-    ctx.fillRect(
-      p.x + 15,
-      p.y + 80,
-      40,
-      60
-    );
-
-
-    ctx.fillStyle =
-      "#674130";
-
-
-    ctx.fillRect(
-      p.x + 10,
-      p.y + 78,
-      50,
-      12
-    );
-
-
-    /*
-     * Folhas.
-
-    */
-
-    const leaves = [
-
-      [25, 20, 35],
-
-      [40, 5, 28],
-
-      [55, 30, 35],
-
-      [20, 50, 30],
-
-      [45, 45, 32]
-
-    ];
-
-
-    for (
-      const leaf of leaves
-    ) {
-
-      const [
-        lx,
-        ly,
-        size
-      ] = leaf;
-
-
-      ctx.fillStyle =
-        "#486447";
-
-
-      ctx.beginPath();
-
-
-      ctx.arc(
-        p.x + lx,
-        p.y + ly,
-        size / 2,
-        0,
-        Math.PI * 2
-      );
-
-
-      ctx.fill();
-
-
-      ctx.fillStyle =
-        "#314a31";
-
-
-      ctx.fillRect(
-        p.x + lx - 2,
-        p.y + ly,
-        4,
-        size / 2
-      );
-
-    }
-
-  }
-
-
-  /* =========================================================
-     TRASH
-     ========================================================= */
-
-  renderTrash(ctx) {
-
-    const t =
-      this.trash;
-
-
-    /*
-     * Sombra.
-
-    */
-
-    ctx.fillStyle =
-      "rgba(0,0,0,0.3)";
-
-
-    ctx.fillRect(
-      t.x + 5,
-      t.y + t.height - 3,
-      t.width,
-      10
-    );
-
-
-    /*
-     * Corpo.
-
-    */
-
-    ctx.fillStyle =
-      "#565958";
-
-
-    ctx.fillRect(
-      t.x + 7,
-      t.y + 12,
-      t.width - 14,
-      t.height - 12
-    );
-
-
-    /*
-     * Tampa.
-
-    */
-
-    ctx.fillStyle =
-      "#737674";
-
-
-    ctx.fillRect(
-      t.x,
-      t.y,
-      t.width,
-      15
-    );
-
-
-    /*
-     * Faixa.
-
-    */
-
-    ctx.fillStyle =
-      "#303231";
-
-
-    ctx.fillRect(
-      t.x + 12,
-      t.y + 30,
-      t.width - 24,
-      7
-    );
-
-  }
-
-
-  /* =========================================================
-     DOOR
-     ========================================================= */
-
-  renderDoor(ctx) {
-
-    const d =
-      this.exitDoor;
-
-
-    /*
-     * A porta fica embutida na parede esquerda.
-     */
-
-    const x =
-      d.x;
-
-
-    const y =
-      d.y;
-
-
-    const w =
-      d.width;
-
-
-    const h =
-      d.height;
-
-
-    /*
-     * Sombra da abertura.
-
-    */
-
-    ctx.fillStyle =
-      "#151515";
-
+      "#513d2c";
 
     ctx.fillRect(
       x,
@@ -4064,453 +1611,972 @@ export class World {
       h
     );
 
-
     /*
-     * Porta fechada.
-
+      Nichos
     */
 
-    if (
-      !this.doorOpen
-    ) {
-
-      ctx.fillStyle =
-        "#4d3928";
-
-
-      ctx.fillRect(
-        x + 5,
-        y + 5,
-        w - 10,
-        h - 10
-      );
-
-
-      ctx.fillStyle =
-        "#715238";
-
-
-      ctx.fillRect(
-        x + 9,
-        y + 9,
-        7,
-        h - 18
-      );
-
-
-      /*
-       * Maçaneta.
-
-      */
-
-      ctx.fillStyle =
-        "#c2a968";
-
-
-      ctx.fillRect(
-        x + 28,
-        y + h / 2,
-        7,
-        7
-      );
-
-
-      /*
-       * Placa.
-
-      */
-
-      ctx.fillStyle =
-        "#7d3939";
-
-
-      ctx.fillRect(
-        x + 10,
-        y + 35,
-        w - 20,
-        22
-      );
-
-
-      ctx.fillStyle =
-        "#d5c7a7";
-
-
-      ctx.font =
-        "7px monospace";
-
-
-      ctx.fillText(
-        "SAÍDA",
-        x + 12,
-        y + 49
-      );
-
-
-      return;
-
-    }
-
-
-    /*
-     * Porta aberta.
-     */
-
-    ctx.fillStyle =
-      "#0b0d0d";
-
-
-    ctx.fillRect(
-      x,
-      y,
-      w,
-      h
-    );
-
-
-    /*
-     * Luz vindo do corredor.
-
-    */
-
-    const gradient =
-      ctx.createLinearGradient(
-        x + w,
-        y,
-        x,
-        y
-      );
-
-
-    gradient.addColorStop(
-      0,
-      "rgba(189,166,111,0.45)"
-    );
-
-
-    gradient.addColorStop(
-      1,
-      "rgba(0,0,0,0)"
-    );
-
-
-    ctx.fillStyle =
-      gradient;
-
-
-    ctx.fillRect(
-      x - 100,
-      y,
-      100,
-      h
-    );
-
-
-    /*
-     * Folha da porta deslocada.
-
-    */
-
-    ctx.fillStyle =
-      "#4d3928";
-
-
-    ctx.fillRect(
-      x - 75,
-      y + 8,
-      70,
-      h - 16
-    );
-
-
-    ctx.fillStyle =
-      "#715238";
-
-
-    ctx.fillRect(
-      x - 65,
-      y + 15,
-      7,
-      h - 30
-    );
-
-  }
-
-
-  /* =========================================================
-     DECORATIVE DETAILS
-     ========================================================= */
-
-  renderDecorativeDetails(
-    ctx
-  ) {
-
-    /*
-     * Rodapés.
-
-    */
-
-    const r =
-      this.room;
-
-
-    ctx.fillStyle =
-      "#171817";
-
-
-    ctx.fillRect(
-      r.x +
-      this.wallThickness,
-
-      r.y +
-      this.wallThickness,
-
-      r.width -
-      this.wallThickness * 2,
-
-      6
-    );
-
-
-    /*
-     * Pequenos detalhes nas paredes.
-
-    */
-
-    ctx.fillStyle =
-      "rgba(255,255,255,0.025)";
-
+    const shelfHeight =
+      h / 4;
 
     for (
       let i = 0;
-      i < 35;
+      i < 4;
       i++
     ) {
+      const shelfY =
+        y +
+        i *
+          shelfHeight;
 
-      const x =
-        r.x +
-        Math.random() *
-        r.width;
-
-
-      const y =
-        r.y +
-        Math.random() *
-        r.height;
-
+      ctx.fillStyle =
+        "#241c17";
 
       ctx.fillRect(
-        Math.floor(x),
-        Math.floor(y),
-        2,
-        2
+        x + 12,
+        shelfY + 10,
+        w - 24,
+        shelfHeight - 16
       );
 
-    }
+      ctx.fillStyle =
+        "#604832";
 
-
-    /*
-     * Fios das lâmpadas.
-
-    */
-
-    ctx.strokeStyle =
-      "#1a1b1b";
-
-
-    ctx.lineWidth =
-      3;
-
-
-    for (
-      const light of
-      this.lights
-    ) {
-
-      ctx.beginPath();
-
-
-      ctx.moveTo(
-        light.x,
-        r.y
+      ctx.fillRect(
+        x + 5,
+        shelfY +
+          shelfHeight -
+          9,
+        w - 10,
+        9
       );
-
-
-      ctx.lineTo(
-        light.x,
-        light.y
-      );
-
-
-      ctx.stroke();
-
 
       /*
-       * Lâmpada.
-
+        Livros
       */
 
-      ctx.fillStyle =
-        "#d0c69d";
+      const bookColors = [
+        "#6b4b3d",
+        "#41505a",
+        "#766244",
+        "#594c63",
+        "#405447",
+        "#704c38"
+      ];
 
+      let bookX =
+        x + 22;
 
-      ctx.fillRect(
-        light.x - 20,
-        light.y,
-        40,
-        10
-      );
+      const maxX =
+        x + w - 22;
 
+      let index = i;
 
-      ctx.fillStyle =
-        "#6e684f";
+      while (
+        bookX <
+        maxX - 15
+      ) {
+        const bookWidth =
+          12 +
+          (
+            index * 7
+          ) %
+            16;
 
+        ctx.fillStyle =
+          bookColors[
+            index %
+              bookColors.length
+          ];
 
-      ctx.fillRect(
-        light.x - 14,
-        light.y + 10,
-        28,
-        4
-      );
+        ctx.fillRect(
+          bookX,
+          shelfY + 18,
+          bookWidth,
+          shelfHeight - 34
+        );
 
+        bookX +=
+          bookWidth + 4;
+
+        index++;
+      }
     }
-
   }
 
+  /* =========================================================
+     MESA DO PROFESSOR
+  ========================================================== */
+
+  renderTeacherDesk(ctx) {
+    const object =
+      this.objects.find(
+        (item) =>
+          item.id ===
+          "teacherDesk"
+      );
+
+    if (!object) {
+      return;
+    }
+
+    const x = object.x;
+    const y = object.y;
+    const w = object.width;
+    const h = object.height;
+
+    /*
+      Sombra
+    */
+
+    ctx.fillStyle =
+      "rgba(0,0,0,0.4)";
+
+    ctx.fillRect(
+      x + 10,
+      y + 12,
+      w,
+      h
+    );
+
+    /*
+      Tampo
+    */
+
+    ctx.fillStyle =
+      "#654a34";
+
+    ctx.fillRect(
+      x,
+      y,
+      w,
+      32
+    );
+
+    /*
+      Frente
+    */
+
+    ctx.fillStyle =
+      "#4a3527";
+
+    ctx.fillRect(
+      x + 12,
+      y + 32,
+      w - 24,
+      h - 32
+    );
+
+    /*
+      Gavetas
+    */
+
+    ctx.fillStyle =
+      "#35261e";
+
+    ctx.fillRect(
+      x + 30,
+      y + 50,
+      90,
+      35
+    );
+
+    ctx.fillRect(
+      x + 30,
+      y + 88,
+      90,
+      18
+    );
+
+    ctx.fillRect(
+      x + w - 120,
+      y + 50,
+      90,
+      35
+    );
+
+    /*
+      Puxadores
+    */
+
+    ctx.fillStyle =
+      "#b29a6c";
+
+    ctx.fillRect(
+      x + 72,
+      y + 65,
+      18,
+      5
+    );
+
+    ctx.fillRect(
+      x + w - 78,
+      y + 65,
+      18,
+      5
+    );
+  }
 
   /* =========================================================
-     WORLD LIGHTS
-     ========================================================= */
+     COMPUTADOR
+  ========================================================== */
 
-  renderWorldLights(
+  renderComputer(ctx) {
+    const object =
+      this.objects.find(
+        (item) =>
+          item.id ===
+          "computer"
+      );
+
+    if (!object) {
+      return;
+    }
+
+    const x = object.x;
+    const y = object.y;
+
+    /*
+      Monitor
+    */
+
+    ctx.fillStyle =
+      "#171a1e";
+
+    ctx.fillRect(
+      x,
+      y,
+      95,
+      58
+    );
+
+    ctx.fillStyle =
+      "#29343a";
+
+    ctx.fillRect(
+      x + 7,
+      y + 7,
+      81,
+      44
+    );
+
+    /*
+      Tela
+    */
+
+    ctx.fillStyle =
+      "#687d72";
+
+    ctx.fillRect(
+      x + 13,
+      y + 13,
+      69,
+      32
+    );
+
+    /*
+      Texto da tela
+    */
+
+    ctx.fillStyle =
+      "rgba(10,20,15,0.75)";
+
+    ctx.font =
+      "9px monospace";
+
+    ctx.fillText(
+      "ACCESS",
+      x + 22,
+      y + 27
+    );
+
+    ctx.fillText(
+      "LOCKED",
+      x + 22,
+      y + 38
+    );
+
+    /*
+      Base
+    */
+
+    ctx.fillStyle =
+      "#171a1e";
+
+    ctx.fillRect(
+      x + 35,
+      y + 58,
+      25,
+      18
+    );
+
+    ctx.fillRect(
+      x + 20,
+      y + 76,
+      55,
+      7
+    );
+  }
+
+  /* =========================================================
+     MESAS DOS ALUNOS
+  ========================================================== */
+
+  renderDesks(ctx) {
+    const desks =
+      this.objects.filter(
+        (object) =>
+          object.type ===
+          "desk"
+      );
+
+    for (
+      const desk of desks
+    ) {
+      this.renderDesk(
+        ctx,
+        desk
+      );
+    }
+  }
+
+  renderDesk(
+    ctx,
+    desk
+  ) {
+    const x = desk.x;
+    const y = desk.y;
+    const w = desk.width;
+    const h = desk.height;
+
+    /*
+      Sombra
+    */
+
+    ctx.fillStyle =
+      "rgba(0,0,0,0.38)";
+
+    ctx.fillRect(
+      x + 10,
+      y + 12,
+      w,
+      h
+    );
+
+    /*
+      Cadeira
+    */
+
+    ctx.fillStyle =
+      "#3b4146";
+
+    ctx.fillRect(
+      x + 54,
+      y + h + 15,
+      78,
+      35
+    );
+
+    ctx.fillRect(
+      x + 61,
+      y + h + 47,
+      8,
+      28
+    );
+
+    ctx.fillRect(
+      x + 117,
+      y + h + 47,
+      8,
+      28
+    );
+
+    /*
+      Tampo
+    */
+
+    ctx.fillStyle =
+      "#654a34";
+
+    ctx.fillRect(
+      x,
+      y,
+      w,
+      32
+    );
+
+    /*
+      Borda
+    */
+
+    ctx.fillStyle =
+      "#422f23";
+
+    ctx.fillRect(
+      x,
+      y + 28,
+      w,
+      7
+    );
+
+    /*
+      Painel frontal
+    */
+
+    ctx.fillStyle =
+      "#4d392b";
+
+    ctx.fillRect(
+      x + 14,
+      y + 35,
+      w - 28,
+      52
+    );
+
+    /*
+      Pernas
+    */
+
+    ctx.fillStyle =
+      "#302a26";
+
+    ctx.fillRect(
+      x + 16,
+      y + 87,
+      10,
+      32
+    );
+
+    ctx.fillRect(
+      x + w - 26,
+      y + 87,
+      10,
+      32
+    );
+
+    /*
+      Caderno
+    */
+
+    ctx.fillStyle =
+      "#b9b39e";
+
+    ctx.fillRect(
+      x + 45,
+      y + 8,
+      65,
+      17
+    );
+
+    ctx.fillStyle =
+      "#6c6b62";
+
+    ctx.fillRect(
+      x + 51,
+      y + 12,
+      42,
+      2
+    );
+
+    ctx.fillRect(
+      x + 51,
+      y + 17,
+      34,
+      2
+    );
+
+    /*
+      Lápis
+    */
+
+    ctx.fillStyle =
+      "#b89558";
+
+    ctx.fillRect(
+      x + 119,
+      y + 9,
+      37,
+      5
+    );
+  }
+
+  /* =========================================================
+     CARTAZES
+  ========================================================== */
+
+  renderPosters(ctx) {
+    const posters =
+      this.objects.filter(
+        (object) =>
+          object.type ===
+          "poster"
+      );
+
+    for (
+      const poster of posters
+    ) {
+      const x = poster.x;
+      const y = poster.y;
+      const w = poster.width;
+      const h = poster.height;
+
+      ctx.fillStyle =
+        "rgba(0,0,0,0.35)";
+
+      ctx.fillRect(
+        x + 6,
+        y + 7,
+        w,
+        h
+      );
+
+      ctx.fillStyle =
+        "#b4a17b";
+
+      ctx.fillRect(
+        x,
+        y,
+        w,
+        h
+      );
+
+      ctx.strokeStyle =
+        "#5c4d3a";
+
+      ctx.lineWidth = 4;
+
+      ctx.strokeRect(
+        x,
+        y,
+        w,
+        h
+      );
+
+      ctx.fillStyle =
+        "rgba(35,35,30,0.6)";
+
+      ctx.font =
+        "bold 10px monospace";
+
+      ctx.textAlign =
+        "center";
+
+      ctx.fillText(
+        poster.id ===
+          "poster_left"
+          ? "SEGURANÇA"
+          : "MATEMÁTICA",
+        x + w / 2,
+        y + 28
+      );
+
+      ctx.fillStyle =
+        "rgba(35,35,30,0.35)";
+
+      ctx.fillRect(
+        x + 12,
+        y + 42,
+        w - 24,
+        5
+      );
+
+      ctx.fillRect(
+        x + 12,
+        y + 55,
+        w - 32,
+        5
+      );
+
+      ctx.fillRect(
+        x + 12,
+        y + 68,
+        w - 18,
+        5
+      );
+
+      ctx.textAlign =
+        "left";
+    }
+  }
+
+  /* =========================================================
+     PLANTA
+  ========================================================== */
+
+  renderPlant(ctx) {
+    const object =
+      this.objects.find(
+        (item) =>
+          item.id ===
+          "plant"
+      );
+
+    if (!object) {
+      return;
+    }
+
+    const cx =
+      object.x +
+      object.width / 2;
+
+    const bottom =
+      object.y +
+      object.height;
+
+    /*
+      Sombra
+    */
+
+    ctx.fillStyle =
+      "rgba(0,0,0,0.38)";
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+      cx + 8,
+      bottom - 5,
+      35,
+      10,
+      0,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+    /*
+      Vaso
+    */
+
+    ctx.fillStyle =
+      "#694839";
+
+    ctx.fillRect(
+      cx - 27,
+      bottom - 42,
+      54,
+      42
+    );
+
+    ctx.fillStyle =
+      "#412e25";
+
+    ctx.fillRect(
+      cx - 20,
+      bottom - 36,
+      40,
+      7
+    );
+
+    /*
+      Folhas
+    */
+
+    ctx.fillStyle =
+      "#3e5942";
+
+    const leaves = [
+      [-25, -48],
+      [-8, -65],
+      [12, -54],
+      [28, -39],
+      [4, -78],
+      [-30, -29]
+    ];
+
+    for (
+      const [
+        lx,
+        ly
+      ] of leaves
+    ) {
+      ctx.fillRect(
+        cx + lx,
+        bottom + ly,
+        18,
+        28
+      );
+    }
+  }
+
+  /* =========================================================
+     LIXEIRA
+  ========================================================== */
+
+  renderTrash(ctx) {
+    const object =
+      this.objects.find(
+        (item) =>
+          item.id ===
+          "trash"
+      );
+
+    if (!object) {
+      return;
+    }
+
+    const x = object.x;
+    const y = object.y;
+
+    ctx.fillStyle =
+      "rgba(0,0,0,0.4)";
+
+    ctx.fillRect(
+      x + 8,
+      y + 10,
+      object.width,
+      object.height
+    );
+
+    ctx.fillStyle =
+      "#4b5051";
+
+    ctx.fillRect(
+      x + 5,
+      y + 10,
+      object.width - 10,
+      object.height - 10
+    );
+
+    ctx.fillStyle =
+      "#292d2f";
+
+    ctx.fillRect(
+      x,
+      y + 4,
+      object.width,
+      12
+    );
+
+    ctx.fillStyle =
+      "#707477";
+
+    for (
+      let i = 0;
+      i < 4;
+      i++
+    ) {
+      ctx.fillRect(
+        x + 14 + i * 10,
+        y + 25,
+        4,
+        object.height - 30
+      );
+    }
+  }
+
+  /* =========================================================
+     PAINEL DECORATIVO
+  ========================================================== */
+
+  renderFlag(ctx) {
+    const object =
+      this.objects.find(
+        (item) =>
+          item.id ===
+          "flag"
+      );
+
+    if (!object) {
+      return;
+    }
+
+    const x = object.x;
+    const y = object.y;
+
+    ctx.fillStyle =
+      "#17191d";
+
+    ctx.fillRect(
+      x + 38,
+      y,
+      7,
+      object.height
+    );
+
+    ctx.fillStyle =
+      "#6e5b45";
+
+    ctx.fillRect(
+      x,
+      y + 8,
+      65,
+      45
+    );
+
+    ctx.fillStyle =
+      "#3b3027";
+
+    ctx.fillRect(
+      x + 8,
+      y + 16,
+      48,
+      4
+    );
+
+    ctx.fillRect(
+      x + 8,
+      y + 27,
+      35,
+      4
+    );
+
+    ctx.fillRect(
+      x + 8,
+      y + 38,
+      44,
+      4
+    );
+  }
+
+  /* =========================================================
+     INDICADOR DE INTERAÇÃO
+  ========================================================== */
+
+  renderInteractionMarkers(
     ctx,
     game
   ) {
-
     if (
-      !game
+      !game ||
+      game.state !==
+        "playing"
     ) {
-
       return;
-
     }
 
+    const target =
+      game.currentInteractionTarget;
 
-    /*
-     * Pequenas luzes das lâmpadas.
-     *
-     * A iluminação principal é feita no Game,
-     * seguindo o personagem.
-     */
-
-    for (
-      const light of
-      this.lights
-    ) {
-
-      const radius =
-        light.radius;
-
-
-      const gradient =
-        ctx.createRadialGradient(
-          light.x,
-          light.y,
-          5,
-
-          light.x,
-          light.y,
-          radius
-        );
-
-
-      gradient.addColorStop(
-        0,
-        `rgba(245,220,157,${
-          light.intensity
-        })`
-      );
-
-
-      gradient.addColorStop(
-        0.45,
-        `rgba(210,185,120,${
-          light.intensity * 0.3
-        })`
-      );
-
-
-      gradient.addColorStop(
-        1,
-        "rgba(0,0,0,0)"
-      );
-
-
-      ctx.save();
-
-
-      ctx.globalCompositeOperation =
-        "lighter";
-
-
-      ctx.fillStyle =
-        gradient;
-
-
-      ctx.beginPath();
-
-
-      ctx.arc(
-        light.x,
-        light.y,
-        radius,
-        0,
-        Math.PI * 2
-      );
-
-
-      ctx.fill();
-
-
-      ctx.restore();
-
+    if (!target) {
+      return;
     }
 
-  }
+    const x =
+      target.x +
+      target.width / 2;
 
+    const y =
+      target.y - 18;
 
-  /* =========================================================
-     UTILITY
-     ========================================================= */
+    const pulse =
+      Math.sin(
+        game.time * 5
+      ) * 3;
 
-  isInsideRoom(
-    x,
-    y
-  ) {
+    ctx.save();
 
-    return (
+    ctx.globalAlpha =
+      0.72;
 
-      x >=
-      this.room.x +
+    ctx.fillStyle =
+      "#d9c99a";
 
-      this.wallThickness &&
+    ctx.font =
+      "bold 15px monospace";
 
-      x <=
-      this.room.x +
-      this.room.width -
-      this.wallThickness &&
+    ctx.textAlign =
+      "center";
 
-      y >=
-      this.room.y +
-      this.wallThickness &&
-
-      y <=
-      this.room.y +
-      this.room.height -
-      this.wallThickness
-
+    ctx.fillText(
+      "E",
+      x,
+      y + pulse
     );
 
+    ctx.textAlign =
+      "left";
+
+    ctx.restore();
   }
 
+  /* =========================================================
+     ILUMINAÇÃO
+     
+     A visão acompanha o jogador.
+     O centro permanece visível e as
+     bordas ficam progressivamente mais escuras.
+     
+     Não existe brilho branco.
+  ========================================================== */
+
+  renderLighting(
+    ctx,
+    player,
+    camera,
+    gameTime = 0
+  ) {
+    if (!player) {
+      return;
+    }
+
+    const px =
+      player.x -
+      camera.x;
+
+    const py =
+      player.y -
+      camera.y;
+
+    const radius =
+      330 +
+      Math.sin(
+        gameTime * 0.8
+      ) * 4;
+
+    const vision =
+      ctx.createRadialGradient(
+        px,
+        py,
+        radius * 0.30,
+        px,
+        py,
+        radius
+      );
+
+    vision.addColorStop(
+      0,
+      "rgba(3,5,8,0)"
+    );
+
+    vision.addColorStop(
+      0.40,
+      "rgba(3,5,8,0.04)"
+    );
+
+    vision.addColorStop(
+      0.62,
+      "rgba(3,5,8,0.14)"
+    );
+
+    vision.addColorStop(
+      0.80,
+      "rgba(3,5,8,0.36)"
+    );
+
+    vision.addColorStop(
+      0.93,
+      "rgba(3,5,8,0.58)"
+    );
+
+    vision.addColorStop(
+      1,
+      "rgba(3,5,8,0.72)"
+    );
+
+    ctx.save();
+
+    ctx.fillStyle =
+      vision;
+
+    ctx.fillRect(
+      0,
+      0,
+      this.game?.viewWidth ||
+        window.innerWidth,
+      this.game?.viewHeight ||
+        window.innerHeight
+    );
+
+    ctx.restore();
+  }
 }
