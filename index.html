@@ -1,19 +1,20 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    content="width=device-width, initial-scale=1.0"
   >
 
   <meta
     name="description"
-    content="Escape Room — uma experiência de investigação e acessibilidade."
+    content="A Sala — Escape Room de acessibilidade"
   >
 
-  <title>Escape Room — A Sala</title>
+  <title>A Sala — Escape Room</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,7 +24,7 @@
     rel="stylesheet"
   >
 
-  <link rel="stylesheet" href="./style.css?v=20260902-4">
+  <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
@@ -36,13 +37,19 @@
         id="gameCanvas"
         width="960"
         height="540"
-        aria-label="Escape Room — A Sala"
-        role="application"
         tabindex="0"
+        aria-label="Escape Room A Sala"
       ></canvas>
 
-      <!-- Tela de carregamento -->
-      <div id="loadingScreen" class="overlay-screen">
+      <!-- =====================================================
+           CARREGAMENTO
+      ====================================================== -->
+
+      <div
+        id="loadingScreen"
+        class="overlay-screen"
+      >
+
         <div class="loading-card">
 
           <div class="loading-title">
@@ -60,10 +67,18 @@
           </p>
 
         </div>
+
       </div>
 
-      <!-- Tela inicial -->
-      <div id="startScreen" class="overlay-screen hidden">
+
+      <!-- =====================================================
+           MENU INICIAL
+      ====================================================== -->
+
+      <div
+        id="startScreen"
+        class="overlay-screen hidden"
+      >
 
         <div class="menu-card">
 
@@ -77,25 +92,46 @@
 
           <p class="menu-description">
             Você está preso em uma sala de aula.
-            Encontre as pistas, resolva os desafios
-            e descubra uma maneira de escapar.
+            Explore o ambiente, encontre as pistas,
+            descubra o código e encontre uma saída.
           </p>
 
           <div class="controls-box">
 
             <div class="control-row">
-              <span class="control-key">W A S D</span>
-              <span>Movimentar</span>
+
+              <span class="control-key">
+                W A S D
+              </span>
+
+              <span>
+                Movimentar
+              </span>
+
             </div>
 
             <div class="control-row">
-              <span class="control-key">E</span>
-              <span>Interagir</span>
+
+              <span class="control-key">
+                E
+              </span>
+
+              <span>
+                Investigar
+              </span>
+
             </div>
 
             <div class="control-row">
-              <span class="control-key">ESC</span>
-              <span>Pausar</span>
+
+              <span class="control-key">
+                ESC
+              </span>
+
+              <span>
+                Pausar
+              </span>
+
             </div>
 
           </div>
@@ -112,8 +148,15 @@
 
       </div>
 
-      <!-- HUD -->
-      <div id="hud" class="hud hidden">
+
+      <!-- =====================================================
+           HUD
+      ====================================================== -->
+
+      <div
+        id="hud"
+        class="hud hidden"
+      >
 
         <div class="hud-objective">
 
@@ -122,7 +165,7 @@
           </div>
 
           <div id="objectiveText">
-            Encontre uma maneira de escapar da sala.
+            Encontre uma maneira de escapar.
           </div>
 
         </div>
@@ -135,9 +178,50 @@
 
         </div>
 
+        <div
+          id="voiceIndicator"
+          class="voice-indicator hidden"
+        >
+
+          <span class="voice-icon">
+            🔊
+          </span>
+
+          <span>
+            OUVINDO...
+          </span>
+
+        </div>
+
       </div>
 
-      <!-- Mensagem / diálogo -->
+
+      <!-- =====================================================
+           BOTÃO DE VOZ
+      ====================================================== -->
+
+      <button
+        id="voiceButton"
+        class="voice-button hidden"
+        type="button"
+        aria-label="Ouvir texto"
+      >
+
+        <span>
+          🔊
+        </span>
+
+        <span>
+          OUVIR
+        </span>
+
+      </button>
+
+
+      <!-- =====================================================
+           MENSAGEM
+      ====================================================== -->
+
       <div
         id="messageOverlay"
         class="modal-overlay hidden"
@@ -157,22 +241,49 @@
             class="message-text"
           ></div>
 
+          <div class="message-actions">
+
+            <button
+              id="messageVoiceButton"
+              class="game-button voice-action"
+              type="button"
+            >
+              🔊 OUVIR
+            </button>
+
+            <button
+              id="messageContinueButton"
+              class="game-button"
+              type="button"
+            >
+              CONTINUAR
+            </button>
+
+          </div>
+
           <div class="message-footer">
-            <span>ENTER</span>
-            para continuar
+            ENTER para continuar
           </div>
 
         </div>
 
       </div>
 
-      <!-- Puzzle -->
+
+      <!-- =====================================================
+           PUZZLE
+      ====================================================== -->
+
       <div
         id="puzzleOverlay"
         class="modal-overlay hidden"
       >
 
         <div class="puzzle-card">
+
+          <div class="puzzle-eyebrow">
+            INVESTIGAÇÃO
+          </div>
 
           <div
             id="puzzleTitle"
@@ -185,6 +296,14 @@
             id="puzzleQuestion"
             class="puzzle-question"
           ></div>
+
+          <button
+            id="puzzleVoiceButton"
+            class="game-button voice-action"
+            type="button"
+          >
+            🔊 OUVIR PISTA
+          </button>
 
           <input
             id="puzzleInput"
@@ -224,7 +343,11 @@
 
       </div>
 
-      <!-- Terminal -->
+
+      <!-- =====================================================
+           TERMINAL
+      ====================================================== -->
+
       <div
         id="terminalOverlay"
         class="modal-overlay hidden"
@@ -233,8 +356,11 @@
         <div class="terminal-card">
 
           <div class="terminal-header">
+
             <span class="terminal-light"></span>
+
             TERMINAL
+
           </div>
 
           <div
@@ -245,8 +371,20 @@
           </div>
 
           <div class="terminal-code-display">
-            <span id="terminalCodeDisplay">_ _ _ _</span>
+
+            <span id="terminalCodeDisplay">
+              _ _ _ _
+            </span>
+
           </div>
+
+          <button
+            id="terminalVoiceButton"
+            class="game-button voice-action"
+            type="button"
+          >
+            🔊 OUVIR
+          </button>
 
           <input
             id="terminalInput"
@@ -288,7 +426,11 @@
 
       </div>
 
-      <!-- Pause -->
+
+      <!-- =====================================================
+           PAUSA
+      ====================================================== -->
+
       <div
         id="pauseScreen"
         class="overlay-screen hidden"
@@ -305,8 +447,7 @@
           </h2>
 
           <p>
-            Pressione ESC ou o botão abaixo
-            para continuar.
+            Pressione ESC para continuar.
           </p>
 
           <button
@@ -329,7 +470,11 @@
 
       </div>
 
-      <!-- Vitória -->
+
+      <!-- =====================================================
+           VITÓRIA
+      ====================================================== -->
+
       <div
         id="completeScreen"
         class="overlay-screen hidden"
@@ -351,14 +496,14 @@
 
           <p>
             Você encontrou as pistas,
-            resolveu os desafios e conseguiu
+            descobriu o código e conseguiu
             encontrar uma saída.
           </p>
 
           <div class="complete-message">
-            Acessibilidade também é criar
-            experiências onde todos possam
-            participar.
+            Acessibilidade também significa
+            criar experiências onde todos
+            possam participar.
           </div>
 
           <button
@@ -373,18 +518,23 @@
 
       </div>
 
-      <!-- Erro -->
+
+      <!-- =====================================================
+           ERRO
+      ====================================================== -->
+
       <div
         id="gameError"
         class="error-screen hidden"
       >
+
         <div class="error-card">
 
           <h2>
             Erro no Escape Room
           </h2>
 
-          <p>
+          <p id="gameErrorText">
             O jogo encontrou um problema ao iniciar.
           </p>
 
@@ -397,9 +547,15 @@
           </button>
 
         </div>
+
       </div>
 
     </section>
+
+
+    <!-- =======================================================
+         RODAPÉ
+    ======================================================== -->
 
     <footer id="gameFooter">
 
@@ -415,10 +571,16 @@
 
   </main>
 
+
+  <!-- =========================================================
+       JAVASCRIPT
+  ========================================================== -->
+
   <script
     type="module"
-    src="./main.js?v=20260902-4"
+    src="./main.js"
   ></script>
 
 </body>
+
 </html>

@@ -1,757 +1,3634 @@
-import { Input } from "./input.js?v=20260902-4";
-import { Player } from "./player.js?v=20260902-4";
-import { World } from "./world.js?v=20260902-4";
+/* =========================================================
+   A SALA — ESCAPE ROOM
+   GAME.JS
+   ========================================================= */
+
+import { Input } from "./input.js";
+import { World } from "./world.js";
+import { Player } from "./player.js";
+
+
+/* =========================================================
+   GAME
+   ========================================================= */
 
 export class Game {
+
   constructor(canvas) {
+
     this.canvas = canvas;
-    this.ctx = canvas.getContext("2d", { alpha: false });
+
+    this.ctx =
+      canvas.getContext("2d");
+
 
     if (!this.ctx) {
-      throw new Error("Canvas 2D indisponível.");
+      throw new Error(
+        "Não foi possível criar o contexto 2D."
+      );
     }
+
 
     this.ctx.imageSmoothingEnabled = false;
 
-    this.width = 960;
-    this.height = 540;
-    this.worldWidth = 1600;
-    this.worldHeight = 900;
+
+    /* -------------------------------------------------------
+       DIMENSÕES
+    ------------------------------------------------------- */
+
+    this.width = canvas.width;
+
+    this.height = canvas.height;
+
+
+    this.worldWidth = 1800;
+
+    this.worldHeight = 1000;
+
+
+    /* -------------------------------------------------------
+       ESTADO
+    ------------------------------------------------------- */
 
     this.state = "menu";
-    this.gameTime = 0;
-    this.completed = false;
 
-    this.world = new World(this.worldWidth, this.worldHeight);
-    this.player = new Player({ world: this.world });
-    this.input = new Input();
+    this.started = false;
 
-    this.camera = { x: 0, y: 0, targetX: 0, targetY: 0 };
-    this.cameraSmoothing = 10;
-
-    this.currentInteraction = null;
     this.messageOpen = false;
-    this.currentPuzzle = null;
-    this.currentTerminal = null;
 
-    this.doorUnlocked = false;
-    this.elapsedTime = 0;
+    this.puzzleOpen = false;
+
+    this.terminalOpen = false;
+
+
+    /* -------------------------------------------------------
+       TEMPO
+    ------------------------------------------------------- */
+
+    this.time = 0;
+
+    this.playTime = 0;
+
+    this.lightTime = 0;
+
+    this.flickerTimer = 0;
+
+    this.flickerStrength = 0;
+
+    this.flickerCooldown = 2.5;
+
+
+    /* -------------------------------------------------------
+       CÂMERA
+    ------------------------------------------------------- */
+
+    this.camera = {
+      x: 0,
+      y: 0,
+
+      targetX: 0,
+      targetY: 0,
+
+      smooth: 0.12
+    };
+
+
+    /* -------------------------------------------------------
+       MUNDO
+    ------------------------------------------------------- */
+
+    this.world =
+      new World(
+        this.worldWidth,
+        this.worldHeight
+      );
+
+
+    /* -------------------------------------------------------
+       INPUT
+    ------------------------------------------------------- */
+
+    this.input =
+      new Input(this);
+
+
+    /* -------------------------------------------------------
+       PLAYER
+    ------------------------------------------------------- */
+
+    const spawn =
+      this.world.getSpawnPoint();
+
+
+    this.player =
+      new Player({
+        world: this.world,
+        x: spawn.x,
+        y: spawn.y
+      });
+
+
+    /* -------------------------------------------------------
+       PROGRESSO
+    ------------------------------------------------------- */
+
+    this.progress = {
+
+      board: false,
+
+      clock: false,
+
+      cabinet: false,
+
+      bookshelf: false,
+
+      computer: false,
+
+      desk1: false,
+
+      desk2: false,
+
+      desk3: false,
+
+      desk4: false,
+
+      desk5: false,
+
+      desk6: false,
+
+      posterLeft: false,
+
+      posterRight: false,
+
+      terminal: false,
+
+      codeSolved: false,
+
+      exitUnlocked: false
+
+    };
+
+
+    /* -------------------------------------------------------
+       SENHA E PISTAS
+    ------------------------------------------------------- */
+
+    this.puzzleData =
+      this.generatePuzzle();
+
+
+    this.currentMessage = {
+      title: "",
+      text: ""
+    };
+
+
+    this.currentPuzzle = null;
+
+
+    /* -------------------------------------------------------
+       ÁUDIO
+    ------------------------------------------------------- */
+
+    this.voiceEnabled =
+      "speechSynthesis" in window;
+
+    this.speech =
+      window.speechSynthesis || null;
+
+
+    this.voiceRate = 0.92;
+
+    this.voicePitch = 0.9;
+
+    this.voiceVolume = 1;
+
+
+    /* -------------------------------------------------------
+       AMBIENTE
+    ------------------------------------------------------- */
 
     this.particles = [];
-    this.shakeTime = 0;
-    this.shakeStrength = 0;
+
+    this.ambientParticles = [];
+
+    this.initializeParticles();
+
+
+    /* -------------------------------------------------------
+       INTERAÇÃO
+    ------------------------------------------------------- */
+
+    this.nearestInteraction = null;
+
+    this.interactionCooldown = 0;
+
+
+    /* -------------------------------------------------------
+       ANIMAÇÕES
+    ------------------------------------------------------- */
+
+    this.doorAnimation = 0;
+
+    this.playerLightPulse = 0;
+
+    this.screenShake = 0;
+
+    this.flashAlpha = 0;
+
+
+    /* -------------------------------------------------------
+       SOM
+    ------------------------------------------------------- */
 
     this.audioContext = null;
 
-    this.elements = {};
-    this.cacheDOM();
-    this.bindDOM();
+    this.audioUnlocked = false;
 
-    this.reset();
-    this.showScreen("menuScreen");
 
-    console.log("Escape Room v2026-09-02-4 carregado.");
-  }
+    /* -------------------------------------------------------
+       CONFIGURAÇÃO
+    ------------------------------------------------------- */
 
-  cacheDOM() {
-    const ids = [
-      "menuScreen", "pauseScreen", "completionScreen",
-      "startButton", "resumeButton", "pauseRestartButton", "restartButton",
-      "objectivePanel", "objectiveText", "interactionHint", "interactionKey",
-      "interactionText", "statusPanel", "statusText", "pauseButton",
-      "sceneTransition", "messageContainer", "messageTitle", "messageText",
-      "messageContinue", "terminalOverlay", "terminalDisplay",
-      "terminalFeedback", "puzzleOverlay", "puzzleTitle", "puzzleQuestion",
-      "puzzleOptions", "puzzleFeedback", "completionTime"
-    ];
-
-    for (const id of ids) {
-      this.elements[id] = document.getElementById(id);
-    }
-  }
-
-  bindDOM() {
-    this.elements.startButton?.addEventListener("click", () => this.start());
-    this.elements.resumeButton?.addEventListener("click", () => this.resume());
-    this.elements.pauseRestartButton?.addEventListener("click", () => this.restart());
-    this.elements.restartButton?.addEventListener("click", () => this.restart());
-    this.elements.pauseButton?.addEventListener("click", () => this.togglePause());
-    this.elements.messageContinue?.addEventListener("click", () => this.closeMessage());
-
-    this.elements.terminalOverlay?.querySelectorAll("[data-key]").forEach(button => {
-      button.addEventListener("click", () => this.handleTerminalKey(button.dataset.key));
-    });
-
-    this.elements.terminalOverlay?.querySelector("[data-action='clear']")
-      ?.addEventListener("click", () => this.clearTerminal());
-
-    this.elements.terminalOverlay?.querySelector("[data-action='enter']")
-      ?.addEventListener("click", () => this.submitTerminal());
-
-    this.elements.terminalOverlay?.querySelector("[data-action='close']")
-      ?.addEventListener("click", () => this.closeTerminal());
-  }
-
-  reset() {
-    this.state = "menu";
-    this.gameTime = 0;
-    this.elapsedTime = 0;
-    this.completed = false;
-    this.doorUnlocked = false;
-
-    this.currentInteraction = null;
-    this.messageOpen = false;
-    this.currentPuzzle = null;
-    this.currentTerminal = null;
-
-    this.world.reset();
-    this.player.reset();
-
-    this.particles = [];
-    this.shakeTime = 0;
-    this.shakeStrength = 0;
+    this.setupWorld();
 
     this.updateCamera(true);
-    this.hideAllOverlays();
 
-    this.setObjective("Encontre uma maneira de escapar da sala.");
-    this.setStatus("Explore a sala.");
+    this.updateHUD();
+
   }
 
-  start() {
-    this.reset();
-    this.state = "playing";
-    this.hideScreen("menuScreen");
-    this.hideScreen("pauseScreen");
-    this.hideScreen("completionScreen");
-    this.showGameplayUI();
-    this.startAudio();
 
-    // Não abre uma caixa de diálogo no início:
-    // o jogador já começa com controle total.
-    this.openingPulse();
-  }
+  /* =========================================================
+     CONFIGURAÇÃO DO MUNDO
+     ========================================================= */
 
-  restart() {
-    this.start();
-  }
-
-  update(deltaTime) {
-    if (!Number.isFinite(deltaTime)) deltaTime = 0;
-    deltaTime = Math.min(deltaTime, 0.05);
-
-    if (this.state === "menu") {
-      this.world.update(deltaTime);
-      this.input.endFrame();
-      return;
-    }
-
-    if (this.state === "paused" || this.state === "completed") {
-      this.input.endFrame();
-      return;
-    }
-
-    if (this.state !== "playing") {
-      this.input.endFrame();
-      return;
-    }
-
-    if (this.messageOpen) {
-      if (this.input.wantsConfirm()) this.closeMessage();
-      this.input.endFrame();
-      return;
-    }
-
-    if (this.currentPuzzle || this.currentTerminal) {
-      const digit = this.input.getPressedDigit();
-      if (this.currentTerminal && digit) this.handleTerminalKey(digit);
-      if (this.input.wantsConfirm() && this.currentTerminal) this.submitTerminal();
-      if (this.input.wantsConfirm() && this.currentPuzzle) {
-        // O puzzle é respondido pelos botões para evitar escolhas acidentais.
-      }
-      this.input.endFrame();
-      return;
-    }
-
-    if (this.input.wantsPause()) {
-      this.pause();
-      this.input.endFrame();
-      return;
-    }
-
-    this.gameTime += deltaTime;
-    this.elapsedTime += deltaTime;
-
-    this.player.update(deltaTime, this.input);
-    this.world.update(deltaTime);
-    this.updateCamera();
-    this.updateInteraction();
-    this.updateParticles(deltaTime);
-
-    if (this.input.wantsInteract()) {
-      this.handleInteraction();
-    }
-
-    this.handleDoorExit();
-
-    if (this.shakeTime > 0) {
-      this.shakeTime -= deltaTime;
-      if (this.shakeTime <= 0) {
-        this.shakeTime = 0;
-        this.shakeStrength = 0;
-      }
-    }
-
-    this.input.endFrame();
-  }
-
-  pause() {
-    if (this.state !== "playing" || this.messageOpen || this.currentPuzzle || this.currentTerminal) return;
-    this.state = "paused";
-    this.showScreen("pauseScreen");
-    this.hideGameplayUI();
-  }
-
-  resume() {
-    if (this.state !== "paused") return;
-    this.state = "playing";
-    this.hideScreen("pauseScreen");
-    this.showGameplayUI();
-  }
-
-  togglePause() {
-    if (this.state === "playing") this.pause();
-    else if (this.state === "paused") this.resume();
-  }
-
-  updateCamera(force = false) {
-    const targetX = this.clamp(
-      this.player.x - this.width / 2,
-      0,
-      Math.max(0, this.worldWidth - this.width)
-    );
-
-    const targetY = this.clamp(
-      this.player.y - this.height / 2,
-      0,
-      Math.max(0, this.worldHeight - this.height)
-    );
-
-    this.camera.targetX = targetX;
-    this.camera.targetY = targetY;
-
-    if (force) {
-      this.camera.x = targetX;
-      this.camera.y = targetY;
-      return;
-    }
-
-    const amount = 1 - Math.exp(-this.cameraSmoothing / 60);
-    this.camera.x += (targetX - this.camera.x) * amount;
-    this.camera.y += (targetY - this.camera.y) * amount;
-  }
-
-  updateInteraction() {
-    this.currentInteraction = this.world.getNearestInteraction(this.player);
-
-    if (this.currentInteraction) {
-      this.showInteractionHint(this.currentInteraction);
-    } else {
-      this.hideInteractionHint();
-    }
-  }
-
-  handleInteraction() {
-    const target = this.currentInteraction;
-    if (!target) return;
-
-    switch (target.id) {
-      case "board":
-        this.openMessage(
-          "O QUADRO",
-          "Algumas marcas de giz formam uma sequência. A sala parece ter sido preparada para esconder informações."
-        );
-        this.setStatus("Uma pista foi encontrada.");
-        break;
-
-      case "clock":
-        this.openMessage(
-          "O RELÓGIO",
-          "Os ponteiros estão quase imóveis. Talvez a hora marcada seja uma pista."
-        );
-        break;
-
-      case "bookshelf":
-        this.openMessage(
-          "A ESTANTE",
-          "Um dos livros está deslocado. Atrás dele há uma anotação: quatro números podem ser importantes."
-        );
-        this.setObjective("Use as pistas para descobrir o código.");
-        break;
-
-      case "cabinet":
-        this.openCabinetPuzzle();
-        break;
-
-      case "computer":
-        this.openTerminal();
-        break;
-
-      case "teacherDesk":
-        this.openMessage(
-          "MESA DO PROFESSOR",
-          "Entre os papéis existe uma frase circulada: “Nem tudo precisa ser visto para ser encontrado.”"
-        );
-        break;
-
-      case "flag":
-        this.openMessage(
-          "BANDEIRA",
-          "A bandeira do Brasil está presa à parede. Atrás dela existe apenas uma pequena marca no reboco."
-        );
-        break;
-
-      case "exit":
-        if (this.doorUnlocked) {
-          this.openDoor();
-        } else {
-          this.openMessage(
-            "A PORTA",
-            "Está trancada. Primeiro encontre a solução dos desafios e descubra o código do terminal."
-          );
-          this.setObjective("Encontre o código para abrir a porta.");
-        }
-        break;
-
-      default:
-        this.openMessage(
-          target.label || "OBJETO",
-          "Não há nada para fazer aqui."
-        );
-        break;
-    }
-  }
-
-  openCabinetPuzzle() {
-    this.currentPuzzle = {
-      title: "O ARMÁRIO",
-      question: "Qual número completa a sequência: 2, 4, 8, 16, ?",
-      options: ["24", "28", "32", "36"],
-      answer: "32"
-    };
-
-    this.elements.puzzleTitle.textContent = this.currentPuzzle.title;
-    this.elements.puzzleQuestion.textContent = this.currentPuzzle.question;
-    this.elements.puzzleFeedback.textContent = "";
-    this.elements.puzzleOptions.innerHTML = "";
-
-    for (const option of this.currentPuzzle.options) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "puzzle-option";
-      button.textContent = option;
-      button.addEventListener("click", () => this.answerPuzzle(option));
-      this.elements.puzzleOptions.appendChild(button);
-    }
-
-    this.elements.puzzleOverlay.classList.add("is-visible");
-    this.elements.puzzleOverlay.setAttribute("aria-hidden", "false");
-  }
-
-  answerPuzzle(answer) {
-    if (!this.currentPuzzle) return;
-
-    if (answer === this.currentPuzzle.answer) {
-      this.currentPuzzle = null;
-      this.elements.puzzleOverlay.classList.remove("is-visible");
-      this.elements.puzzleOverlay.setAttribute("aria-hidden", "true");
-
-      this.setStatus("Desafio resolvido.");
-      this.setObjective("Encontre o terminal e use o código encontrado.");
-      this.openMessage(
-        "PISTA DESCOBERTA",
-        "O armário se abre. Dentro dele há um bilhete com uma sequência de quatro dígitos: 4 — 8 — 1 — 6."
-      );
-      this.spawnSparkles(this.player.x, this.player.y, 24);
-      this.playSuccessSound();
-    } else {
-      this.elements.puzzleFeedback.textContent = "Essa resposta não completa a sequência.";
-      this.shake(0.14, 3);
-      this.playErrorSound();
-    }
-  }
-
-  openTerminal() {
-    this.currentTerminal = {
-      code: "4816",
-      entered: ""
-    };
-
-    this.elements.terminalDisplay.textContent = "----";
-    this.elements.terminalFeedback.textContent = "";
-    this.elements.terminalOverlay.classList.add("is-visible");
-    this.elements.terminalOverlay.setAttribute("aria-hidden", "false");
-    this.setStatus("Digite o código encontrado.");
-  }
-
-  handleTerminalKey(key) {
-    if (!this.currentTerminal || !/^\d$/.test(key)) return;
-    if (this.currentTerminal.entered.length >= 4) return;
-
-    this.currentTerminal.entered += key;
-    this.elements.terminalDisplay.textContent =
-      this.currentTerminal.entered.padEnd(4, "•");
-
-    if (this.currentTerminal.entered.length === 4) {
-      this.submitTerminal();
-    }
-  }
-
-  clearTerminal() {
-    if (!this.currentTerminal) return;
-    this.currentTerminal.entered = "";
-    this.elements.terminalDisplay.textContent = "----";
-    this.elements.terminalFeedback.textContent = "";
-  }
-
-  submitTerminal() {
-    if (!this.currentTerminal) return;
-
-    if (this.currentTerminal.entered.length !== 4) {
-      this.elements.terminalFeedback.textContent = "Digite 4 números.";
-      return;
-    }
-
-    if (this.currentTerminal.entered === this.currentTerminal.code) {
-      this.currentTerminal = null;
-      this.elements.terminalOverlay.classList.remove("is-visible");
-      this.elements.terminalOverlay.setAttribute("aria-hidden", "true");
-
-      this.doorUnlocked = true;
-      this.world.setDoorOpen(true);
-
-      this.setObjective("A porta está aberta. Vá até a saída.");
-      this.setStatus("Sistema de segurança desativado.");
-      this.spawnSparkles(this.player.x, this.player.y, 32);
-      this.shake(0.22, 2);
-      this.playSuccessSound();
-
-      this.openMessage(
-        "PORTA DESBLOQUEADA",
-        "O sistema de segurança foi desativado. A porta agora está aberta. Vá até a esquerda da sala e atravesse a saída."
-      );
-    } else {
-      this.elements.terminalFeedback.textContent = "Código incorreto.";
-      this.currentTerminal.entered = "";
-      this.elements.terminalDisplay.textContent = "----";
-      this.shake(0.16, 3);
-      this.playErrorSound();
-    }
-  }
-
-  closeTerminal() {
-    this.currentTerminal = null;
-    this.elements.terminalOverlay.classList.remove("is-visible");
-    this.elements.terminalOverlay.setAttribute("aria-hidden", "true");
-  }
-
-  openDoor() {
-    if (!this.doorUnlocked) return;
-    this.world.setDoorOpen(true);
-    this.setObjective("Atravesse a porta.");
-    this.setStatus("A saída está aberta.");
-  }
-
-  handleDoorExit() {
-    if (!this.doorUnlocked || this.completed) return;
-
-    const door = this.world.exitDoor;
-    const centerX = door.x + door.width / 2;
-    const centerY = door.y + door.height / 2;
+  setupWorld() {
 
     if (
-      Math.hypot(this.player.x - centerX, this.player.y - centerY) < 80
+      typeof this.world.setGame ===
+      "function"
     ) {
-      this.completeGame();
-    }
-  }
 
-  completeGame() {
-    if (this.completed) return;
+      this.world.setGame(this);
 
-    this.completed = true;
-    this.state = "completed";
-    this.world.setDoorOpen(true);
-
-    this.hideGameplayUI();
-    this.hideAllOverlays();
-
-    this.elements.completionTime.textContent = this.formatTime(this.elapsedTime);
-    this.showScreen("completionScreen");
-
-    this.spawnSparkles(this.player.x, this.player.y, 50);
-    this.playSuccessSound();
-  }
-
-  openMessage(title, text) {
-    this.messageOpen = true;
-    this.elements.messageTitle.textContent = title || "Mensagem";
-    this.elements.messageText.textContent = text || "";
-    this.elements.messageContainer.classList.add("is-visible");
-    this.elements.messageContainer.setAttribute("aria-hidden", "false");
-    this.hideInteractionHint();
-  }
-
-  closeMessage() {
-    this.messageOpen = false;
-    this.elements.messageContainer.classList.remove("is-visible");
-    this.elements.messageContainer.setAttribute("aria-hidden", "true");
-  }
-
-  showInteractionHint(target) {
-    this.elements.interactionKey.textContent = "E";
-    this.elements.interactionText.textContent =
-      `Interagir: ${target.label || "objeto"}`;
-
-    this.elements.interactionHint.classList.add("is-visible");
-    this.elements.interactionHint.setAttribute("aria-hidden", "false");
-  }
-
-  hideInteractionHint() {
-    this.elements.interactionHint.classList.remove("is-visible");
-    this.elements.interactionHint.setAttribute("aria-hidden", "true");
-  }
-
-  setObjective(text) {
-    this.elements.objectiveText.textContent = text;
-  }
-
-  setStatus(text) {
-    this.elements.statusText.textContent = text;
-  }
-
-  showGameplayUI() {
-    this.elements.objectivePanel.classList.add("is-visible");
-    this.elements.statusPanel.classList.add("is-visible");
-    this.elements.pauseButton.classList.add("is-visible");
-  }
-
-  hideGameplayUI() {
-    this.elements.objectivePanel.classList.remove("is-visible");
-    this.elements.statusPanel.classList.remove("is-visible");
-    this.elements.pauseButton.classList.remove("is-visible");
-    this.hideInteractionHint();
-  }
-
-  showScreen(id) {
-    for (const screenId of ["menuScreen", "pauseScreen", "completionScreen"]) {
-      const element = this.elements[screenId];
-      if (!element) continue;
-
-      const active = screenId === id;
-      element.classList.toggle("is-visible", active);
-      element.setAttribute("aria-hidden", active ? "false" : "true");
-    }
-  }
-
-  hideScreen(id) {
-    const element = this.elements[id];
-    if (!element) return;
-    element.classList.remove("is-visible");
-    element.setAttribute("aria-hidden", "true");
-  }
-
-  hideAllOverlays() {
-    this.messageOpen = false;
-    this.currentPuzzle = null;
-    this.currentTerminal = null;
-
-    for (const id of ["messageContainer", "puzzleOverlay", "terminalOverlay"]) {
-      const element = this.elements[id];
-      if (!element) continue;
-      element.classList.remove("is-visible");
-      element.setAttribute("aria-hidden", "true");
     }
 
-    this.hideInteractionHint();
   }
 
-  openingPulse() {
-    this.spawnSparkles(this.player.x, this.player.y, 8);
-  }
 
-  shake(duration, strength) {
-    this.shakeTime = duration;
-    this.shakeStrength = strength;
-  }
+  /* =========================================================
+     GERADOR DE PUZZLE
+     ========================================================= */
 
-  spawnSparkles(x, y, amount) {
-    for (let i = 0; i < amount; i += 1) {
-      const life = 0.5 + Math.random() * 0.8;
-      this.particles.push({
-        x: x + (Math.random() - 0.5) * 50,
-        y: y + (Math.random() - 0.5) * 50,
-        vx: (Math.random() - 0.5) * 60,
-        vy: (Math.random() - 0.5) * 60,
-        life,
-        maxLife: life,
-        size: Math.random() > 0.5 ? 2 : 1
-      });
+  generatePuzzle() {
+
+    /*
+     * Cada carregamento cria uma combinação diferente.
+     *
+     * O código final é montado a partir das respostas
+     * dos desafios encontrados durante a investigação.
+     */
+
+    const randomDigit =
+      () => Math.floor(
+        Math.random() * 9
+      ) + 1;
+
+
+    const digits = [
+      randomDigit(),
+      randomDigit(),
+      randomDigit(),
+      randomDigit()
+    ];
+
+
+    /*
+     * Evita código com quatro números iguais.
+     */
+
+    if (
+      digits.every(
+        value => value === digits[0]
+      )
+    ) {
+
+      digits[3] =
+        digits[3] === 9
+          ? 1
+          : digits[3] + 1;
+
     }
-  }
 
-  updateParticles(deltaTime) {
-    for (let i = this.particles.length - 1; i >= 0; i -= 1) {
-      const p = this.particles[i];
-      p.life -= deltaTime;
 
-      if (p.life <= 0) {
-        this.particles.splice(i, 1);
-        continue;
+    const order =
+      this.shuffle([
+        0,
+        1,
+        2,
+        3
+      ]);
+
+
+    const clues = [
+      {
+        id: "clue1",
+
+        answer:
+          String(digits[0]),
+
+        text:
+          `No quadro existe uma sequência incompleta.
+
+Observe com atenção:
+
+2, 4, 6, ?
+
+Qual número completa a sequência?`,
+
+        hint:
+          "A sequência aumenta sempre pelo mesmo valor.",
+
+        voice:
+          "No quadro existe uma sequência incompleta. Dois, quatro, seis. Qual número vem depois?"
+      },
+
+      {
+        id: "clue2",
+
+        answer:
+          String(digits[1]),
+
+        text:
+          `O relógio parece estranho.
+
+Conte quantas marcas principais
+existem no mostrador.
+
+Depois descubra qual número deve
+ser observado na posição indicada
+pela pista do ambiente.`,
+
+        hint:
+          "Nem sempre a resposta está escrita diretamente.",
+
+        voice:
+          "O relógio parece estranho. Observe suas marcas e procure a posição indicada pela pista."
+      },
+
+      {
+        id: "clue3",
+
+        answer:
+          String(digits[2]),
+
+        text:
+          `Entre os objetos da sala existe
+uma pequena anotação.
+
+Ela diz:
+
+"Comece com cinco.
+Acrescente dois.
+Retire um."
+
+Qual é o resultado?`,
+
+        hint:
+          "Faça as operações na ordem.",
+
+        voice:
+          "A anotação diz: comece com cinco, acrescente dois e retire um. Qual é o resultado?"
+      },
+
+      {
+        id: "clue4",
+
+        answer:
+          String(digits[3]),
+
+        text:
+          `Uma das carteiras possui uma pista:
+
+"Sou o número de lados
+de uma forma simples,
+mas acrescente uma unidade."
+
+Qual número você encontra?`,
+
+        hint:
+          "Pense em uma forma geométrica básica.",
+
+        voice:
+          "Uma carteira possui uma pista. Sou o número de lados de uma forma simples, mas acrescente uma unidade."
       }
+    ];
 
-      p.x += p.vx * deltaTime;
-      p.y += p.vy * deltaTime;
-      p.vy += 18 * deltaTime;
-      p.vx *= 0.985;
-      p.vy *= 0.985;
-    }
-  }
 
-  renderParticles(ctx, camera) {
-    for (const p of this.particles) {
-      const x = p.x - camera.x;
-      const y = p.y - camera.y;
-      const alpha = Math.max(0, p.life / p.maxLife);
+    /*
+     * Para que a senha seja realmente diferente,
+     * recalculamos os números das pistas conforme
+     * a ordem sorteada.
+     */
 
-      if (x < -5 || y < -5 || x > this.width + 5 || y > this.height + 5) continue;
+    const shuffledClues =
+      order.map(
+        index => clues[index]
+      );
 
-      ctx.fillStyle = `rgba(245,220,160,${alpha * 0.7})`;
-      ctx.fillRect(Math.round(x), Math.round(y), p.size, p.size);
-    }
-  }
 
-  render() {
-    const ctx = this.ctx;
-    ctx.clearRect(0, 0, this.width, this.height);
+    const code =
+      digits.join("");
 
-    let shakeX = 0;
-    let shakeY = 0;
 
-    if (this.shakeTime > 0) {
-      shakeX = (Math.random() - 0.5) * this.shakeStrength;
-      shakeY = (Math.random() - 0.5) * this.shakeStrength;
-    }
+    return {
 
-    const camera = {
-      x: this.camera.x - shakeX,
-      y: this.camera.y - shakeY
+      code,
+
+      digits,
+
+      clues: shuffledClues,
+
+      used: [],
+
+      currentIndex: 0
+
     };
 
-    this.drawBackground(ctx);
-    this.world.render(ctx, camera);
-    this.renderParticles(ctx, camera);
-    this.player.render(ctx, camera);
-    this.world.renderLighting(ctx, this.player, camera, this.gameTime);
-    this.renderAtmosphere(ctx);
   }
 
-  drawBackground(ctx) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
-    gradient.addColorStop(0, "#070a0d");
-    gradient.addColorStop(1, "#11171a");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, this.width, this.height);
-  }
 
-  renderAtmosphere(ctx) {
-    ctx.save();
+  /* =========================================================
+     SHUFFLE
+     ========================================================= */
 
-    for (let i = 0; i < 38; i += 1) {
-      const x = (i * 97.13 + this.gameTime * 2.5) % this.width;
-      const y = (i * 51.77 + Math.sin(this.gameTime * 0.4 + i) * 5) % this.height;
+  shuffle(array) {
 
-      ctx.fillStyle = i % 4 === 0
-        ? "rgba(255,255,255,0.03)"
-        : "rgba(255,255,255,0.012)";
+    const result =
+      [...array];
 
-      ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+
+    for (
+      let i = result.length - 1;
+      i > 0;
+      i--
+    ) {
+
+      const j =
+        Math.floor(
+          Math.random() * (i + 1)
+        );
+
+
+      [
+        result[i],
+        result[j]
+      ] =
+      [
+        result[j],
+        result[i]
+      ];
+
     }
 
-    ctx.restore();
+
+    return result;
+
   }
 
-  startAudio() {
-    if (this.audioContext) {
-      if (this.audioContext.state === "suspended") this.audioContext.resume();
+
+  /* =========================================================
+     START
+     ========================================================= */
+
+  start() {
+
+    if (
+      this.state === "playing"
+    ) {
+
+      return;
+
+    }
+
+
+    this.unlockAudio();
+
+
+    this.state = "playing";
+
+    this.started = true;
+
+    this.messageOpen = false;
+
+    this.puzzleOpen = false;
+
+    this.terminalOpen = false;
+
+
+    this.showHUD();
+
+
+    this.player.resetTo(
+      this.world.getSpawnPoint()
+    );
+
+
+    this.updateCamera(true);
+
+
+    this.showMessage(
+      "A SALA",
+      "A porta está trancada.\n\nA sala está silenciosa demais.\n\nExplore o ambiente. Há pistas escondidas por todos os lados.\n\nUse E para investigar objetos."
+    );
+
+
+    this.speak(
+      "A porta está trancada. A sala está silenciosa demais. Explore o ambiente. Há pistas escondidas por todos os lados. Use a tecla E para investigar objetos."
+    );
+
+  }
+
+
+  /* =========================================================
+     RESTART
+     ========================================================= */
+
+  restart() {
+
+    this.stopSpeaking();
+
+
+    this.state = "playing";
+
+    this.started = true;
+
+
+    this.progress = {
+
+      board: false,
+
+      clock: false,
+
+      cabinet: false,
+
+      bookshelf: false,
+
+      computer: false,
+
+      desk1: false,
+
+      desk2: false,
+
+      desk3: false,
+
+      desk4: false,
+
+      desk5: false,
+
+      desk6: false,
+
+      posterLeft: false,
+
+      posterRight: false,
+
+      terminal: false,
+
+      codeSolved: false,
+
+      exitUnlocked: false
+
+    };
+
+
+    this.puzzleData =
+      this.generatePuzzle();
+
+
+    this.currentMessage = {
+      title: "",
+      text: ""
+    };
+
+
+    this.currentPuzzle = null;
+
+
+    this.world.reset();
+
+
+    this.player.resetTo(
+      this.world.getSpawnPoint()
+    );
+
+
+    this.doorAnimation = 0;
+
+    this.flashAlpha = 0;
+
+    this.screenShake = 0;
+
+
+    this.closeAllOverlays();
+
+    this.showHUD();
+
+    this.updateCamera(true);
+
+
+    this.unlockAudio();
+
+
+    this.showMessage(
+      "NOVA PARTIDA",
+      "A sala mudou.\n\nAs pistas foram reorganizadas e um novo código foi criado.\n\nBoa sorte."
+    );
+
+
+    this.speak(
+      "Nova partida. As pistas foram reorganizadas e um novo código foi criado."
+    );
+
+  }
+
+
+  /* =========================================================
+     PAUSE
+     ========================================================= */
+
+  togglePause() {
+
+    if (
+      this.state === "playing"
+    ) {
+
+      this.pause();
+
+      return;
+
+    }
+
+
+    if (
+      this.state === "paused"
+    ) {
+
+      this.resume();
+
+    }
+
+  }
+
+
+  pause() {
+
+    if (
+      this.state !== "playing"
+    ) {
+
+      return;
+
+    }
+
+
+    this.state = "paused";
+
+
+    const pauseScreen =
+      document.getElementById(
+        "pauseScreen"
+      );
+
+
+    if (pauseScreen) {
+
+      pauseScreen.classList.remove(
+        "hidden"
+      );
+
+    }
+
+  }
+
+
+  resume() {
+
+    if (
+      this.state !== "paused"
+    ) {
+
+      return;
+
+    }
+
+
+    this.state = "playing";
+
+
+    const pauseScreen =
+      document.getElementById(
+        "pauseScreen"
+      );
+
+
+    if (pauseScreen) {
+
+      pauseScreen.classList.add(
+        "hidden"
+      );
+
+    }
+
+
+    this.canvas.focus();
+
+  }
+
+
+  /* =========================================================
+     UPDATE
+     ========================================================= */
+
+  update(deltaTime) {
+
+    if (
+      !Number.isFinite(deltaTime)
+    ) {
+
+      return;
+
+    }
+
+
+    this.time += deltaTime;
+
+
+    this.updateAmbient(
+      deltaTime
+    );
+
+
+    if (
+      this.state !== "playing"
+    ) {
+
+      this.input.endFrame();
+
+      return;
+
+    }
+
+
+    if (
+      this.messageOpen ||
+      this.puzzleOpen ||
+      this.terminalOpen
+    ) {
+
+      this.updateCamera();
+
+      this.input.endFrame();
+
+      return;
+
+    }
+
+
+    this.playTime += deltaTime;
+
+
+    this.interactionCooldown =
+      Math.max(
+        0,
+        this.interactionCooldown -
+        deltaTime
+      );
+
+
+    this.updatePlayer(
+      deltaTime
+    );
+
+
+    this.updateInteraction();
+
+
+    this.updateCamera();
+
+
+    this.updateLighting(
+      deltaTime
+    );
+
+
+    this.updateAnimations(
+      deltaTime
+    );
+
+
+    this.updateHUD();
+
+
+    if (
+      this.input.wantsPause()
+    ) {
+
+      this.pause();
+
+    }
+
+
+    if (
+      this.input.wantsInteract()
+    ) {
+
+      this.interact();
+
+    }
+
+
+    this.input.endFrame();
+
+  }
+
+
+  /* =========================================================
+     PLAYER
+     ========================================================= */
+
+  updatePlayer(deltaTime) {
+
+    const movement =
+      this.input.getMovementVector();
+
+
+    if (
+      movement.x === 0 &&
+      movement.y === 0
+    ) {
+
+      this.player.update(
+        deltaTime,
+        0,
+        0
+      );
+
+      return;
+
+    }
+
+
+    this.player.update(
+      deltaTime,
+      movement.x,
+      movement.y
+    );
+
+  }
+
+
+  /* =========================================================
+     INTERAÇÃO
+     ========================================================= */
+
+  updateInteraction() {
+
+    if (
+      !this.world ||
+      !this.player
+    ) {
+
+      return;
+
+    }
+
+
+    this.nearestInteraction =
+      this.world.getNearestInteraction(
+        this.player
+      );
+
+  }
+
+
+  interact() {
+
+    if (
+      this.interactionCooldown > 0
+    ) {
+
+      return;
+
+    }
+
+
+    this.interactionCooldown =
+      0.25;
+
+
+    const target =
+      this.nearestInteraction ||
+      this.world.getNearestInteraction(
+        this.player
+      );
+
+
+    if (!target) {
+
+      this.playBeep(
+        120,
+        0.04,
+        "triangle"
+      );
+
+      return;
+
+    }
+
+
+    this.handleInteraction(
+      target
+    );
+
+  }
+
+
+  /* =========================================================
+     TRATAMENTO DE INTERAÇÃO
+     ========================================================= */
+
+  handleInteraction(target) {
+
+    switch (target.id) {
+
+      case "board":
+
+        this.interactBoard();
+
+        break;
+
+
+      case "clock":
+
+        this.interactClock();
+
+        break;
+
+
+      case "cabinet":
+
+        this.interactCabinet();
+
+        break;
+
+
+      case "bookshelf":
+
+        this.interactBookshelf();
+
+        break;
+
+
+      case "computer":
+
+        this.interactComputer();
+
+        break;
+
+
+      case "poster_left":
+
+        this.interactPosterLeft();
+
+        break;
+
+
+      case "poster_right":
+
+        this.interactPosterRight();
+
+        break;
+
+
+      case "desk_1":
+      case "desk_2":
+      case "desk_3":
+      case "desk_4":
+      case "desk_5":
+      case "desk_6":
+
+        this.interactDesk(
+          target.id
+        );
+
+        break;
+
+
+      case "exit":
+
+        this.interactExit();
+
+        break;
+
+
+      default:
+
+        this.showMessage(
+          "OBJETO",
+          "Não parece haver nada de especial aqui."
+        );
+
+        break;
+
+    }
+
+  }
+
+
+  /* =========================================================
+     QUADRO
+     ========================================================= */
+
+  interactBoard() {
+
+    this.progress.board = true;
+
+
+    const clue =
+      this.puzzleData.clues[0];
+
+
+    this.showMessage(
+      "QUADRO",
+      "Há várias anotações apagadas.\n\nUma delas chama sua atenção:\n\n" +
+      clue.text
+    );
+
+
+    this.speak(
+      "Quadro. " +
+      clue.voice
+    );
+
+
+    this.playBeep(
+      440,
+      0.08,
+      "sine"
+    );
+
+  }
+
+
+  /* =========================================================
+     RELÓGIO
+     ========================================================= */
+
+  interactClock() {
+
+    this.progress.clock = true;
+
+
+    const clue =
+      this.puzzleData.clues[1];
+
+
+    this.showMessage(
+      "RELÓGIO",
+      "O relógio parou.\n\nOs ponteiros não parecem marcar uma hora normal.\n\n" +
+      clue.text
+    );
+
+
+    this.speak(
+      "Relógio. " +
+      clue.voice
+    );
+
+
+    this.playBeep(
+      330,
+      0.08,
+      "sine"
+    );
+
+  }
+
+
+  /* =========================================================
+     ARMÁRIO
+     ========================================================= */
+
+  interactCabinet() {
+
+    this.progress.cabinet = true;
+
+
+    this.showMessage(
+      "ARMÁRIO",
+      "Você abre uma das portas.\n\nHá materiais escolares antigos, alguns livros e uma folha dobrada.\n\nNa folha está escrito:\n\n\"Nem toda pista precisa estar onde você espera.\""
+    );
+
+
+    this.speak(
+      "Armário. Você encontra materiais escolares antigos e uma folha. Nela está escrito: Nem toda pista precisa estar onde você espera."
+    );
+
+
+    this.playBeep(
+      250,
+      0.07,
+      "triangle"
+    );
+
+  }
+
+
+  /* =========================================================
+     ESTANTE
+     ========================================================= */
+
+  interactBookshelf() {
+
+    this.progress.bookshelf = true;
+
+
+    const clue =
+      this.puzzleData.clues[2];
+
+
+    this.showMessage(
+      "ESTANTE",
+      "Entre os livros há uma folha escondida.\n\n" +
+      clue.text
+    );
+
+
+    this.speak(
+      "Estante. " +
+      clue.voice
+    );
+
+
+    this.playBeep(
+      520,
+      0.08,
+      "sine"
+    );
+
+  }
+
+
+  /* =========================================================
+     COMPUTADOR
+     ========================================================= */
+
+  interactComputer() {
+
+    this.progress.computer = true;
+
+
+    if (
+      !this.progress.codeSolved
+    ) {
+
+      this.showMessage(
+        "COMPUTADOR",
+        "O computador está ligado.\n\nA tela mostra:\n\n\"ACESSO RESTRITO\"\n\n\"O sistema exige um código de quatro dígitos.\""
+      );
+
+
+      this.speak(
+        "Computador. A tela mostra acesso restrito. O sistema exige um código de quatro dígitos."
+      );
+
+
+      return;
+
+    }
+
+
+    this.openTerminal();
+
+  }
+
+
+  /* =========================================================
+     PÔSTER ESQUERDO
+     ========================================================= */
+
+  interactPosterLeft() {
+
+    this.progress.posterLeft =
+      true;
+
+
+    this.showMessage(
+      "AVISO",
+      "Um cartaz antigo está preso à parede.\n\nVocê percebe pequenas marcas no papel.\n\nParece que alguém usou o cartaz para esconder alguma coisa."
+    );
+
+
+    this.speak(
+      "Aviso. Um cartaz antigo está preso à parede. Pequenas marcas indicam que alguém pode ter escondido alguma coisa ali."
+    );
+
+  }
+
+
+  /* =========================================================
+     PÔSTER DIREITO
+     ========================================================= */
+
+  interactPosterRight() {
+
+    this.progress.posterRight =
+      true;
+
+
+    const clue =
+      this.puzzleData.clues[3];
+
+
+    this.showMessage(
+      "ANOTAÇÃO",
+      "Atrás do cartaz existe uma pequena anotação.\n\n" +
+      clue.text
+    );
+
+
+    this.speak(
+      "Anotação. " +
+      clue.voice
+    );
+
+  }
+
+
+  /* =========================================================
+     CARTEIRAS
+     ========================================================= */
+
+  interactDesk(id) {
+
+    this.progress[
+      this.deskProgressKey(id)
+    ] = true;
+
+
+    const deskNumber =
+      Number(
+        id.replace(
+          "desk_",
+          ""
+        )
+      );
+
+
+    const messages = {
+
+      1:
+        "A carteira está cheia de riscos. Alguém escreveu uma sequência e depois tentou apagá-la.",
+
+      2:
+        "Você encontra um lápis quebrado e um pequeno pedaço de papel. Não parece ser a pista principal.",
+
+      3:
+        "Há uma frase escrita na madeira: \"Observe o que está acima de você.\"", 
+
+      4:
+        "Debaixo da carteira existe uma marca em forma de seta apontando para a parede.",
+
+      5:
+        "Você encontra uma folha em branco. Quando olha contra a luz, percebe algumas marcas.",
+
+      6:
+        "A última carteira está estranhamente limpa. Talvez alguém tenha procurado alguma coisa aqui."
+    };
+
+
+    let message =
+      messages[deskNumber] ||
+      "Não há nada de especial nesta carteira.";
+
+
+    /*
+     * A carteira que contém a pista principal
+     * muda a cada partida.
+     */
+
+    const clueIndex =
+      3;
+
+
+    if (
+      deskNumber ===
+      this.getSpecialDesk()
+    ) {
+
+      const clue =
+        this.puzzleData.clues[
+          clueIndex
+        ];
+
+
+      message +=
+        "\n\nAtrás da carteira você encontra uma anotação:\n\n" +
+        clue.text;
+
+
+      this.speak(
+        "Carteira " +
+        deskNumber +
+        ". " +
+        clue.voice
+      );
+
+    } else {
+
+      this.speak(
+        "Carteira " +
+        deskNumber +
+        ". " +
+        message
+      );
+
+    }
+
+
+    this.showMessage(
+      "CARTEIRA " +
+      deskNumber,
+      message
+    );
+
+
+    this.playBeep(
+      300 +
+      deskNumber * 35,
+      0.06,
+      "triangle"
+    );
+
+  }
+
+
+  /* =========================================================
+     CARTEIRA ESPECIAL
+     ========================================================= */
+
+  getSpecialDesk() {
+
+    /*
+     * O local da quarta pista também muda.
+     */
+
+    const seed =
+      this.puzzleData.digits[0] +
+      this.puzzleData.digits[1];
+
+
+    return (
+      seed % 6
+    ) + 1;
+
+  }
+
+
+  /* =========================================================
+     PROGRESS KEY
+     ========================================================= */
+
+  deskProgressKey(id) {
+
+    return id
+      .replace(
+        "desk_",
+        "desk"
+      );
+
+  }
+
+
+  /* =========================================================
+     SAÍDA
+     ========================================================= */
+
+  interactExit() {
+
+    if (
+      !this.progress.exitUnlocked
+    ) {
+
+      const remaining =
+        this.countMissingEvidence();
+
+
+      if (
+        remaining > 0
+      ) {
+
+        this.showMessage(
+          "PORTA",
+          "A porta está trancada.\n\nParece que ainda falta investigar " +
+          remaining +
+          (remaining === 1
+            ? " parte importante"
+            : " partes importantes") +
+          " da sala."
+        );
+
+
+        this.speak(
+          "A porta está trancada. Ainda faltam pistas importantes."
+        );
+
+
+        return;
+
+      }
+
+
+      this.showMessage(
+        "PORTA",
+        "A fechadura possui um pequeno teclado.\n\nTalvez o computador tenha alguma resposta."
+      );
+
+
+      this.speak(
+        "A fechadura possui um pequeno teclado. Talvez o computador tenha alguma resposta."
+      );
+
+
+      return;
+
+    }
+
+
+    this.completeGame();
+
+  }
+
+
+  /* =========================================================
+     CONTAGEM DE EVIDÊNCIAS
+     ========================================================= */
+
+  countMissingEvidence() {
+
+    let found = 0;
+
+
+    if (this.progress.board) {
+      found++;
+    }
+
+    if (this.progress.clock) {
+      found++;
+    }
+
+    if (this.progress.bookshelf) {
+      found++;
+    }
+
+    if (this.progress.posterRight) {
+      found++;
+    }
+
+
+    return Math.max(
+      0,
+      3 - found
+    );
+
+  }
+
+
+  /* =========================================================
+     TERMINAL
+     ========================================================= */
+
+  openTerminal() {
+
+    if (
+      !this.progress.computer
+    ) {
+
+      return;
+
+    }
+
+
+    this.terminalOpen = true;
+
+
+    const overlay =
+      document.getElementById(
+        "terminalOverlay"
+      );
+
+
+    const input =
+      document.getElementById(
+        "terminalInput"
+      );
+
+
+    const feedback =
+      document.getElementById(
+        "terminalFeedback"
+      );
+
+
+    const display =
+      document.getElementById(
+        "terminalCodeDisplay"
+      );
+
+
+    if (overlay) {
+
+      overlay.classList.remove(
+        "hidden"
+      );
+
+    }
+
+
+    if (feedback) {
+
+      feedback.textContent = "";
+
+    }
+
+
+    if (display) {
+
+      display.textContent =
+        "_ _ _ _";
+
+    }
+
+
+    if (input) {
+
+      input.value = "";
+
+      setTimeout(
+        () => input.focus(),
+        50
+      );
+
+    }
+
+
+    this.speakTerminal();
+
+  }
+
+
+  /* =========================================================
+     TERMINAL VOICE
+     ========================================================= */
+
+  speakTerminal() {
+
+    this.speak(
+      "Terminal. Sistema bloqueado. Digite o código de quatro dígitos encontrado nas pistas."
+    );
+
+  }
+
+
+  /* =========================================================
+     SUBMIT TERMINAL
+     ========================================================= */
+
+  submitTerminal() {
+
+    const input =
+      document.getElementById(
+        "terminalInput"
+      );
+
+
+    const feedback =
+      document.getElementById(
+        "terminalFeedback"
+      );
+
+
+    if (!input) {
       return;
     }
 
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      this.audioContext = new AudioContext();
-    } catch {
-      this.audioContext = null;
+
+    const value =
+      input.value
+        .replace(
+          /\D/g,
+          ""
+        )
+        .slice(
+          0,
+          4
+        );
+
+
+    input.value =
+      value;
+
+
+    if (
+      value.length !== 4
+    ) {
+
+      if (feedback) {
+
+        feedback.textContent =
+          "Digite quatro números.";
+
+      }
+
+
+      this.speak(
+        "Digite quatro números."
+      );
+
+
+      return;
+
     }
+
+
+    if (
+      value ===
+      this.puzzleData.code
+    ) {
+
+      this.progress.codeSolved =
+        true;
+
+      this.progress.exitUnlocked =
+        true;
+
+
+      this.terminalOpen = false;
+
+
+      const overlay =
+        document.getElementById(
+          "terminalOverlay"
+        );
+
+
+      if (overlay) {
+
+        overlay.classList.add(
+          "hidden"
+        );
+
+      }
+
+
+      this.world.setDoorOpen(
+        true
+      );
+
+
+      this.showMessage(
+        "ACESSO LIBERADO",
+        "Código correto.\n\nO computador emite um som baixo.\n\nEm algum lugar da sala, a fechadura da porta se solta.\n\nAgora você precisa chegar até a saída."
+      );
+
+
+      this.speak(
+        "Código correto. A fechadura da porta foi liberada. Agora você precisa chegar até a saída."
+      );
+
+
+      this.flashAlpha =
+        0.5;
+
+
+      this.screenShake =
+        5;
+
+
+      this.playSuccessSound();
+
+
+      return;
+
+    }
+
+
+    if (feedback) {
+
+      feedback.textContent =
+        "Código incorreto. As pistas ainda escondem a resposta.";
+
+    }
+
+
+    this.speak(
+      "Código incorreto. As pistas ainda escondem a resposta."
+    );
+
+
+    this.playErrorSound();
+
+
+    this.screenShake =
+      3;
+
   }
 
-  playTone(frequency, duration = 0.08, type = "sine", volume = 0.025) {
-    if (!this.audioContext) return;
+
+  /* =========================================================
+     CLOSE TERMINAL
+     ========================================================= */
+
+  closeTerminal() {
+
+    this.terminalOpen = false;
+
+
+    const overlay =
+      document.getElementById(
+        "terminalOverlay"
+      );
+
+
+    if (overlay) {
+
+      overlay.classList.add(
+        "hidden"
+      );
+
+    }
+
+
+    this.canvas.focus();
+
+  }
+
+
+  /* =========================================================
+     PUZZLE
+     ========================================================= */
+
+  openPuzzle(clue) {
+
+    if (!clue) {
+      return;
+    }
+
+
+    this.currentPuzzle =
+      clue;
+
+
+    this.puzzleOpen = true;
+
+
+    const overlay =
+      document.getElementById(
+        "puzzleOverlay"
+      );
+
+
+    const title =
+      document.getElementById(
+        "puzzleTitle"
+      );
+
+
+    const question =
+      document.getElementById(
+        "puzzleQuestion"
+      );
+
+
+    const feedback =
+      document.getElementById(
+        "puzzleFeedback"
+      );
+
+
+    const input =
+      document.getElementById(
+        "puzzleInput"
+      );
+
+
+    if (title) {
+
+      title.textContent =
+        "DESAFIO";
+
+    }
+
+
+    if (question) {
+
+      question.textContent =
+        clue.text;
+
+    }
+
+
+    if (feedback) {
+
+      feedback.textContent = "";
+
+    }
+
+
+    if (input) {
+
+      input.value = "";
+
+    }
+
+
+    if (overlay) {
+
+      overlay.classList.remove(
+        "hidden"
+      );
+
+    }
+
+
+    this.speakCurrentPuzzle();
+
+
+    setTimeout(
+      () => {
+
+        if (input) {
+
+          input.focus();
+
+        }
+
+      },
+      50
+    );
+
+  }
+
+
+  /* =========================================================
+     SUBMIT PUZZLE
+     ========================================================= */
+
+  submitPuzzle() {
+
+    if (
+      !this.currentPuzzle
+    ) {
+
+      return;
+
+    }
+
+
+    const input =
+      document.getElementById(
+        "puzzleInput"
+      );
+
+
+    const feedback =
+      document.getElementById(
+        "puzzleFeedback"
+      );
+
+
+    if (!input) {
+      return;
+    }
+
+
+    const answer =
+      input.value
+        .trim()
+        .toLowerCase();
+
+
+    const expected =
+      String(
+        this.currentPuzzle.answer
+      )
+      .trim()
+      .toLowerCase();
+
+
+    if (
+      answer === expected
+    ) {
+
+      this.puzzleOpen = false;
+
+
+      const overlay =
+        document.getElementById(
+          "puzzleOverlay"
+        );
+
+
+      if (overlay) {
+
+        overlay.classList.add(
+          "hidden"
+        );
+
+      }
+
+
+      this.progress[
+        this.currentPuzzle.id
+      ] = true;
+
+
+      this.showMessage(
+        "PISTA ENCONTRADA",
+        "Resposta correta.\n\nVocê encontrou uma parte importante do código."
+      );
+
+
+      this.speak(
+        "Resposta correta. Você encontrou uma parte importante do código."
+      );
+
+
+      this.playSuccessSound();
+
+
+      return;
+
+    }
+
+
+    if (feedback) {
+
+      feedback.textContent =
+        "Não é essa. Observe melhor a pista.";
+
+    }
+
+
+    this.speak(
+      "Não é essa resposta. Observe melhor a pista."
+    );
+
+
+    this.playErrorSound();
+
+  }
+
+
+  /* =========================================================
+     CLOSE PUZZLE
+     ========================================================= */
+
+  closePuzzle() {
+
+    this.puzzleOpen = false;
+
+    this.currentPuzzle = null;
+
+
+    const overlay =
+      document.getElementById(
+        "puzzleOverlay"
+      );
+
+
+    if (overlay) {
+
+      overlay.classList.add(
+        "hidden"
+      );
+
+    }
+
+
+    this.canvas.focus();
+
+  }
+
+
+  /* =========================================================
+     MESSAGE
+     ========================================================= */
+
+  showMessage(title, text) {
+
+    this.currentMessage = {
+      title,
+      text
+    };
+
+
+    this.messageOpen = true;
+
+
+    const overlay =
+      document.getElementById(
+        "messageOverlay"
+      );
+
+
+    const titleElement =
+      document.getElementById(
+        "messageTitle"
+      );
+
+
+    const textElement =
+      document.getElementById(
+        "messageText"
+      );
+
+
+    if (titleElement) {
+
+      titleElement.textContent =
+        title;
+
+    }
+
+
+    if (textElement) {
+
+      textElement.textContent =
+        text;
+
+    }
+
+
+    if (overlay) {
+
+      overlay.classList.remove(
+        "hidden"
+      );
+
+    }
+
+  }
+
+
+  /* =========================================================
+     CLOSE MESSAGE
+     ========================================================= */
+
+  closeMessage() {
+
+    this.messageOpen = false;
+
+
+    const overlay =
+      document.getElementById(
+        "messageOverlay"
+      );
+
+
+    if (overlay) {
+
+      overlay.classList.add(
+        "hidden"
+      );
+
+    }
+
+
+    this.canvas.focus();
+
+  }
+
+
+  /* =========================================================
+     SPEAK CURRENT TEXT
+     ========================================================= */
+
+  speakCurrentText() {
+
+    if (
+      !this.currentMessage
+    ) {
+
+      return;
+
+    }
+
+
+    this.speak(
+      this.currentMessage.text
+    );
+
+  }
+
+
+  /* =========================================================
+     SPEAK CURRENT PUZZLE
+     ========================================================= */
+
+  speakCurrentPuzzle() {
+
+    if (
+      !this.currentPuzzle
+    ) {
+
+      return;
+
+    }
+
+
+    this.speak(
+      this.currentPuzzle.voice ||
+      this.currentPuzzle.text
+    );
+
+  }
+
+
+  /* =========================================================
+     VOZ
+     ========================================================= */
+
+  speak(text) {
+
+    if (
+      !this.voiceEnabled ||
+      !this.speech ||
+      !text
+    ) {
+
+      return;
+
+    }
+
+
+    this.stopSpeaking();
+
+
+    const utterance =
+      new SpeechSynthesisUtterance(
+        text
+      );
+
+
+    utterance.lang =
+      "pt-BR";
+
+
+    utterance.rate =
+      this.voiceRate;
+
+
+    utterance.pitch =
+      this.voicePitch;
+
+
+    utterance.volume =
+      this.voiceVolume;
+
+
+    const voices =
+      this.speech.getVoices();
+
+
+    const portugueseVoice =
+      voices.find(
+        voice =>
+          voice.lang &&
+          voice.lang
+            .toLowerCase()
+            .startsWith("pt-br")
+      ) ||
+      voices.find(
+        voice =>
+          voice.lang &&
+          voice.lang
+            .toLowerCase()
+            .startsWith("pt")
+      );
+
+
+    if (
+      portugueseVoice
+    ) {
+
+      utterance.voice =
+        portugueseVoice;
+
+    }
+
+
+    const indicator =
+      document.getElementById(
+        "voiceIndicator"
+      );
+
+
+    if (indicator) {
+
+      indicator.classList.remove(
+        "hidden"
+      );
+
+    }
+
+
+    utterance.onend =
+      () => {
+
+        if (indicator) {
+
+          indicator.classList.add(
+            "hidden"
+          );
+
+        }
+
+      };
+
+
+    utterance.onerror =
+      () => {
+
+        if (indicator) {
+
+          indicator.classList.add(
+            "hidden"
+          );
+
+        }
+
+      };
+
+
+    this.speech.speak(
+      utterance
+    );
+
+  }
+
+
+  /* =========================================================
+     STOP SPEAKING
+     ========================================================= */
+
+  stopSpeaking() {
+
+    if (
+      this.speech
+    ) {
+
+      this.speech.cancel();
+
+    }
+
+
+    const indicator =
+      document.getElementById(
+        "voiceIndicator"
+      );
+
+
+    if (indicator) {
+
+      indicator.classList.add(
+        "hidden"
+      );
+
+    }
+
+  }
+
+
+  /* =========================================================
+     AUDIO
+     ========================================================= */
+
+  unlockAudio() {
+
+    if (
+      this.audioUnlocked
+    ) {
+
+      return;
+
+    }
+
 
     try {
-      if (this.audioContext.state === "suspended") this.audioContext.resume();
 
-      const now = this.audioContext.currentTime;
-      const oscillator = this.audioContext.createOscillator();
-      const gain = this.audioContext.createGain();
+      const AudioContext =
+        window.AudioContext ||
+        window.webkitAudioContext;
 
-      oscillator.type = type;
-      oscillator.frequency.setValueAtTime(frequency, now);
 
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      if (!AudioContext) {
 
-      oscillator.connect(gain);
-      gain.connect(this.audioContext.destination);
+        return;
 
-      oscillator.start(now);
-      oscillator.stop(now + duration + 0.02);
-    } catch {
-      // O jogo continua funcionando sem áudio.
+      }
+
+
+      this.audioContext =
+        new AudioContext();
+
+
+      if (
+        this.audioContext.state ===
+        "suspended"
+      ) {
+
+        this.audioContext.resume();
+
+      }
+
+
+      this.audioUnlocked =
+        true;
+
+
+    } catch (error) {
+
+      console.warn(
+        "Áudio não disponível:",
+        error
+      );
+
     }
+
   }
+
+
+  playBeep(
+    frequency = 440,
+    duration = 0.08,
+    type = "sine"
+  ) {
+
+    if (
+      !this.audioContext
+    ) {
+
+      return;
+
+    }
+
+
+    try {
+
+      const oscillator =
+        this.audioContext.createOscillator();
+
+
+      const gain =
+        this.audioContext.createGain();
+
+
+      oscillator.type =
+        type;
+
+
+      oscillator.frequency.value =
+        frequency;
+
+
+      gain.gain.setValueAtTime(
+        0.0001,
+        this.audioContext.currentTime
+      );
+
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.055,
+        this.audioContext.currentTime + 0.01
+      );
+
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        this.audioContext.currentTime + duration
+      );
+
+
+      oscillator.connect(
+        gain
+      );
+
+
+      gain.connect(
+        this.audioContext.destination
+      );
+
+
+      oscillator.start();
+
+
+      oscillator.stop(
+        this.audioContext.currentTime +
+        duration
+      );
+
+    } catch (error) {
+
+      console.warn(
+        "Erro no beep:",
+        error
+      );
+
+    }
+
+  }
+
+
+  /* =========================================================
+     SOM DE SUCESSO
+     ========================================================= */
 
   playSuccessSound() {
-    this.playTone(523.25, 0.09, "sine", 0.03);
-    window.setTimeout(() => this.playTone(659.25, 0.12, "sine", 0.025), 65);
+
+    this.playBeep(
+      523,
+      0.12,
+      "sine"
+    );
+
+
+    setTimeout(
+      () => {
+
+        this.playBeep(
+          659,
+          0.12,
+          "sine"
+        );
+
+      },
+      110
+    );
+
+
+    setTimeout(
+      () => {
+
+        this.playBeep(
+          784,
+          0.18,
+          "sine"
+        );
+
+      },
+      220
+    );
+
   }
+
+
+  /* =========================================================
+     SOM DE ERRO
+     ========================================================= */
 
   playErrorSound() {
-    this.playTone(150, 0.12, "sawtooth", 0.018);
+
+    this.playBeep(
+      160,
+      0.18,
+      "sawtooth"
+    );
+
+
+    setTimeout(
+      () => {
+
+        this.playBeep(
+          110,
+          0.2,
+          "sawtooth"
+        );
+
+      },
+      100
+    );
+
   }
 
-  formatTime(seconds) {
-    const total = Math.max(0, Math.floor(seconds));
-    const minutes = Math.floor(total / 60);
-    const secs = total % 60;
-    return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  }
 
-  clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
+  /* =========================================================
+     AMBIENTE
+     ========================================================= */
 
-  destroy() {
-    this.input.destroy();
+  initializeParticles() {
 
-    if (this.audioContext) {
-      try {
-        this.audioContext.close();
-      } catch {}
+    for (
+      let i = 0;
+      i < 100;
+      i++
+    ) {
+
+      this.ambientParticles.push({
+
+        x:
+          Math.random() *
+          this.worldWidth,
+
+        y:
+          Math.random() *
+          this.worldHeight,
+
+        size:
+          Math.random() *
+          2 + 0.5,
+
+        speed:
+          Math.random() *
+          5 + 2,
+
+        alpha:
+          Math.random() *
+          0.35 + 0.05
+
+      });
+
     }
 
-    this.audioContext = null;
   }
-}
+
+
+  updateAmbient(deltaTime) {
+
+    for (
+      const particle of
+      this.ambientParticles
+    ) {
+
+      particle.y -=
+        particle.speed *
+        deltaTime;
+
+
+      if (
+        particle.y < 50
+      ) {
+
+        particle.y =
+          this.worldHeight;
+
+      }
+
+    }
+
+  }
+
+
+  /* =========================================================
+     ILUMINAÇÃO
+     ========================================================= */
+
+  updateLighting(deltaTime) {
+
+    this.lightTime +=
+      deltaTime;
+
+
+    this.flickerCooldown -=
+      deltaTime;
+
+
+    if (
+      this.flickerCooldown <= 0
+    ) {
+
+      /*
+       * Piscadas irregulares.
+       */
+
+      if (
+        Math.random() < 0.35
+      ) {
+
+        this.flickerStrength =
+          0.65 +
+          Math.random() * 0.35;
+
+
+        this.flickerTimer =
+          0.06 +
+          Math.random() * 0.16;
+
+
+        this.screenShake =
+          Math.max(
+            this.screenShake,
+            1
+          );
+
+      }
+
+
+      this.flickerCooldown =
+        2.5 +
+        Math.random() * 5;
+
+    }
+
+
+    if (
+      this.flickerTimer > 0
+    ) {
+
+      this.flickerTimer -=
+        deltaTime;
+
+    } else {
+
+      this.flickerStrength =
+        Math.max(
+          0,
+          this.flickerStrength -
+          deltaTime * 2.8
+        );
+
+    }
+
+
+    this.playerLightPulse =
+      Math.sin(
+        this.time * 2.2
+      ) *
+      0.025;
+
+
+    this.flashAlpha =
+      Math.max(
+        0,
+        this.flashAlpha -
+        deltaTime * 2.5
+      );
+
+
+    this.screenShake =
+      Math.max(
+        0,
+        this.screenShake -
+        deltaTime * 9
+      );
+
+  }
+
+
+  /* =========================================================
+     ANIMAÇÕES
+     ========================================================= */
+
+  updateAnimations(deltaTime) {
+
+    if (
+      this.progress.exitUnlocked
+    ) {
+
+      this.doorAnimation =
+        Math.min(
+          1,
+          this.doorAnimation +
+          deltaTime * 1.7
+        );
+
+    }
+
+  }
+
+
+  /* =========================================================
+     PARTÍCULAS
+     ========================================================= */
+
+  updateParticles(deltaTime) {
+
+    for (
+      const particle of
+      this.particles
+    ) {
+
+      particle.life -=
+        deltaTime;
+
+      particle.y -=
+        particle.speed *
+        deltaTime;
+
+
+      if (
+        particle.life <= 0
+      ) {
+
+        particle.reset =
+          true;
+
+      }
+
+    }
+
+
+    this.particles =
+      this.particles.filter(
+        particle =>
+          !particle.reset
+      );
+
+  }
+
+
+  /* =========================================================
+     CÂMERA
+     ========================================================= */
+
+  updateCamera(immediate = false) {
+
+    if (
+      !this.player
+    ) {
+
+      return;
+
+    }
+
+
+    this.camera.targetX =
+      this.player.x -
+      this.width / 2;
+
+
+    this.camera.targetY =
+      this.player.y -
+      this.height / 2;
+
+
+    const maxX =
+      this.worldWidth -
+      this.width;
+
+
+    const maxY =
+      this.worldHeight -
+      this.height;
+
+
+    this.camera.targetX =
+      Math.max(
+        0,
+        Math.min(
+          maxX,
+          this.camera.targetX
+        )
+      );
+
+
+    this.camera.targetY =
+      Math.max(
+        0,
+        Math.min(
+          maxY,
+          this.camera.targetY
+        )
+      );
+
+
+    if (
+      immediate
+    ) {
+
+      this.camera.x =
+        this.camera.targetX;
+
+      this.camera.y =
+        this.camera.targetY;
+
+      return;
+
+    }
+
+
+    this.camera.x +=
+      (
+        this.camera.targetX -
+        this.camera.x
+      ) *
+      this.camera.smooth;
+
+
+    this.camera.y +=
+      (
+        this.camera.targetY -
+        this.camera.y
+      ) *
+      this.camera.smooth;
+
+  }
+
+
+  /* =========================================================
+     RENDER
+     ========================================================= */
+
+  render() {
+
+    const ctx =
+      this.ctx;
+
+
+    ctx.clearRect(
+      0,
+      0,
+      this.width,
+      this.height
+    );
+
+
+    ctx.save();
+
+
+    /*
+     * Pequeno tremor quando a iluminação
+     * falha ou acontece algum evento.
+     */
+
+    if (
+      this.screenShake > 0
+    ) {
+
+      const shake =
+        this.screenShake;
+
+
+      ctx.translate(
+        (Math.random() - 0.5) *
+        shake,
+
+        (Math.random() - 0.5) *
+        shake
+      );
+
+    }
+
+
+    ctx.translate(
+      -Math.floor(
+        this.camera.x
+      ),
+
+      -Math.floor(
+        this.camera.y
+      )
+    );
+
+
+    this.world.render(
+      ctx,
+      this
+    );
+
+
+    this.renderAmbientParticles(
+      ctx
+    );
+
+
+    this.player.render(
+      ctx
+    );
+
+
+    this.renderLighting(
+      ctx
+    );
+
+
+    ctx.restore();
+
+
+    this.renderFlash();
+
+  }
+
+
+  /* =========================================================
+     AMBIENT PARTICLES RENDER
+     ========================================================= */
+
+  renderAmbientParticles(ctx) {
+
+    for (
+      const particle of
+      this.ambientParticles
+    ) {
+
+      const distance =
+        Math.hypot(
+          particle.x -
+          this.player.x,
+
+          particle.y -
+          this.player.y
+        );
+
+
+      if (
+        distance >
+        450
+      ) {
+
+        continue;
+
+      }
+
+
+      ctx.save();
+
+
+      ctx.globalAlpha =
+        particle.alpha *
+        Math.max(
+          0,
+          1 -
+          distance / 450
+        );
+
+
+      ctx.fillStyle =
+        "#d8c9a5";
+
+
+      ctx.fillRect(
+        Math.floor(
+          particle.x
+        ),
+
+        Math.floor(
+          particle.y
+        ),
+
+        Math.max(
+          1,
+          Math.floor(
+            particle.size
+          )
+        ),
+
+        Math.max(
+          1,
+          Math.floor(
+            particle.size
+          )
+        )
+      );
+
+
+      ctx.restore();
+
+    }
+
+  }
+
+
+  /* =========================================================
+     LIGHTING
+     ========================================================= */
+
+  renderLighting(ctx) {
+
+    const playerX =
+      this.player.x;
+
+
+    const playerY =
+      this.player.y;
+
+
+    const baseDarkness =
+      0.76;
+
+
+    const flicker =
+      this.flickerStrength;
+
+
+    /*
+     * Tudo começa escuro.
+     */
+
+    ctx.save();
+
+
+    ctx.fillStyle =
+      `rgba(0, 0, 0, ${baseDarkness})`;
+
+
+    ctx.fillRect(
+      this.camera.x,
+      this.camera.y,
+      this.width,
+      this.height
+    );
+
+
+    /*
+     * Campo de visão do jogador.
+     */
+
+    const radius =
+      225 +
+      Math.sin(
+        this.time * 2
+      ) * 7;
+
+
+    const gradient =
+      ctx.createRadialGradient(
+        playerX,
+        playerY,
+        20,
+
+        playerX,
+        playerY,
+        radius
+      );
+
+
+    gradient.addColorStop(
+      0,
+      "rgba(255, 241, 196, 0.78)"
+    );
+
+
+    gradient.addColorStop(
+      0.2,
+      "rgba(235, 216, 169, 0.42)"
+    );
+
+
+    gradient.addColorStop(
+      0.52,
+      "rgba(150, 136, 106, 0.18)"
+    );
+
+
+    gradient.addColorStop(
+      0.78,
+      "rgba(30, 32, 32, 0.08)"
+    );
+
+
+    gradient.addColorStop(
+      1,
+      "rgba(0, 0, 0, 0)"
+    );
+
+
+    ctx.globalCompositeOperation =
+      "lighter";
+
+
+    ctx.fillStyle =
+      gradient;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+      playerX,
+      playerY,
+      radius,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    /*
+     * Luz secundária no ambiente.
+     */
+
+    this.renderLampGlow(
+      ctx,
+      640,
+      80,
+      125,
+      0.16
+    );
+
+
+    this.renderLampGlow(
+      ctx,
+      1370,
+      90,
+      110,
+      0.12
+    );
+
+
+    this.renderLampGlow(
+      ctx,
+      450,
+      510,
+      85,
+      0.08
+    );
+
+
+    /*
+     * Piscada.
+     */
+
+    if (
+      flicker > 0
+    ) {
+
+      ctx.globalCompositeOperation =
+        "source-over";
+
+
+      ctx.fillStyle =
+        `rgba(5, 6, 7, ${
+          Math.min(
+            0.8,
+            flicker
+          )
+        })`;
+
+
+      ctx.fillRect(
+        this.camera.x,
+        this.camera.y,
+        this.width,
+        this.height
+      );
+
+    }
+
+
+    ctx.restore();
+
+  }
+
+
+  /* =========================================================
+     LAMP GLOW
+     ========================================================= */
+
+  renderLampGlow(
+    ctx,
+    x,
+    y,
+    radius,
+    alpha
+  ) {
+
+    const gradient =
+      ctx.createRadialGradient(
+        x,
+        y,
+        5,
+        x,
+        y,
+        radius
+      );
+
+
+    gradient.addColorStop(
+      0,
+      `rgba(255, 222, 151, ${alpha})`
+    );
+
+
+    gradient.addColorStop(
+      0.45,
+      `rgba(209, 170, 96, ${
+        alpha * 0.35
+      })`
+    );
+
+
+    gradient.addColorStop(
+      1,
+      "rgba(0,0,0,0)"
+    );
+
+
+    ctx.save();
+
+
+    ctx.globalCompositeOperation =
+      "lighter";
+
+
+    ctx.fillStyle =
+      gradient;
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+      x,
+      y,
+      radius,
+      0,
+      Math.PI * 2
+    );
+
+
+    ctx.fill();
+
+
+    ctx.restore();
+
+  }
+
+
+  /* =========================================================
+     FLASH
+     ========================================================= */
+
+  renderFlash() {
+
+    if (
+      this.flashAlpha <= 0
+    ) {
+
+      return;
+
+    }
+
+
+    this.ctx.save();
+
+
+    this.ctx.fillStyle =
+      `rgba(255,244,210,${
+        this.flashAlpha
+      })`;
+
+
+    this.ctx.fillRect(
+      0,
+      0,
+      this.width,
+      this.height
+    );
+
+
+    this.ctx.restore();
+
+  }
+
+
+  /* =========================================================
+     HUD
+     ========================================================= */
+
+  updateHUD() {
+
+    const hint =
+      document.getElementById(
+        "interactionHint"
+      );
+
+
+    if (!hint) {
+      return;
+    }
+
+
+    if (
+      this.state !== "playing"
+    ) {
+
+      return;
+
+    }
+
+
+    if (
+      this.nearestInteraction
+    ) {
+
+      hint.textContent =
+        "E — " +
+        (
+          this.nearestInteraction.label ||
+          "Investigar"
+        );
+
+    } else {
+
+      hint.textContent =
+        "Explore a sala...";
+
+    }
+
+  }
+
+
+  /* =========================================================
+     SHOW HUD
+     ========================================================= */
+
+  showHUD() {
+
+    const hud =
+      document.getElementById(
+        "hud"
+      );
+
+
+    const voice =
+      document.getElementById(
+        "voiceButton"
+      );
+
+
+    if (hud) {
+
+      hud.classList.remove(
+        "hidden"
+      );
+
+    }
+
+
+    if (voice) {
+
+      voice.classList.remove(
+        "hidden"
+      );
+
+    }
+
+
+    const start =
+      document.getElementById(
+        "startScreen"
+      );
+
+
+    if (start) {
+
+      start.classList.add(
+        "hidden"
+      );
+
+    }
+
+  }
+
+
+  /* =========================================================
+     CLOSE ALL OVERLAYS
+     ========================================================= */
+
+  closeAllOverlays() {
+
+    const ids = [
+
+      "messageOverlay",
+
+      "puzzleOverlay",
+
+      "terminalOverlay",
+
+      "pauseScreen",
+
+      "completeScreen"
+
+    ];
+
+
+    for (
+      const id of ids
+    ) {
+
+      const element =
+        document.getElementById(
+          id
+        );
+
+
+      if (element) {
+
+        element.classList.add(
+          "hidden"
+        );
+
+      }
+
+    }
+
+
+    this.messageOpen = false;
+
+    this.puzzleOpen = false;
+
+    this.terminalOpen = false;
+
+  }
+
+
+  /* =========================================================
+     COMPLETE
+     ========================================================= */
+
+  completeGame() {
+
+    this.state =
+      "complete";
+
+
+    this.started =
+      false;
+
+
+    this.stopSpeaking();
+
+
+    this.playSuccessSound();
+
+
+    const screen =
+      document.getElementById(
+        "completeScreen"
+      );
+
+
+    if (screen) {
+
+      screen.classList.remove(
+        "hidden"
+      );
+
+    }
+
+
+    const hud =
+      document.getElementById(
+        "hud"
+      );
+
+
+    if (hud) {
+
+      hud.classList.add(
+        "hidden"
+      );
+
+    }
+
+
+    const voice =
+      document.getElementById(
+        "voiceButton"
+      );
+
+
+    if (voice) {
+
+      voice.classList.add(
+        "hidden"
+      );
+
+    }
+
+  }
+
+
+  /* =========================================================
+     KEYBOARD HANDLER
+     ========================================================= */
+
+  handleKeyDown(event) {
+
+    if (!event) {
+      return;
+    }
+
+
+    if (
+      event.key ===
+      "Enter"
+    ) {
+
+      if (
+        this.messageOpen
+      ) {
+
+        event.preventDefault();
+
+        this.closeMessage();
+
+        return;
+
+      }
+
+    }
+
+
+    if (
+      event.key ===
+      "Escape"
+    ) {
+
+      if (
+        this.messageOpen
+      ) {
+
+        event.preventDefault();
+
+        this.closeMessage();
+
+        return;
+
+      }
+
+
+      if (
+        this.puzzleOpen
+      ) {
+
+        event.preventDefault();
+
+        this.closePuzzle();
+
+        return;
+
+      }
+
+
+      if (
+        this.terminalOpen
+      ) {
+
+        event.preventDefault();
+
+        this.closeTerminal();
+
+        return;
+
+      }
+
+    }
+
+  }
+
+
+  /* =========================================================
+     DESTROY
+     ========================================================= */
+
+  destroy() {
+
+    this.stopSpeaking();
+
+
+    if (
+      this.input &&
+      typeof this.input.destroy ===
+      "function"
+    ) {
+
+      this.input.destroy();
+
+    }
+
+
+    if (
+      this.audioContext
+    ) {
+
+      try {
+
+        this.audioContext.close();
+
+      } catch (error) {
+
+        console.warn(
+          "Erro fechando áudio:",
+          error
+        );
+
+      }
+
+    }
+
+  }
+
+}     
